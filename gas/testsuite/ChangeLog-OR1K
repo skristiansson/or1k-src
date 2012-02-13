@@ -1,0 +1,10 @@
+2012-02-13  Peter Gavin  <pgavin@gmail.com>
+
+	* gas/all/gas.exp: openrisc passes the test now
+	* gas/elf/warn-2.exp: s/openrisc/or1k/ s/or32/or1k/
+	* gas/lns/lns-common-1-or1k.s: new file because or1k has different nop opcode
+	* gas/lns/lns.exp: use lns-common-1-or1k.s when doing or1k
+	* gas/testsuite/gas/openrisc/*: deleted
+	* gas/testsuite/gas/or1k/allinsn.d: new file
+	* gas/testsuite/gas/or1k/allinsn.s: ditto
+	* gas/testsuite/gas/or1k/allinsn.exp: ditto

@@ -1,0 +1,741 @@
+; OpenRISC Basic Instruction Set 32-bit (ORBIS32)  -*- Scheme -*-
+; Copyright 2000, 2001, 2011 Free Software Foundation, Inc.
+; Contributed by Johan Rydberg, jrydberg@opencores.org
+; Modified by Julius Baxter, juliusbaxter@gmail.com
+
+; Instruction fields.
+
+; Attributes:
+;  . PCREL-ADDR  pc relative value (for reloc and disassembly purposes)
+;  . ABS-ADDR    absolute address (for reloc and disassembly purposes?)
+;  . RESERVED    bits are not used to decode insn, must be all 0
+
+; Instruction classes.
+(dnf f-opcode     "insn opcode"          () 31 6)
+
+; Register fields.
+(dnf f-r1        "r1"                  () 25 5)
+(dnf f-r2        "r2"                  () 20 5)
+(dnf f-r3        "r3"                  () 15 5)
+
+; Immediates.
+(df  f-simm16    "signed imm (16)"     () 15 16 INT #f #f)
+(dnf f-uimm16    "unsigned imm (16)"   () 15 16)
+(dnf f-uimm5     "unsigned imm (5)"    () 4  5)
+(dnf f-uimm6     "unsigned imm (6)"    () 5  6) ;; shroti
+(df  f-hi16      "high 16"             () 15 16 INT #f #f)
+(df  f-lo16      "low 16"              () 15 16 INT #f #f)
+
+; Sub fields
+(dnf f-op-25-2       "op-25-2"              () 25 2) ;; nop
+(dnf f-op-25-5       "op-25-5"              () 25 5) ;; sys, trap, *sync, sf*
+(dnf f-op-16-1       "op-16-1"              () 16 1) ;; movhi,macrc
+(dnf f-op-7-4        "op-7-4"               () 7 4)
+(dnf f-op-3-4        "op-3-4"               () 3 4)
+(dnf f-op-9-2        "op-9-2"               () 9 2) ;; alu ops upper opcode
+(dnf f-op-7-2        "op-7-2"               () 7 2) ;; alu lower upper opc,shroti
+; Reserved fields
+(dnf f-resv-25-26       "resv-25-26"              () 25 26)
+(dnf f-resv-25-10       "resv-25-10"              () 25 10)
+(dnf f-resv-23-8        "resv-23-8"               () 23 8)
+(dnf f-resv-20-5        "resv-20-5"               () 20 5)
+(dnf f-resv-20-4        "resv-20-4"               () 20 4)
+(dnf f-resv-15-8        "resv-15-8"               () 15 8)
+(dnf f-resv-10-11       "resv-10-11"              () 10 11)
+(dnf f-resv-10-7       "resv-10-7"              () 10 7)
+(dnf f-resv-10-3        "resv-10-3"               () 10 3)
+(dnf f-resv-5-2         "resv-5-2"                () 5 2)
+
+(dnf f-i16-1     "uimm16-1"            () 10 11)
+(dnf f-i16-2     "uimm16-2"            () 25  5)
+
+; PC relative, 26-bit (2 shifted to right)
+(df f-disp26     "disp26"              (PCREL-ADDR) 25 26 INT
+    ((value pc) (sra WI (sub WI value pc) (const 2)))
+    ((value pc) (add WI (sll WI value (const 2)) pc)))
+
+(define-multi-ifield
+  (name f-i16nc)
+  (comment "16 bit signed")
+  (attrs SIGN-OPT)
+  (mode HI)
+  (subfields f-i16-1 f-i16-2)
+  (insert (sequence ()
+                    (set (ifield f-i16-2) (and (sra (ifield f-i16nc) 
+                                                    (const 11)) 
+                                               (const #x1f)))
+                    (set (ifield f-i16-1) (and (ifield f-i16nc) 
+                                               (const #x7ff)))))
+  (extract (sequence ()
+                     (set (ifield f-i16nc) (c-raw-call SI "@arch@_sign_extend_16bit" 
+                                           (or (sll (ifield f-i16-2) 
+                                                    (const 11))
+                                               (ifield f-i16-1))))))
+)
+
+
+; Enums.
+
+; insn-opcode: bits 31-26
+(define-normal-insn-enum 
+  insn-opcode "insn main opcode enums" () OPC_ f-opcode
+  (("J" #x00 )
+   ("JAL" #x01 )
+   ("BNF" #x03 )
+   ("BF" #x04 )
+   ("NOP" #x05)
+   ("MOVHIMACRC" #x06)
+   ("SYSTRAPSYNCS" #x08)
+   ("RFE" #x09)
+   ("VECTOR" #x0a)
+   ("JR" #x11)
+   ("JALR" #x12 )
+   ("MACI" #x13)
+   ("CUST1" #x1c)
+   ("CUST2" #x1d)
+   ("CUST3" #x1e)
+   ("CUST4"#x1f)
+   ("LD" #x20)
+   ("LWZ" #x21)
+   ("LWS" #x22)
+   ("LBZ" #x23)
+   ("LBS" #x24)
+   ("LHZ" #x25)
+   ("LHS" #x26)
+   ("ADDI" #x27)
+   ("ADDIC" #x28)
+   ("ANDI" #x29)
+   ("ORI" #x2a)
+   ("XORI" #x2b)
+   ("MULI" #x2c)
+   ("MFSPR" #x2d)
+   ("SHROTI" #x2e)
+   ("SFI"  #x2f)
+   ("MTSPR" #x30)
+   ("MAC" #x31)
+   ("FLOAT" #x32)
+   ("SD" #x34)
+   ("SW" #x35)
+   ("SB" #x36)
+   ("SH" #x37)
+   ("ALU" #x38)
+   ("SF" #x39)
+   ("CUST5" #x3c)
+   ("CUST6" #x3d)
+   ("CUST7" #x3e)
+   ("CUST8" #x3f ) 
+  )
+)
+
+(define-normal-insn-enum insn-opcode-systrapsyncs 
+  "systrapsync insn opcode enums" () 
+  OPC_SYSTRAPSYNCS_ f-op-25-5
+    (("SYSCALL" #x00 )
+     ("TRAP" #x08 )
+     ("MSYNC" #x10 )
+     ("PSYNC" #x14 )
+     ("CSYNC" #x18 )
+    )
+)
+
+(define-normal-insn-enum insn-opcode-movehimacrc 
+  "movhi/macrc insn opcode enums" () 
+  OPC_MOVHIMACRC_ f-op-16-1
+  ("MOVHI" "MACRC")
+)
+
+(define-normal-insn-enum insn-opcode-shorts 
+  "shift/rotate insn opcode enums" () 
+  OPC_SHROTS_ f-op-7-2
+    (("SLL" #x0 )
+     ("SRL" #x1 )
+     ("SRA" #x2 )
+     ("ROR" #x3 )
+    )
+)
+
+(define-normal-insn-enum insn-opcode-alu-regreg 
+  "alu reg/reg insn opcode enums" () 
+  OPC_ALU_REGREG_ f-op-3-4
+  (("ADD"   #x0)
+   ("ADDC"  #x1)
+   ("SUB"   #x2)
+   ("AND"   #x3)
+   ("OR"    #x4)
+   ("XOR"   #x5)
+   ("MUL"   #x6)
+   ("SHROT" #x8)
+   ("DIV"   #x9)
+   ("DIVU"  #xA)
+   ("MULU"  #xB)
+   ("EXTBH" #xC)
+   ("EXTW"  #xD)
+   ("CMOV"  #xE)
+   ("FFL1"  #xF)
+   )
+)
+   
+(define-normal-insn-enum insn-opcode-setflag
+  "setflag insn opcode enums" () 
+  OPC_SF_ f-op-25-5
+    (("EQ"  #x00)
+     ("NEQ" #x01)
+     ("GTU" #x02)
+     ("GEU" #x03)
+     ("LTU" #x04)
+     ("LEU" #x05)
+     ("GTS" #x0A)
+     ("GES" #x0B)
+     ("LTS" #x0C)
+     ("LES" #x0D)
+    )
+)
+
+
+; Instruction operands.
+
+(dnop spr     "special purpose register"   (SEM-ONLY)  h-spr  f-nil)
+(dnop cbit    "condition bit"              (SEM-ONLY)  h-cbit f-nil)
+(dnop simm-16 "16 bit signed immediate"    ()          h-sint f-simm16)
+(dnop uimm-16 "16 bit unsigned immediate"  ()          h-uint f-uimm16)
+(dnop disp-26 "pc-rel 26 bit"              ()          h-iaddr f-disp26)
+(dnop uimm-5  "imm5"                       ()          h-uint f-uimm5)
+(dnop uimm-6  "imm6"                       ()          h-uint f-uimm6)
+
+(dnop rD      "destination register"       ()          h-gr   f-r1)
+(dnop rA      "source register A"          ()          h-gr   f-r2)
+(dnop rB      "source register B"          ()          h-gr   f-r3)
+
+
+; For hi(foo).
+(define-operand
+  (name hi16) (comment "high 16 bit immediate, sign optional") 
+  (attrs SIGN-OPT)
+  (type h-hi16)
+  (index f-simm16)
+  (handlers (parse "hi16"))
+)
+
+; For lo(foo)
+(define-operand
+  (name lo16) (comment "low 16 bit immediate, sign optional")
+  (attrs SIGN-OPT)
+  (type h-lo16)
+  (index f-lo16)
+  (handlers (parse "lo16"))
+)
+
+(define-operand
+  (name ui16nc)
+  (comment "16 bit immediate, sign optional")
+  (attrs)
+  (type h-lo16)
+  (index f-i16nc)
+  (handlers (parse "lo16"))
+)
+
+; Instructions.
+
+; Branch releated instructions 
+
+(dni l-j "jump (pc-relative iaddr)"
+     ; This function may not be in delay slot
+     (NOT-IN-DELAY-SLOT) 
+
+     "l.j ${disp-26}"
+     (+ OPC_J disp-26)
+
+     ; We execute the delay slot before doin' the real branch
+     (delay 1 (set pc disp-26))
+     ()
+)
+
+(dni l-jal "jump and link (pc-relative iaddr)"
+     ; This function may not be in delay slot
+     (NOT-IN-DELAY-SLOT)
+
+     "l.jal ${disp-26}"
+     (+ OPC_JAL disp-26)
+
+     ; We execute the delay slot before doin' the real branch
+     ; Set LR to (delay insn addr + 4)
+     (sequence ()
+               (set (reg h-gr 9) (add (reg h-delay-insn) 4))
+               (delay 1 (set pc disp-26)))
+     ()
+)
+
+(dni l-jr "jump register (absolute iaddr)"
+     ; This function may not be in delay slot
+     (NOT-IN-DELAY-SLOT)
+
+     "l.jr $rB"
+     (+ OPC_JR (f-resv-25-10 0) rB (f-resv-10-11 0))
+
+     ; We execute the delay slot before doin' the real branch
+     (delay 1 (set pc rB))
+     ()
+)
+
+(dni l-jalr "jump register and link (absolute iaddr)"
+     ; This function may not be in delay slot
+     (NOT-IN-DELAY-SLOT)
+
+     "l.jalr $rB"
+     (+ OPC_JALR (f-resv-25-10 0) rB (f-resv-10-11 0) )
+
+     ; We save the value of rB in a temporary slot before setting
+     ; the link register.  This because "l.jalr r9" would cause
+     ; a forever-and-ever loop otherwise.
+     ;
+     ; We execute the delay slot before doin' the real branch
+     (sequence ((WI tmp-slot))
+               (set tmp-slot rB)
+               (set (reg h-gr 9) (add (reg h-delay-insn) 4))
+               (delay 1 (set pc tmp-slot)))
+     ()
+)
+
+(dni l-bnf "branch if condition bit not set (pc relative iaddr)"
+     ; This function may not be in delay slot
+     (NOT-IN-DELAY-SLOT)
+
+     "l.bnf ${disp-26}"
+     (+ OPC_BNF disp-26)
+
+     ; We execute the delay slot before doin' the real branch
+     (if (eq cbit 0) 
+	 (delay 1 (set pc disp-26))
+	 (if (eq cbit 1)
+	     ; the delay slot is executed always, but when we're not branching
+	     ; the PC is not updated to skip it, so we execute it twice. To
+	     ; avoid that, we'll step over it here, but really it's executed
+	     (delay 1 (set pc (add pc 8)))))
+     ()
+)
+
+(dni l-bf "branch if condition bit is set (pc relative iaddr)"
+     ; This function may not be in delay slot
+     (NOT-IN-DELAY-SLOT)
+
+     "l.bf ${disp-26}"
+     (+ OPC_BF disp-26)
+
+     ; We execute the delay slot before doin' the real branch
+     (if (eq cbit 1) 
+	 (delay 1 (set pc disp-26))
+	 (if (eq cbit 0)
+	     ; the delay slot is executed always, but when we're not branching
+	     ; the PC is not updated to skip it, so we execute it twice. To
+	     ; avoid that, we'll step over it here, but really it's executed
+	     (delay 1 (set pc (add pc 8)))))
+     ()
+)
+
+(dni l-trap "trap (exception)"
+     ()
+     "l.trap ${uimm-16}"
+     (+ OPC_SYSTRAPSYNCS OPC_SYSTRAPSYNCS_TRAP (f-resv-20-5 0) uimm-16)
+     ; Do exception entry handling in C function, PC set based on SR state
+     (set pc (c-call WI "@arch@_cpu_exception_entry" 14 pc ))
+     ()
+)
+
+
+(dni l-sys "syscall (exception)"
+     ; This function may not be in delay slot
+     (NOT-IN-DELAY-SLOT)
+
+     "l.sys ${uimm-16}"
+     (+ OPC_SYSTRAPSYNCS OPC_SYSTRAPSYNCS_SYSCALL (f-resv-20-5 0) uimm-16)
+     ; Do exception entry handling in C function, PC set based on SR state
+     (set pc (c-call WI "@arch@_cpu_exception_entry" #xC pc ))
+
+     ()
+)
+
+
+(dni l-rfe "return from exception"
+     ; This function may not be in delay slot
+     (NOT-IN-DELAY-SLOT)
+
+     "l.rfe"
+     (+ OPC_RFE (f-resv-25-26 0))
+     (sequence ()
+	       ; Set SR to whatever is in ESR
+	       (c-call VOID "@cpu@_h_spr_set_handler" 17 
+		       (c-call SI "@cpu@_h_spr_get_handler" 48))
+	       ; Set PC to whatever is in EPCR
+               (set pc (c-call SI "@cpu@_h_spr_get_handler" 32))
+     )
+     ()
+)
+
+
+; Misc instructions
+
+; l.nop with immediate must be first so it handles all l.nops in sim
+(dni l-nop-imm "nop with immediate"
+     ()
+     "l.nop ${uimm-16}"
+     (+ OPC_NOP (f-op-25-2 #x1) (f-resv-23-8 0) uimm-16)
+     (c-call VOID "@cpu@_nop_handler" uimm-16 )
+     ()
+)
+
+(dni l-nop "nop without immediate"
+     ()
+     "l.nop"
+     (+ OPC_NOP (f-op-25-2 #x1) (f-resv-23-8 0) uimm-16)
+     (nop)
+     ()
+)
+
+(dni l-movhi "movhi"
+     ()
+     "l.movhi $rD,$hi16"
+     (+ OPC_MOVHIMACRC rD (f-resv-20-4 0) OPC_MOVHIMACRC_MOVHI hi16)
+     (set rD (sll WI hi16 (const 16)))
+     ()
+)
+
+
+; System releated instructions
+
+(dni l-mfspr "mfspr"
+     ()
+     "l.mfspr $rD,$rA,${uimm-16}"
+     (+ OPC_MFSPR rD rA uimm-16)
+     (set rD (c-call SI "@cpu@_h_spr_get_handler" (or rA uimm-16)))
+     ()
+)
+
+(dni l-mtspr "mtspr"
+     ()
+     "l.mtspr $rA,$rB,${ui16nc}"
+     (+ OPC_MTSPR rA rB ui16nc )
+     (c-call VOID "@cpu@_h_spr_set_handler" (or rA ui16nc) rB)
+     ()
+)
+
+
+; Load instructions
+
+(dni l-lwz "load word (zero extend ignored)"
+     ()
+     "l.lwz $rD,${simm-16}($rA)"
+     (+ OPC_LWZ rD rA simm-16)
+     (set rD (mem SI (add rA simm-16)))
+     ()
+)
+
+
+(dni l-lws "load word (sign extend ignored)"
+     ()
+     "l.lws $rD,${simm-16}($rA)"
+     (+ OPC_LWS rD rA simm-16)
+     (set rD (mem SI (add rA simm-16)))
+     ()
+)
+
+(dni l-lbz "load byte (zero extend)"
+     ()
+     "l.lbz $rD,${simm-16}($rA)"
+     (+ OPC_LBZ rD rA simm-16)
+     (set rD (zext SI (mem QI (add rA simm-16))))
+     ()
+)
+
+(dni l-lbs "load byte (sign extend)"
+     ()
+     "l.lbs $rD,${simm-16}($rA)"
+     (+ OPC_LBS rD rA simm-16)
+     (set rD (ext SI (mem QI (add rA simm-16))))
+     ()
+)
+
+(dni l-lhz "load halfword (zero extend)"
+     ()
+     "l.lhz $rD,${simm-16}($rA)"
+     (+ OPC_LHZ rD simm-16 rA)
+     (set rD (zext SI (mem HI (add rA simm-16))))
+     ()
+)
+
+(dni l-lhs "load halfword (sign extend)"
+     ()
+     "l.lhs $rD,${simm-16}($rA)"
+     (+ OPC_LHS rD rA simm-16)
+     (set rD (ext SI (mem HI (add rA simm-16))))
+     ()
+)
+
+
+; Store instructions
+;
+; We have to use a multi field since the integer is splited over 2 fields
+
+(define-pmacro (store-insn mnemonic opc-op mode-op)
+  (begin
+     (dni (.sym l- mnemonic)
+          (.str "l." mnemonic " imm(reg)/reg")
+          ()
+          (.str "l." mnemonic " ${ui16nc}($rA),$rB")
+          (+ opc-op rB rD ui16nc)
+          (set (mem mode-op (add rA ui16nc)) rB)
+          ()
+     )
+   )
+)
+
+(store-insn sw OPC_SW SI)
+(store-insn sb OPC_SB QI)
+(store-insn sh OPC_SH HI)
+
+
+
+; Shift and rotate instructions
+
+(define-pmacro (shift-insn mnemonic opc-shrots-op)
+  (begin
+     (dni (.sym l- mnemonic)
+          (.str "l." mnemonic " reg/reg/reg")
+          ()
+          (.str "l." mnemonic " $rD,$rA,$rB")
+          (+ OPC_ALU rD rA rB (f-resv-10-3 0) opc-shrots-op (f-resv-5-2 0) 
+	     OPC_ALU_REGREG_SHROT )
+          (set rD (mnemonic rA rB))
+          ()
+     )
+     (dni (.sym l- mnemonic "i")
+          (.str "l." mnemonic " reg/reg/imm")
+          ()
+          (.str "l." mnemonic "i $rD,$rA,${uimm-6}")
+          (+ OPC_SHROTI rD rA (f-resv-15-8 0) opc-shrots-op uimm-6)
+          (set rD (mnemonic rA uimm-6))
+          ()
+     )
+   )
+)
+
+(shift-insn sll OPC_SHROTS_SLL)
+(shift-insn srl OPC_SHROTS_SRL)
+(shift-insn sra OPC_SHROTS_SRA)
+(shift-insn ror OPC_SHROTS_ROR)
+
+
+; Arithmetic insns
+
+; ALU op macro
+(define-pmacro (alu-insn mnemonic opc-alu)
+  (begin
+     (dni (.sym l- mnemonic)
+          (.str "l." mnemonic " reg/reg/reg")
+          ()
+          (.str "l." mnemonic " $rD,$rA,$rB")
+          (+ OPC_ALU rD rA rB (f-resv-10-7 0) opc-alu)
+          (set rD (mnemonic rA rB))
+          ()
+     )
+  )
+)
+
+(alu-insn add OPC_ALU_REGREG_ADD)
+(alu-insn sub OPC_ALU_REGREG_SUB)
+(alu-insn and OPC_ALU_REGREG_AND)
+(alu-insn or  OPC_ALU_REGREG_OR )
+(alu-insn xor OPC_ALU_REGREG_XOR)
+
+(dni (l-addc) "l.addc reg/reg/reg"
+          ()
+          ("l.addc $rD,$rA,$rB")
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x00) OPC_ALU_REGREG_ADDC)
+	  ;; TODO - fish out carry flag and add in here
+          (set rD (add rA rB))
+          ()
+)
+
+(dni (l-mul) "l.mul reg/reg/reg"
+          ()
+          ("l.mul $rD,$rA,$rB")
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MUL)
+          (set rD (mul DI (ext DI rA)  (ext DI rB)))
+          ()
+)
+
+(dni (l-mulu) "l.mulu reg/reg/reg"
+          ()
+          ("l.mulu $rD,$rA,$rB")
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MULU)
+          (set rD (mul DI (zext DI rA)  (zext DI rB)))
+          ()
+)
+
+(dni l-div "divide (signed)"
+          ()
+          "l.div $rD,$rA,$rB"
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_DIV)
+          (set rD (div rA rB))
+          ()
+)
+
+(dni l-divu "divide (unsigned)"
+          ()
+          "l.divu $rD,$rA,$rB"
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_DIVU)
+          (set rD (udiv rA rB))
+          ()
+)
+
+(dni l-ff1 "find first '1'"
+          ()
+          "l.ff1 $rD,$rA"
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x00) OPC_ALU_REGREG_FFL1)
+          (set rD (c-call SI "@cpu@_h_ff1" rA))
+          ()
+)
+
+(dni l-fl1 "find last '1'"
+          ()
+          "l.fl1 $rD,$rA"
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x10) OPC_ALU_REGREG_FFL1)
+          (set rD (c-call SI "@cpu@_h_fl1" rA))
+          ()
+)
+
+
+(define-pmacro (alu-insn-imm  mnemonic insn-opc signop )
+  (begin
+      (dni (.sym l- mnemonic "i")
+          (.str "l." mnemonic " reg/reg/lo16")
+          ()
+          (.str "l." mnemonic "i $rD,$rA,$lo16")
+          (+ insn-opc rD rA lo16)
+          (set rD (mnemonic rA (signop SI (trunc HI lo16))))
+          ()
+     )
+   )
+)
+
+(alu-insn-imm add OPC_ADDI ext )
+(alu-insn-imm and OPC_ANDI zext )
+(alu-insn-imm or  OPC_ORI  zext )
+(alu-insn-imm xor OPC_XORI ext )
+(alu-insn-imm mul OPC_MULI ext )
+
+(dni ("l.addic")
+     ("l.addic reg/reg/lo16")
+     ()
+     ("l.addic $rD,$rA,$lo16")
+     (+ OPC_ADDIC rD rA lo16)
+     ;; TODO - get carry flag in on this
+     (set rD (add rA (ext SI (trunc HI lo16))))
+     ()
+)
+
+;; TODO: l.ext* , l.cust* , l.mac*
+
+
+; Compare instructions
+
+; Register compare signed
+(define-pmacro (sf-insn-sr opc-sf sem-op)
+  (begin
+     (dni (.sym l- "sf" (.sym sem-op "s"))
+          (.str "l.sf" (.str sem-op) "s reg/reg")
+          ()
+          (.str "l.sf" (.str sem-op) "s $rA,$rB")
+          (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
+          (set cbit (sem-op rA rB)) ;; TODO: ensure signed compare
+          ()
+     )
+  )
+)
+
+; Register compare unsigned
+(define-pmacro (sf-insn-ur opc-sf sem-op)
+  (begin
+     (dni (.sym l- "sf" (.sym sem-op "u"))
+          (.str "l." (.str sem-op) "u reg/reg")
+          ()
+          (.str "l.sf" (.str sem-op) "u $rA,$rB")
+          (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
+          (set cbit (sem-op rA rB)) ;; TODO: ensure unsigned compare
+          ()
+     )
+  )
+)
+
+; Immediate compare signed
+(define-pmacro (sf-insn-si opc-sf sem-op)
+  (begin
+     (dni (.sym l- "sf" (.sym sem-op "si"))
+          (.str "l." (.str sem-op) "si reg/imm")
+          ()
+          (.str "l.sf" (.str sem-op) "si $rA,${simm-16}")
+          (+ OPC_SFI opc-sf rA simm-16)
+          (set cbit (sem-op rA simm-16))
+          ()
+     )
+  )
+)
+
+; Immediate compare (both signed and unsigned)
+(define-pmacro (sf-insn-ui opc-sf sem-op)
+  (begin
+     (dni (.sym l- "sf" (.sym sem-op "ui"))
+          (.str "l." (.str sem-op) "ui reg/imm")
+          ()
+          (.str "l.sf" (.str sem-op) "ui $rA,$lo16")
+          (+ OPC_SFI opc-sf rA lo16)
+          (set cbit (sem-op rA (ext SI (trunc HI lo16))))
+          ()
+     )
+  )
+)
+
+; Immediate compare unsigned
+(define-pmacro (sf-insn opc-sf sem-op)
+  (begin
+     (dni (.sym l- "sf" sem-op)
+          (.str "l." (.str sem-op) " reg/reg")
+          ()
+          (.str "l.sf" (.str sem-op) " $rA,$rB")
+          (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
+          (set cbit (sem-op rA rB))
+          ()
+     )
+     (dni (.sym l- "sf" (.sym sem-op "i"))
+          (.str "l.sf" (.str sem-op) "i reg/imm")
+          ()
+          (.str "l.sf" (.str sem-op) "i $rA,$lo16")
+          (+ OPC_SFI opc-sf rA lo16)
+          (set cbit (sem-op rA (ext SI (trunc HI lo16)))) ;; TODO: ensure rA interpreted w/ sign.
+          ()
+     )
+   )
+)
+
+
+(sf-insn-ur OPC_SF_GTU gt)
+(sf-insn-ur OPC_SF_GEU ge)
+(sf-insn-ur OPC_SF_LTU lt)
+(sf-insn-ur OPC_SF_LEU le)
+
+(sf-insn-sr OPC_SF_GTS gt)
+(sf-insn-sr OPC_SF_GES ge)
+(sf-insn-sr OPC_SF_LTS lt)
+(sf-insn-sr OPC_SF_LES le)
+
+(sf-insn-ui OPC_SF_GTU gt)
+(sf-insn-ui OPC_SF_GEU ge)
+(sf-insn-ui OPC_SF_LTU lt)
+(sf-insn-ui OPC_SF_LEU le)
+
+(sf-insn-si OPC_SF_GTS gt)
+(sf-insn-si OPC_SF_GES ge)
+(sf-insn-si OPC_SF_LTS lt)
+(sf-insn-si OPC_SF_LES le)
+
+(sf-insn    OPC_SF_EQ  eq)
+(sf-insn    OPC_SF_NEQ ne)

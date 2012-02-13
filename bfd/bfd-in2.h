@@ -1824,7 +1824,7 @@ enum bfd_architecture
 #define bfd_mach_i960_jx        7
 #define bfd_mach_i960_hx        8
 
-  bfd_arch_or32,      /* OpenRISC 32 */
+  bfd_arch_or1k,      /* OpenRISC 1000 */
 
   bfd_arch_sparc,     /* SPARC */
 #define bfd_mach_sparc                 1
@@ -4770,9 +4770,9 @@ a matching LO8XG part.  */
   BFD_RELOC_860_HIGOT,
   BFD_RELOC_860_HIGOTOFF,
 
-/* OpenRISC Relocations.  */
-  BFD_RELOC_OPENRISC_ABS_26,
-  BFD_RELOC_OPENRISC_REL_26,
+/* OpenRISC 1000 Relocations.  */
+  BFD_RELOC_OR1K_ABS_26,
+  BFD_RELOC_OR1K_REL_26,
 
 /* H8 elf Relocations.  */
   BFD_RELOC_H8_DIR16A8,

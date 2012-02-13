@@ -203,7 +203,7 @@ if { ![is_elf_format] } then {
 }
 
 # Test objdump -WL on a file that contains line information for multiple files and search directories.
-# Not supported on mcore, moxie and openrisc targets because they do not (yet) support the generation
+# Not supported on mcore and moxie targets because they do not (yet) support the generation
 # of DWARF2 line debug information.
 
 if { ![is_elf_format]
@@ -213,12 +213,15 @@ if { ![is_elf_format]
      || [istarget "ia64*-*-*"]
      || [istarget "mcore-*-*"]
      || [istarget "moxie-*-*"]
-     || [istarget "openrisc-*-*"]
-     || [istarget "or32-*-*"]
 } then {
     unsupported "objump decode line"
 } else {
-    if { ![binutils_assemble $srcdir/$subdir/dw2-decodedline.S tmpdir/dw2-decodedline.o] } then {
+    if { [istarget "or1k*-*-*"] } then {
+        set decodedline_testsrc $srcdir/$subdir/dw2-decodedline-1.S
+    } else {
+        set decodedline_testsrc $srcdir/$subdir/dw2-decodedline.S
+    }
+    if { ![binutils_assemble $decodedline_testsrc tmpdir/dw2-decodedline.o] } then {
 	fail "objdump decoded line"
     }
 

@@ -1,0 +1,11 @@
+2012-02-13  Peter Gavin  <pgavin@gmail.com>
+
+	* coff-or32.c, cpu-openrisc.c, cpu-or32.c: deleted
+	* elf32-openrisc.c, elf32-or32.c: ditto
+	* Makefile.am: s/openrisc/or1k/ s/or32/or1k/, remove coff-or32 support
+	* archures.c: ditto
+	* config.bfd: ditto
+	* configure.in: ditto
+	* coffcode.h: ditto
+	* reloc.c: ditto
+	* targets.c: ditto

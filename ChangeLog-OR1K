@@ -1,0 +1,3 @@
+2012-02-13  Peter Gavin  <pgavin@gmail.com>
+
+	* config.guess, config.sub: s/or32/or1k/ s/openrisc/or1k/

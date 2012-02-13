@@ -12146,7 +12146,7 @@ _ACEOF
         fi
         ;;
 
-      epiphany | fr30 | ip2k | iq2000 | lm32 | m32r | openrisc)
+      epiphany | fr30 | ip2k | iq2000 | lm32 | m32r | or1k)
 	using_cgen=yes
 	;;
 

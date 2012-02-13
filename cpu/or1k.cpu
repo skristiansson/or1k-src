@@ -1,0 +1,151 @@
+; OpenRISC 1000 architecture.  -*- Scheme -*-
+; Copyright 2000, 2001, 2011 Free Software Foundation, Inc.
+; Contributed by Johan Rydberg, jrydberg@opencores.org
+; Modified by Julius Baxter, juliusbaxter@gmail.com
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 2 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program; if not, write to the Free Software
+; Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, 
+; MA 02110-1301, USA.
+
+(include "simplify.inc")
+
+; The OpenRISC family is a set of RISC microprocessor architectures with an 
+; emphasis on scalability and is targetted at embedded use.
+; The CPU RTL development is a collaborative open source effort.
+; http://opencores.org/or1k
+; http://openrisc.net
+
+(define-arch
+  (name or1k)
+  (comment "OpenRISC 1000")
+  (insn-lsb0? #t)
+  (machs or32)
+  (isas ORBIS32 );ORBIS64 ORFPX32 ORFPX64 ORVDX64)
+)
+
+; Instruction set parameters.
+(define-isa
+  ; Name of the ISA.
+  (name ORBIS32)
+  ; Base insturction length.  The insns are always 32 bits wide.
+  (base-insn-bitsize 32)
+  ; Address of insn in delay slot
+  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
+)
+
+;(define-isa
+;  ; Name of the ISA.
+;  (name ORBIS64)
+;  ; Base insturction length.  The insns are always 32 bits wide.
+;  (base-insn-bitsize 32)
+;  ; Address of insn in delay slot
+;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
+;)
+
+;(define-isa
+;  ; Name of the ISA.
+;  (name ORFPX32)
+;  ; Base insturction length.  The insns are always 32 bits wide.
+;  (base-insn-bitsize 32)
+;  ; Address of insn in delay slot
+;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
+;)
+
+
+;(define-isa
+;  ; Name of the ISA.
+;  (name ORFPX64)
+;  ; Base insturction length.  The insns are always 32 bits wide.
+;  (base-insn-bitsize 32)
+;  ; Address of insn in delay slot
+;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
+;)
+
+;(define-isa
+;  ; Name of the ISA.
+;  (name ORVDX64)
+;  ; Base insturction length.  The insns are always 32 bits wide.
+;  (base-insn-bitsize 32)
+;  ; Address of insn in delay slot
+;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
+;)
+
+
+; CPU family definitions.
+  
+(define-cpu
+  (name or1k32f)
+  (comment "OpenRISC 1000 32-bit CPU family")
+  (insn-endian big)
+  (endian either)
+  (word-bitsize 32)
+)
+
+;(define-cpu
+;  (name or1k64f)
+;  (comment "OpenRISC 1000 64-bit CPU family")
+;  (endian either)
+;  (word-bitsize 64)
+;)
+
+; Generic 32-bit or1k machine
+(define-mach
+  (name or32)
+  (comment "Generic OpenRISC 1000 32-bit CPU")
+  (cpu or1k32f)
+  (isas ORBIS32 );ORFPX32)
+  (bfd-name "or1k")
+)
+
+; Generic 64-bit or1k machine
+;(define-mach
+;  (name or64)
+;  (comment "Generic OpenRISC 1000 64-bit CPU")
+;  (cpu or1k64)
+;  (bfd-name "or64")
+;)
+
+
+; Model descriptions
+
+; OpenRISC 1200 - 32-bit or1k CPU implementation
+(define-model
+  (name or1200) (comment "OpenRISC 1200 model") 
+  ; This model has both instruction and data cache
+  (attrs)
+  (mach or32)
+  ; Nothing special about this.
+  (unit u-exec "Execution Unit" () 1 1 () () () ())
+)
+
+; Attributes
+
+; An attribute to describe if an insn can be in the delay slot or not.
+(define-attr
+  (for insn)
+  (type boolean)
+  (name NOT-IN-DELAY-SLOT)
+  (comment "insn can't go in delay slot")
+)
+
+; Include the 32-bit or1k hardware if needed
+(if (keep-mach? (or32))
+    (include "or1k32.cpu"))
+
+; Include the ORBIS32 ISA if required
+(if (keep-isa? (ORBIS32))
+    (include "or1korbis32.cpu"))
+
+; TODO lf.* (float) in OR32FPX ISA file
+
