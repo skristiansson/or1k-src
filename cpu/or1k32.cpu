@@ -1,0 +1,45 @@
+; OpenRISC 1000 32-bit CPU hardware description.  -*- Scheme -*-
+; Copyright 2000, 2001, 2011 Free Software Foundation, Inc.
+; Contributed by Johan Rydberg, jrydberg@opencores.org
+; Modified by Julius Baxter, juliusbaxter@gmail.com
+
+; Hardware pieces.
+; These entries list the elements of the raw hardware.
+; They're also used to provide tables and other elements of the assembly
+; language.
+
+(dnh h-pc "program counter" (PC PROFILE) (pc) () () ())
+
+(define-hardware
+  (name h-gr) (comment "general registers") (attrs PROFILE)
+  (type register WI (32))
+  (indices keyword ""
+           ((r0 0) (r1 1) (r2 2) (r3 3) (r4 4) (r5 5) (r6 6) (r7 7)
+            (r8 8) (r9 9) (r10 10) (r11 11) (r12 12) (r13 13) (r14 14) 
+            (r15 15) (r16 16) (r17 17) (r18 18) (r19 19) (r20 20) 
+            (r21 21) (r22 22) (r23 23) (r24 24) (r25 25) (r26 26) 
+            (r27 27) (r28 28) (r29 29) (r30 30) (r31 31) (lr 9) 
+            (sp 1)  (fp 2)))
+)
+
+;; Perhaps put the SPR map in here via (indices keyword...) entry?
+;; Perhaps we don't need this, even...
+;; Perhaps specify each of the important bits of the SPRs with a layout..?
+(define-hardware
+  (name h-spr) (comment "special purpose registers")
+  (type register WI (#x20000))    
+  (get (index) (c-call SI "@cpu@_h_spr_get_handler" index))
+  (set (index newval) (c-call VOID "@cpu@_h_spr_set_handler" index newval))
+)
+
+(define-pmacro (spr-npc)  (reg h-spr   16))
+(define-pmacro (spr-sr)  (reg h-spr   17))
+(define-pmacro (spr-ppc)  (reg h-spr   18))
+
+
+
+(dnh h-hi16 "high 16 bits" () (immediate (INT 16)) () () ())
+(dnh h-lo16 "low 16 bits"  () (immediate (INT 16)) () () ())
+
+(dsh h-cbit "condition bit" () (register BI))
+(dsh h-delay-insn "delay insn addr" () (register SI))

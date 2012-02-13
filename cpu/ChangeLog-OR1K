@@ -1,0 +1,4 @@
+2012-02-13  Peter Gavin  <pgavin@gmail.com>
+
+	* openrisc.cpu, openrisc.opc: deleted
+	* or1k.cpu, or1k.opc, or1k32.cpu, or1korbis32.cpu: new files

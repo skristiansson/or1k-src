@@ -1,0 +1,8 @@
+2012-02-13  Peter Gavin  <pgavin@gmail.com>
+
+	* Makefile.am, configure.in, configure.tgt: s/openrisc/or1k/ s/or32/or1k/
+	* doc/as.texinfo: ditto
+        * config/obj-coff.h: remove or32-coff support
+        * config/tc-openrisc.c, config/tc-openrisc.h: deleted
+	* config/tc-or32.c, config/tc-or32.h: ditto
+	* config/tc-or1k.c, config/tc-or1k.h: new files

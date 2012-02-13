@@ -1,0 +1,5 @@
+2012-02-13  Peter Gavin  <pgavin@gmail.com>
+
+	* dis-asm.h: s/openrisc/or1k/ s/or32/or1k/
+        * elf/common.h: ditto
+        * elf/or1k.h: new file

@@ -59,7 +59,7 @@ case ${cpu} in
   mips*el)		cpu_type=mips endian=little ;;
   mips*)		cpu_type=mips endian=big ;;
   mt)			cpu_type=mt endian=big ;;
-  or32*)		cpu_type=or32 endian=big ;;
+  or1k*)		cpu_type=or1k endian=big ;;
   pjl*)			cpu_type=pj endian=little ;;
   pj*)			cpu_type=pj endian=big ;;
   powerpc*le*)		cpu_type=ppc endian=little ;;
@@ -325,10 +325,8 @@ case ${generic_target} in
   ns32k-pc532-lites*)			fmt=aout em=nbsd532 ;;
   ns32k-*-*n*bsd*)			fmt=aout em=nbsd532 ;;
 
-  openrisc-*-*)				fmt=elf ;;
-
-  or32-*-rtems*)			fmt=elf ;;
-  or32-*-elf)				fmt=elf ;;
+  or1k-*-rtems*)			fmt=elf ;;
+  or1k-*-elf)				fmt=elf ;;
 
   pj*)					fmt=elf ;;
 

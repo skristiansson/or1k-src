@@ -1,0 +1,21 @@
+2012-02-13  Peter Gavin  <pgavin@gmail.com>
+
+	* openrisc-asm.c: deleted
+	* openrisc-desc.c: deleted
+	* openrisc-desc.h: deleted
+	* openrisc-dis.c: deleted
+	* openrisc-ibld.c: deleted
+	* openrisc-opc.c: deleted
+	* openrisc-opc.h: deleted
+	* or32-dis.c: deleted
+	* or32-opc.c: deleted
+	* or1k-asm.c: new file, generated with cgen
+	* or1k-desc.c: ditto
+	* or1k-desc.h: ditto
+	* or1k-dis.c: ditto
+	* or1k-ibld.c: ditto
+	* or1k-opc.c: ditto
+	* or1k-opc.h: ditto
+	* Makefile.am: remove old openrisc stuff, replace with or1k
+	* configure.in: ditto
+	* disassemble.c: ditto

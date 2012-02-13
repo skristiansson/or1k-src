@@ -664,8 +664,7 @@ extern const bfd_target bfd_elf32_ntradbigmips_vec;
 extern const bfd_target bfd_elf32_ntradlittlemips_vec;
 extern const bfd_target bfd_elf32_ntradbigmips_freebsd_vec;
 extern const bfd_target bfd_elf32_ntradlittlemips_freebsd_vec;
-extern const bfd_target bfd_elf32_openrisc_vec;
-extern const bfd_target bfd_elf32_or32_big_vec;
+extern const bfd_target bfd_elf32_or1k_vec;
 extern const bfd_target bfd_elf32_pj_vec;
 extern const bfd_target bfd_elf32_pjl_vec;
 extern const bfd_target bfd_elf32_powerpc_vec;
@@ -825,7 +824,6 @@ extern const bfd_target nlm32_i386_vec;
 extern const bfd_target nlm32_powerpc_vec;
 extern const bfd_target nlm32_sparc_vec;
 extern const bfd_target oasys_vec;
-extern const bfd_target or32coff_big_vec;
 extern const bfd_target pc532machaout_vec;
 extern const bfd_target pc532netbsd_vec;
 extern const bfd_target pdp11_aout_vec;
@@ -1037,8 +1035,7 @@ static const bfd_target * const _bfd_target_vector[] =
 	&bfd_elf32_ntradbigmips_freebsd_vec,
 	&bfd_elf32_ntradlittlemips_freebsd_vec,
 #endif
-	&bfd_elf32_openrisc_vec,
-	&bfd_elf32_or32_big_vec,
+	&bfd_elf32_or1k_vec,
 	&bfd_elf32_pj_vec,
 	&bfd_elf32_pjl_vec,
 	&bfd_elf32_powerpc_vec,
@@ -1240,8 +1237,6 @@ static const bfd_target * const _bfd_target_vector[] =
 	   can be annoying target mis-matches.  */
 	&oasys_vec,
 #endif
-	/* Entry for the OpenRISC family.  */
-	&or32coff_big_vec,
 
 	&pc532machaout_vec,
 	&pc532netbsd_vec,
