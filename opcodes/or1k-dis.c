@@ -90,37 +90,40 @@ or1k_cgen_print_operand (CGEN_CPU_DESC cd,
 
   switch (opindex)
     {
-    case OR1K_OPERAND_DISP_26 :
+    case OR1K_OPERAND_DISP26 :
       print_address (cd, info, fields->f_disp26, 0|(1<<CGEN_OPERAND_PCREL_ADDR), pc, length);
       break;
-    case OR1K_OPERAND_HI16 :
-      print_normal (cd, info, fields->f_simm16, 0|(1<<CGEN_OPERAND_SIGNED)|(1<<CGEN_OPERAND_SIGN_OPT), pc, length);
-      break;
-    case OR1K_OPERAND_LO16 :
-      print_normal (cd, info, fields->f_lo16, 0|(1<<CGEN_OPERAND_SIGNED)|(1<<CGEN_OPERAND_SIGN_OPT), pc, length);
-      break;
     case OR1K_OPERAND_RA :
+      print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r2, 0);
+      break;
+    case OR1K_OPERAND_RASF :
       print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r2, 0);
       break;
     case OR1K_OPERAND_RB :
       print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r3, 0);
       break;
+    case OR1K_OPERAND_RBSF :
+      print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r3, 0);
+      break;
     case OR1K_OPERAND_RD :
       print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r1, 0);
       break;
-    case OR1K_OPERAND_SIMM_16 :
-      print_normal (cd, info, fields->f_simm16, 0|(1<<CGEN_OPERAND_SIGNED), pc, length);
+    case OR1K_OPERAND_RDSF :
+      print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r1, 0);
       break;
-    case OR1K_OPERAND_UI16NC :
-      print_normal (cd, info, fields->f_i16nc, 0|(1<<CGEN_OPERAND_SIGNED)|(1<<CGEN_OPERAND_SIGN_OPT)|(1<<CGEN_OPERAND_VIRTUAL), pc, length);
+    case OR1K_OPERAND_SIMM16 :
+      print_normal (cd, info, fields->f_simm16, 0|(1<<CGEN_OPERAND_SIGNED)|(1<<CGEN_OPERAND_SIGN_OPT), pc, length);
       break;
-    case OR1K_OPERAND_UIMM_16 :
+    case OR1K_OPERAND_SIMM16_SPLIT :
+      print_normal (cd, info, fields->f_simm16_split, 0|(1<<CGEN_OPERAND_SIGNED)|(1<<CGEN_OPERAND_SIGN_OPT)|(1<<CGEN_OPERAND_VIRTUAL), pc, length);
+      break;
+    case OR1K_OPERAND_UIMM16 :
       print_normal (cd, info, fields->f_uimm16, 0, pc, length);
       break;
-    case OR1K_OPERAND_UIMM_5 :
-      print_normal (cd, info, fields->f_uimm5, 0, pc, length);
+    case OR1K_OPERAND_UIMM16_SPLIT :
+      print_normal (cd, info, fields->f_uimm16_split, 0|(1<<CGEN_OPERAND_VIRTUAL), pc, length);
       break;
-    case OR1K_OPERAND_UIMM_6 :
+    case OR1K_OPERAND_UIMM6 :
       print_normal (cd, info, fields->f_uimm6, 0, pc, length);
       break;
 

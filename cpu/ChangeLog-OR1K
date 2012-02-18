@@ -1,3 +1,17 @@
+2012-02-18  Peter Gavin  <pgavin@gmail.com>
+
+	* or1k.cpu: add ORFPX32 support; add ORBIS32-MACHS/OR32FPX-MACHS
+	pmacros that will hold the list of machs with the respective isa;
+	* or1kor32fpx.cpu: new file
+	* or1k32.cpu: change the way SPRs and SPR fields are handled;
+	change the way immediates are handled; add enums for SPRs
+	* or1korbis32.cpu: change the way immediates are handled; add mac
+	instructions; add MACHS ORBIS32-MACHS to all instructions; add
+	carry/overflow handling to alu insns; make instructions generally
+	use WI instead of SI; add extb/exth insns
+	* or1k.opc: change the way immediates are handled; determine
+	whether to use hi/lo relocation at parse time
+
 2012-02-13  Peter Gavin  <pgavin@gmail.com>
 
 	* openrisc.cpu, openrisc.opc: deleted

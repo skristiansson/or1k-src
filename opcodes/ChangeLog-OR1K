@@ -1,3 +1,9 @@
+2012-02-18  Peter Gavin  <pgavin@gmail.com>
+
+	* Makefile.am: add dependencies to stamp-or1k for all cpu files
+	* or1k-asm.c, or1k-desc.c, or1k-desc.h, or1k-dis.c, or1k-ibld.c,
+	or1k-opc.c, or1k-opc.h: regenerated
+
 2012-02-13  Peter Gavin  <pgavin@gmail.com>
 
 	* openrisc-asm.c: deleted

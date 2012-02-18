@@ -2,13 +2,18 @@
 ; Copyright 2000, 2001, 2011 Free Software Foundation, Inc.
 ; Contributed by Johan Rydberg, jrydberg@opencores.org
 ; Modified by Julius Baxter, juliusbaxter@gmail.com
+; Modified by Peter Gavin, pgavin@gmail.com
 
 ; Instruction fields.
 
 ; Attributes:
 ;  . PCREL-ADDR  pc relative value (for reloc and disassembly purposes)
-;  . ABS-ADDR    absolute address (for reloc and disassembly purposes?)
 ;  . RESERVED    bits are not used to decode insn, must be all 0
+
+; Hardware for immediate operands
+(dnh h-simm16 "16-bit signed immediate" () (immediate (INT 16)) () () ())
+(dnh h-uimm16 "16-bit unsigned immediate" () (immediate (UINT 16)) () () ())
+(dnh h-uimm6  "6-bit unsigned immediate" () (immediate (UINT 6)) () () ())
 
 ; Instruction classes.
 (dnf f-opcode     "insn opcode"          () 31 6)
@@ -18,14 +23,6 @@
 (dnf f-r2        "r2"                  () 20 5)
 (dnf f-r3        "r3"                  () 15 5)
 
-; Immediates.
-(df  f-simm16    "signed imm (16)"     () 15 16 INT #f #f)
-(dnf f-uimm16    "unsigned imm (16)"   () 15 16)
-(dnf f-uimm5     "unsigned imm (5)"    () 4  5)
-(dnf f-uimm6     "unsigned imm (6)"    () 5  6) ;; shroti
-(df  f-hi16      "high 16"             () 15 16 INT #f #f)
-(df  f-lo16      "low 16"              () 15 16 INT #f #f)
-
 ; Sub fields
 (dnf f-op-25-2       "op-25-2"              () 25 2) ;; nop
 (dnf f-op-25-5       "op-25-5"              () 25 5) ;; sys, trap, *sync, sf*
@@ -33,7 +30,10 @@
 (dnf f-op-7-4        "op-7-4"               () 7 4)
 (dnf f-op-3-4        "op-3-4"               () 3 4)
 (dnf f-op-9-2        "op-9-2"               () 9 2) ;; alu ops upper opcode
+(dnf f-op-9-4        "op-9-4"               () 9 4) ;;
+(dnf f-op-7-8        "op-7-8"               () 7 8)
 (dnf f-op-7-2        "op-7-2"               () 7 2) ;; alu lower upper opc,shroti
+
 ; Reserved fields
 (dnf f-resv-25-26       "resv-25-26"              () 25 26)
 (dnf f-resv-25-10       "resv-25-10"              () 25 10)
@@ -41,37 +41,67 @@
 (dnf f-resv-20-5        "resv-20-5"               () 20 5)
 (dnf f-resv-20-4        "resv-20-4"               () 20 4)
 (dnf f-resv-15-8        "resv-15-8"               () 15 8)
+(dnf f-resv-15-6        "resv-15-6"               () 15 6)
 (dnf f-resv-10-11       "resv-10-11"              () 10 11)
-(dnf f-resv-10-7       "resv-10-7"              () 10 7)
+(dnf f-resv-10-7        "resv-10-7"               () 10 7)
 (dnf f-resv-10-3        "resv-10-3"               () 10 3)
 (dnf f-resv-5-2         "resv-5-2"                () 5 2)
 
-(dnf f-i16-1     "uimm16-1"            () 10 11)
-(dnf f-i16-2     "uimm16-2"            () 25  5)
+(dnf f-imm16-25-5       "imm16-25-5"              () 25  5)
+(dnf f-imm16-10-11      "imm16-10-11"             () 10 11)
 
 ; PC relative, 26-bit (2 shifted to right)
 (df f-disp26     "disp26"              (PCREL-ADDR) 25 26 INT
     ((value pc) (sra WI (sub WI value pc) (const 2)))
     ((value pc) (add WI (sll WI value (const 2)) pc)))
 
+; Immediates.
+(dnf f-uimm16    "uimm16"                ()         15 16)
+(df  f-simm16    "simm16"                (SIGN-OPT) 15 16 INT #f #f)
+(dnf f-uimm6     "uimm6"                 ()         5  6) ;; shroti
+
 (define-multi-ifield
-  (name f-i16nc)
-  (comment "16 bit signed")
-  (attrs SIGN-OPT)
-  (mode HI)
-  (subfields f-i16-1 f-i16-2)
+  (name f-uimm16-split)
+  (comment "16-bit split unsigned immediate")
+  (mode UINT)
+  (subfields f-imm16-25-5 f-imm16-10-11)
   (insert (sequence ()
-                    (set (ifield f-i16-2) (and (sra (ifield f-i16nc) 
-                                                    (const 11)) 
-                                               (const #x1f)))
-                    (set (ifield f-i16-1) (and (ifield f-i16nc) 
-                                               (const #x7ff)))))
+                    (set (ifield f-imm16-25-5)
+                         (and (srl (ifield f-uimm16-split)
+                                   (const 11))
+                              (const #x1f)))
+                    (set (ifield f-imm16-10-11)
+                         (and (ifield f-uimm16-split)
+                              (const #x7ff)))))
   (extract (sequence ()
-                     (set (ifield f-i16nc) (c-raw-call SI "@arch@_sign_extend_16bit" 
-                                           (or (sll (ifield f-i16-2) 
-                                                    (const 11))
-                                               (ifield f-i16-1))))))
-)
+                     (set (ifield f-uimm16-split)
+                          (zext UWI (trunc UHI
+                                         (or (sll (ifield f-imm16-25-5)
+                                                  (const 11))
+                                             (ifield f-imm16-10-11)))))))
+  )
+
+(define-multi-ifield
+  (name f-simm16-split)
+  (comment "16-bit split signed immediate")
+  (attrs SIGN-OPT)
+  (mode INT)
+  (subfields f-imm16-25-5 f-imm16-10-11)
+  (insert (sequence ()
+                    (set (ifield f-imm16-25-5)
+                         (and (sra (ifield f-simm16-split)
+                                   (const 11))
+                              (const #x1f)))
+                    (set (ifield f-imm16-10-11)
+                         (and (ifield f-simm16-split)
+                              (const #x7ff)))))
+  (extract (sequence ()
+                     (set (ifield f-simm16-split)
+                          (ext WI (trunc HI
+                                         (or (sll (ifield f-imm16-25-5)
+                                                  (const 11))
+                                             (ifield f-imm16-10-11)))))))
+  )
 
 
 ; Enums.
@@ -138,11 +168,21 @@
     )
 )
 
-(define-normal-insn-enum insn-opcode-movehimacrc 
+(define-normal-insn-enum insn-opcode-movehimacrc
   "movhi/macrc insn opcode enums" () 
   OPC_MOVHIMACRC_ f-op-16-1
-  ("MOVHI" "MACRC")
+  (("MOVHI" #x0)
+   ("MACRC" #x1)
+  )
 )
+
+(define-normal-insn-enum insn-opcode-mac
+  "multiply/accumulate insn opcode enums" ()
+  OPC_MAC_ f-op-3-4
+  (("MAC" #x1)
+   ("MSB" #x2)
+   )
+  )
 
 (define-normal-insn-enum insn-opcode-shorts 
   "shift/rotate insn opcode enums" () 
@@ -152,6 +192,24 @@
      ("SRA" #x2 )
      ("ROR" #x3 )
     )
+)
+
+(define-normal-insn-enum insn-opcode-extbhs
+  "extend byte/half opcode enums" ()
+  OPC_EXTBHS_ f-op-9-4
+  (("EXTHS" #x0)
+   ("EXTBS" #x1)
+   ("EXTHZ" #x2)
+   ("EXTBZ" #x3)
+   )
+)
+
+(define-normal-insn-enum insn-opcode-extws
+  "extend word opcode enums" ()
+  OPC_EXTWS_ f-op-9-4
+  (("EXTWS" #x0)
+   ("EXTWZ" #x1)
+   )
 )
 
 (define-normal-insn-enum insn-opcode-alu-regreg 
@@ -174,7 +232,7 @@
    ("FFL1"  #xF)
    )
 )
-   
+
 (define-normal-insn-enum insn-opcode-setflag
   "setflag insn opcode enums" () 
   OPC_SF_ f-op-25-5
@@ -194,44 +252,59 @@
 
 ; Instruction operands.
 
-(dnop spr     "special purpose register"   (SEM-ONLY)  h-spr  f-nil)
-(dnop cbit    "condition bit"              (SEM-ONLY)  h-cbit f-nil)
-(dnop simm-16 "16 bit signed immediate"    ()          h-sint f-simm16)
-(dnop uimm-16 "16 bit unsigned immediate"  ()          h-uint f-uimm16)
-(dnop disp-26 "pc-rel 26 bit"              ()          h-iaddr f-disp26)
-(dnop uimm-5  "imm5"                       ()          h-uint f-uimm5)
-(dnop uimm-6  "imm6"                       ()          h-uint f-uimm6)
+(dnop sys-sr       "supervision register"                  (SEM-ONLY) h-sys-sr       f-nil)
+(dnop sys-esr0     "exception supervision register 0"      (SEM-ONLY) h-sys-esr0     f-nil)
+(dnop sys-epcr0    "exception PC register 0"               (SEM-ONLY) h-sys-epcr0    f-nil)
 
-(dnop rD      "destination register"       ()          h-gr   f-r1)
-(dnop rA      "source register A"          ()          h-gr   f-r2)
-(dnop rB      "source register B"          ()          h-gr   f-r3)
+(dnop sys-sr-f     "SR flag bit"                           (SEM-ONLY) h-sys-sr-f     f-nil)
+(dnop sys-sr-cy    "SR carry bit"                          (SEM-ONLY) h-sys-sr-cy    f-nil)
+(dnop sys-sr-ov    "SR overflow bit"                       (SEM-ONLY) h-sys-sr-ov    f-nil)
+(dnop sys-fpcsr-rm "floating point round mode"             (SEM-ONLY) h-sys-fpcsr-rm f-nil)
 
+(dnop mac-machi    "MAC HI result register"                (SEM-ONLY) h-mac-machi    f-nil)
+(dnop mac-maclo    "MAC LO result register"                (SEM-ONLY) h-mac-maclo    f-nil)
 
-; For hi(foo).
+(dnop disp26       "pc-rel 26 bit"                         ()         h-iaddr        f-disp26)
+(dnop uimm6        "uimm6"                                 ()         h-uimm6        f-uimm6)
+
+(dnop rD           "destination register"                  ()         h-gr           f-r1)
+(dnop rA           "source register A"                     ()         h-gr           f-r2)
+(dnop rB           "source register B"                     ()         h-gr           f-r3)
+
 (define-operand
-  (name hi16) (comment "high 16 bit immediate, sign optional") 
+  (name simm16)
+  (comment "16-bit signed immediate")
   (attrs SIGN-OPT)
-  (type h-hi16)
+  (type h-simm16)
   (index f-simm16)
-  (handlers (parse "hi16"))
-)
-
-; For lo(foo)
-(define-operand
-  (name lo16) (comment "low 16 bit immediate, sign optional")
-  (attrs SIGN-OPT)
-  (type h-lo16)
-  (index f-lo16)
-  (handlers (parse "lo16"))
-)
+  (handlers (parse "simm16"))
+  )
 
 (define-operand
-  (name ui16nc)
-  (comment "16 bit immediate, sign optional")
+  (name uimm16)
+  (comment "16-bit unsigned immediate")
   (attrs)
-  (type h-lo16)
-  (index f-i16nc)
-  (handlers (parse "lo16"))
+  (type h-uimm16)
+  (index f-uimm16)
+  (handlers (parse "uimm16"))
+  )
+
+(define-operand
+  (name simm16-split)
+  (comment "split 16-bit signed immediate")
+  (attrs SIGN-OPT)
+  (type h-simm16)
+  (index f-simm16-split)
+  (handlers (parse "simm16"))
+)
+
+(define-operand
+  (name uimm16-split)
+  (comment "split 16-bit unsigned immediate")
+  (attrs)
+  (type h-uimm16)
+  (index f-uimm16-split)
+  (handlers (parse "uimm16"))
 )
 
 ; Instructions.
@@ -240,34 +313,34 @@
 
 (dni l-j "jump (pc-relative iaddr)"
      ; This function may not be in delay slot
-     (NOT-IN-DELAY-SLOT) 
+     ((MACH ORBIS32-MACHS) NOT-IN-DELAY-SLOT) 
 
-     "l.j ${disp-26}"
-     (+ OPC_J disp-26)
+     "l.j ${disp26}"
+     (+ OPC_J disp26)
 
      ; We execute the delay slot before doin' the real branch
-     (delay 1 (set pc disp-26))
+     (delay 1 (set pc disp26))
      ()
 )
 
 (dni l-jal "jump and link (pc-relative iaddr)"
      ; This function may not be in delay slot
-     (NOT-IN-DELAY-SLOT)
+     ((MACH ORBIS32-MACHS) NOT-IN-DELAY-SLOT)
 
-     "l.jal ${disp-26}"
-     (+ OPC_JAL disp-26)
+     "l.jal ${disp26}"
+     (+ OPC_JAL disp26)
 
      ; We execute the delay slot before doin' the real branch
      ; Set LR to (delay insn addr + 4)
      (sequence ()
                (set (reg h-gr 9) (add (reg h-delay-insn) 4))
-               (delay 1 (set pc disp-26)))
+               (delay 1 (set pc disp26)))
      ()
 )
 
 (dni l-jr "jump register (absolute iaddr)"
      ; This function may not be in delay slot
-     (NOT-IN-DELAY-SLOT)
+     ((MACH ORBIS32-MACHS) NOT-IN-DELAY-SLOT)
 
      "l.jr $rB"
      (+ OPC_JR (f-resv-25-10 0) rB (f-resv-10-11 0))
@@ -279,7 +352,7 @@
 
 (dni l-jalr "jump register and link (absolute iaddr)"
      ; This function may not be in delay slot
-     (NOT-IN-DELAY-SLOT)
+     ((MACH ORBIS32-MACHS) NOT-IN-DELAY-SLOT)
 
      "l.jalr $rB"
      (+ OPC_JALR (f-resv-25-10 0) rB (f-resv-10-11 0) )
@@ -298,15 +371,15 @@
 
 (dni l-bnf "branch if condition bit not set (pc relative iaddr)"
      ; This function may not be in delay slot
-     (NOT-IN-DELAY-SLOT)
+     ((MACH ORBIS32-MACHS) NOT-IN-DELAY-SLOT)
 
-     "l.bnf ${disp-26}"
-     (+ OPC_BNF disp-26)
+     "l.bnf ${disp26}"
+     (+ OPC_BNF disp26)
 
      ; We execute the delay slot before doin' the real branch
-     (if (eq cbit 0) 
-	 (delay 1 (set pc disp-26))
-	 (if (eq cbit 1)
+     (if (eq sys-sr-f 0) 
+	 (delay 1 (set pc disp26))
+	 (if (eq sys-sr-f 1)
 	     ; the delay slot is executed always, but when we're not branching
 	     ; the PC is not updated to skip it, so we execute it twice. To
 	     ; avoid that, we'll step over it here, but really it's executed
@@ -316,15 +389,15 @@
 
 (dni l-bf "branch if condition bit is set (pc relative iaddr)"
      ; This function may not be in delay slot
-     (NOT-IN-DELAY-SLOT)
+     ((MACH ORBIS32-MACHS) NOT-IN-DELAY-SLOT)
 
-     "l.bf ${disp-26}"
-     (+ OPC_BF disp-26)
+     "l.bf ${disp26}"
+     (+ OPC_BF disp26)
 
      ; We execute the delay slot before doin' the real branch
-     (if (eq cbit 1) 
-	 (delay 1 (set pc disp-26))
-	 (if (eq cbit 0)
+     (if (eq sys-sr-f 1) 
+	 (delay 1 (set pc disp26))
+	 (if (eq sys-sr-f 0)
 	     ; the delay slot is executed always, but when we're not branching
 	     ; the PC is not updated to skip it, so we execute it twice. To
 	     ; avoid that, we'll step over it here, but really it's executed
@@ -333,9 +406,9 @@
 )
 
 (dni l-trap "trap (exception)"
-     ()
-     "l.trap ${uimm-16}"
-     (+ OPC_SYSTRAPSYNCS OPC_SYSTRAPSYNCS_TRAP (f-resv-20-5 0) uimm-16)
+     ((MACH ORBIS32-MACHS))
+     "l.trap ${uimm16}"
+     (+ OPC_SYSTRAPSYNCS OPC_SYSTRAPSYNCS_TRAP (f-resv-20-5 0) uimm16)
      ; Do exception entry handling in C function, PC set based on SR state
      (set pc (c-call WI "@arch@_cpu_exception_entry" 14 pc ))
      ()
@@ -344,10 +417,10 @@
 
 (dni l-sys "syscall (exception)"
      ; This function may not be in delay slot
-     (NOT-IN-DELAY-SLOT)
+     ((MACH ORBIS32-MACHS) NOT-IN-DELAY-SLOT)
 
-     "l.sys ${uimm-16}"
-     (+ OPC_SYSTRAPSYNCS OPC_SYSTRAPSYNCS_SYSCALL (f-resv-20-5 0) uimm-16)
+     "l.sys ${uimm16}"
+     (+ OPC_SYSTRAPSYNCS OPC_SYSTRAPSYNCS_SYSCALL (f-resv-20-5 0) uimm16)
      ; Do exception entry handling in C function, PC set based on SR state
      (set pc (c-call WI "@arch@_cpu_exception_entry" #xC pc ))
 
@@ -357,17 +430,16 @@
 
 (dni l-rfe "return from exception"
      ; This function may not be in delay slot
-     (NOT-IN-DELAY-SLOT)
+     ((MACH ORBIS32-MACHS) NOT-IN-DELAY-SLOT)
 
      "l.rfe"
      (+ OPC_RFE (f-resv-25-26 0))
      (sequence ()
 	       ; Set SR to whatever is in ESR
-	       (c-call VOID "@cpu@_h_spr_set_handler" 17 
-		       (c-call SI "@cpu@_h_spr_get_handler" 48))
+               (set WI sys-sr sys-esr0)
 	       ; Set PC to whatever is in EPCR
-               (set pc (c-call SI "@cpu@_h_spr_get_handler" 32))
-     )
+               (set IAI pc sys-epcr0)
+               )
      ()
 )
 
@@ -375,114 +447,124 @@
 ; Misc instructions
 
 ; l.nop with immediate must be first so it handles all l.nops in sim
-(dni l-nop-imm "nop with immediate"
-     ()
-     "l.nop ${uimm-16}"
-     (+ OPC_NOP (f-op-25-2 #x1) (f-resv-23-8 0) uimm-16)
-     (c-call VOID "@cpu@_nop_handler" uimm-16 )
+(dni l-nop-imm "nop uimm16"
+     ((MACH ORBIS32-MACHS))
+     "l.nop ${uimm16}"
+     (+ OPC_NOP (f-op-25-2 #x1) (f-resv-23-8 0) uimm16)
+     (c-call VOID "@cpu@_nop_handler" uimm16 )
      ()
 )
 
-(dni l-nop "nop without immediate"
-     ()
+(dni l-nop "nop"
+     ((MACH ORBIS32-MACHS))
      "l.nop"
-     (+ OPC_NOP (f-op-25-2 #x1) (f-resv-23-8 0) uimm-16)
+     (+ OPC_NOP (f-op-25-2 #x1) (f-resv-23-8 0) uimm16)
      (nop)
      ()
 )
 
-(dni l-movhi "movhi"
-     ()
-     "l.movhi $rD,$hi16"
-     (+ OPC_MOVHIMACRC rD (f-resv-20-4 0) OPC_MOVHIMACRC_MOVHI hi16)
-     (set rD (sll WI hi16 (const 16)))
+(dni l-movhi "movhi reg/uimm16"
+     ((MACH ORBIS32-MACHS))
+     "l.movhi $rD,$uimm16"
+     (+ OPC_MOVHIMACRC rD (f-resv-20-4 0) OPC_MOVHIMACRC_MOVHI uimm16)
+     (set rD (sll WI uimm16 (const 16)))
      ()
 )
+
+(dni l-macrc "macrc reg"
+     ((MACH ORBIS32-MACHS))
+     "l.macrc $rD"
+     (+ OPC_MOVHIMACRC rD (f-resv-20-4 0) OPC_MOVHIMACRC_MACRC (f-uimm16 0))
+     (parallel ()
+               (set rD mac-maclo)
+               (set mac-maclo 0)
+               (set mac-machi 0)
+               )
+     ()
+     )
 
 
 ; System releated instructions
 
 (dni l-mfspr "mfspr"
-     ()
-     "l.mfspr $rD,$rA,${uimm-16}"
-     (+ OPC_MFSPR rD rA uimm-16)
-     (set rD (c-call SI "@cpu@_h_spr_get_handler" (or rA uimm-16)))
+     ((MACH ORBIS32-MACHS))
+     "l.mfspr $rD,$rA,${uimm16}"
+     (+ OPC_MFSPR rD rA uimm16)
+     (set rD (c-call WI "@cpu@_h_spr_get_handler" (or rA uimm16)))
      ()
 )
 
 (dni l-mtspr "mtspr"
-     ()
-     "l.mtspr $rA,$rB,${ui16nc}"
-     (+ OPC_MTSPR rA rB ui16nc )
-     (c-call VOID "@cpu@_h_spr_set_handler" (or rA ui16nc) rB)
+     ((MACH ORBIS32-MACHS))
+     "l.mtspr $rA,$rB,${uimm16-split}"
+     (+ OPC_MTSPR rA rB uimm16-split )
+     (c-call VOID "@cpu@_h_spr_set_handler" (or rA uimm16-split) rB)
      ()
 )
 
 
 ; Load instructions
 
-(dni l-lwz "load word (zero extend ignored)"
-     ()
-     "l.lwz $rD,${simm-16}($rA)"
-     (+ OPC_LWZ rD rA simm-16)
-     (set rD (mem SI (add rA simm-16)))
-     ()
-)
-
-
-(dni l-lws "load word (sign extend ignored)"
-     ()
-     "l.lws $rD,${simm-16}($rA)"
-     (+ OPC_LWS rD rA simm-16)
-     (set rD (mem SI (add rA simm-16)))
+(dni l-lwz "l.lwz reg/simm16(reg)"
+     ((MACH ORBIS32-MACHS))
+     "l.lwz $rD,${simm16}($rA)"
+     (+ OPC_LWZ rD rA simm16)
+     (set rD (zext WI (mem SI (add rA simm16))))
      ()
 )
 
-(dni l-lbz "load byte (zero extend)"
-     ()
-     "l.lbz $rD,${simm-16}($rA)"
-     (+ OPC_LBZ rD rA simm-16)
-     (set rD (zext SI (mem QI (add rA simm-16))))
+
+(dni l-lws "l.lws reg/simm16(reg)"
+     ((MACH ORBIS32-MACHS))
+     "l.lws $rD,${simm16}($rA)"
+     (+ OPC_LWS rD rA simm16)
+     (set rD (ext WI (mem SI (add rA simm16))))
      ()
 )
 
-(dni l-lbs "load byte (sign extend)"
-     ()
-     "l.lbs $rD,${simm-16}($rA)"
-     (+ OPC_LBS rD rA simm-16)
-     (set rD (ext SI (mem QI (add rA simm-16))))
-     ()
-)
-
-(dni l-lhz "load halfword (zero extend)"
-     ()
-     "l.lhz $rD,${simm-16}($rA)"
-     (+ OPC_LHZ rD simm-16 rA)
-     (set rD (zext SI (mem HI (add rA simm-16))))
+(dni l-lbz "l.lbz reg/simm16(reg)"
+     ((MACH ORBIS32-MACHS))
+     "l.lbz $rD,${simm16}($rA)"
+     (+ OPC_LBZ rD rA simm16)
+     (set rD (zext WI (mem QI (add rA simm16))))
      ()
 )
 
-(dni l-lhs "load halfword (sign extend)"
+(dni l-lbs "l.lbz reg/simm16(reg)"
+     ((MACH ORBIS32-MACHS))
+     "l.lbs $rD,${simm16}($rA)"
+     (+ OPC_LBS rD rA simm16)
+     (set rD (ext WI (mem QI (add rA simm16))))
      ()
-     "l.lhs $rD,${simm-16}($rA)"
-     (+ OPC_LHS rD rA simm-16)
-     (set rD (ext SI (mem HI (add rA simm-16))))
+)
+
+(dni l-lhz "l.lhz reg/simm16(reg)"
+     ((MACH ORBIS32-MACHS))
+     "l.lhz $rD,${simm16}($rA)"
+     (+ OPC_LHZ rD simm16 rA)
+     (set rD (zext WI (mem HI (add rA simm16))))
+     ()
+)
+
+(dni l-lhs "l.lhs reg/simm16(reg)"
+     ((MACH ORBIS32-MACHS))
+     "l.lhs $rD,${simm16}($rA)"
+     (+ OPC_LHS rD rA simm16)
+     (set rD (ext WI (mem HI (add rA simm16))))
      ()
 )
 
 
 ; Store instructions
-;
-; We have to use a multi field since the integer is splited over 2 fields
 
 (define-pmacro (store-insn mnemonic opc-op mode-op)
   (begin
      (dni (.sym l- mnemonic)
-          (.str "l." mnemonic " imm(reg)/reg")
-          ()
-          (.str "l." mnemonic " ${ui16nc}($rA),$rB")
-          (+ opc-op rB rD ui16nc)
-          (set (mem mode-op (add rA ui16nc)) rB)
+          (.str "l." mnemonic " simm16(reg)/reg")
+          ((MACH ORBIS32-MACHS))
+          (.str "l." mnemonic " ${simm16-split}($rA),$rB")
+          (+ opc-op rB rD simm16-split)
+          (set (mem mode-op (add rA simm16-split)) rB)
           ()
      )
    )
@@ -500,7 +582,7 @@
   (begin
      (dni (.sym l- mnemonic)
           (.str "l." mnemonic " reg/reg/reg")
-          ()
+          ((MACH ORBIS32-MACHS))
           (.str "l." mnemonic " $rD,$rA,$rB")
           (+ OPC_ALU rD rA rB (f-resv-10-3 0) opc-shrots-op (f-resv-5-2 0) 
 	     OPC_ALU_REGREG_SHROT )
@@ -508,11 +590,11 @@
           ()
      )
      (dni (.sym l- mnemonic "i")
-          (.str "l." mnemonic " reg/reg/imm")
-          ()
-          (.str "l." mnemonic "i $rD,$rA,${uimm-6}")
-          (+ OPC_SHROTI rD rA (f-resv-15-8 0) opc-shrots-op uimm-6)
-          (set rD (mnemonic rA uimm-6))
+          (.str "l." mnemonic " reg/reg/uimm6")
+          ((MACH ORBIS32-MACHS))
+          (.str "l." mnemonic "i $rD,$rA,${uimm6}")
+          (+ OPC_SHROTI rD rA (f-resv-15-8 0) opc-shrots-op uimm6)
+          (set rD (mnemonic rA uimm6))
           ()
      )
    )
@@ -531,7 +613,7 @@
   (begin
      (dni (.sym l- mnemonic)
           (.str "l." mnemonic " reg/reg/reg")
-          ()
+          ((MACH ORBIS32-MACHS))
           (.str "l." mnemonic " $rD,$rA,$rB")
           (+ OPC_ALU rD rA rB (f-resv-10-7 0) opc-alu)
           (set rD (mnemonic rA rB))
@@ -540,101 +622,228 @@
   )
 )
 
-(alu-insn add OPC_ALU_REGREG_ADD)
-(alu-insn sub OPC_ALU_REGREG_SUB)
+(dni (l-add) "l.add reg/reg/reg"
+          ((MACH ORBIS32-MACHS))
+          ("l.add $rD,$rA,$rB")
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x00) OPC_ALU_REGREG_ADD)
+          (parallel ()
+                    (set rD (add WI rA rB))
+                    (set sys-sr-ov (addc-oflag WI rA rB 0))
+                    (set sys-sr-cy (addc-cflag WI rA rB 0))
+                    )
+          ()
+)
+
+(dni (l-sub) "l.sub reg/reg/reg"
+          ((MACH ORBIS32-MACHS))
+          ("l.sub $rD,$rA,$rB")
+          (+ OPC_ALU rD rA rB (f-resv-10-7 #x00) OPC_ALU_REGREG_SUB)
+          (parallel ()
+                    (set rD (sub WI rA rB))
+                    (set sys-sr-ov (subc-oflag WI rA rB 0))
+                    (set sys-sr-cy (subc-cflag WI rA rB 0))
+                    )
+          ()
+)
+
 (alu-insn and OPC_ALU_REGREG_AND)
 (alu-insn or  OPC_ALU_REGREG_OR )
 (alu-insn xor OPC_ALU_REGREG_XOR)
 
 (dni (l-addc) "l.addc reg/reg/reg"
-          ()
+          ((MACH ORBIS32-MACHS))
           ("l.addc $rD,$rA,$rB")
           (+ OPC_ALU rD rA rB (f-resv-10-7 #x00) OPC_ALU_REGREG_ADDC)
-	  ;; TODO - fish out carry flag and add in here
-          (set rD (add rA rB))
+          (parallel ()
+                    (set rD (addc WI rA rB sys-sr-cy))
+                    (set sys-sr-ov (addc-oflag WI rA rB sys-sr-cy))
+                    (set sys-sr-cy (addc-cflag WI rA rB sys-sr-cy))
+                    )
           ()
 )
 
 (dni (l-mul) "l.mul reg/reg/reg"
-          ()
+          ((MACH ORBIS32-MACHS))
           ("l.mul $rD,$rA,$rB")
           (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MUL)
-          (set rD (mul DI (ext DI rA)  (ext DI rB)))
+          (sequence ()
+                    (set rD (mul WI rA rB))
+                    ; I'm assuming carry never is 1?  Not specified in or1k manual
+                    (set sys-sr-cy 0)
+                    ; dirty way to check for overflow
+                    (set sys-sr-ov (andif (ne rA 0) (ne (div WI rD rA) rB)))
+                    )
           ()
 )
 
 (dni (l-mulu) "l.mulu reg/reg/reg"
-          ()
+          ((MACH ORBIS32-MACHS))
           ("l.mulu $rD,$rA,$rB")
           (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_MULU)
-          (set rD (mul DI (zext DI rA)  (zext DI rB)))
+          (sequence ()
+                    (set rD (mul UWI rA rB))
+                    (set sys-sr-cy 0)
+                    (set sys-sr-ov (andif (ne rA 0) (ne (div UWI rD rA) rB)))
+                    )
           ()
 )
 
 (dni l-div "divide (signed)"
-          ()
+          ((MACH ORBIS32-MACHS))
           "l.div $rD,$rA,$rB"
           (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_DIV)
-          (set rD (div rA rB))
+          (if (ne rB 0)
+              (sequence ()
+                        (set rD (div WI rA rB))
+                        (set sys-sr-cy 0)
+                        (set sys-sr-ov 0)
+                        )
+              (sequence ()
+                        ; carry flag is set, but not sure what is written to rD
+                        ; (probably nothing)
+                        (set sys-sr-cy 1)
+                        )
+              )
           ()
 )
 
 (dni l-divu "divide (unsigned)"
-          ()
+          ((MACH ORBIS32-MACHS))
           "l.divu $rD,$rA,$rB"
           (+ OPC_ALU rD rA rB (f-resv-10-7 #x30) OPC_ALU_REGREG_DIVU)
-          (set rD (udiv rA rB))
+          (if (ne rB 0)
+              (sequence ()
+                        (set rD (div UWI rA rB))
+                        (set sys-sr-cy 0)
+                        (set sys-sr-ov 0)
+                        )
+              (sequence ()
+                        (set sys-sr-cy 1)
+                        )
+              )
           ()
 )
 
 (dni l-ff1 "find first '1'"
-          ()
+          ((MACH ORBIS32-MACHS))
           "l.ff1 $rD,$rA"
           (+ OPC_ALU rD rA rB (f-resv-10-7 #x00) OPC_ALU_REGREG_FFL1)
-          (set rD (c-call SI "@cpu@_h_ff1" rA))
+          (set rD (c-call WI "@cpu@_h_ff1" rA))
           ()
 )
 
 (dni l-fl1 "find last '1'"
-          ()
+          ((MACH ORBIS32-MACHS))
           "l.fl1 $rD,$rA"
           (+ OPC_ALU rD rA rB (f-resv-10-7 #x10) OPC_ALU_REGREG_FFL1)
-          (set rD (c-call SI "@cpu@_h_fl1" rA))
+          (set rD (c-call WI "@cpu@_h_fl1" rA))
           ()
 )
 
 
-(define-pmacro (alu-insn-imm  mnemonic insn-opc signop )
+(define-pmacro (alu-insn-simm  mnemonic insn-opc)
   (begin
       (dni (.sym l- mnemonic "i")
-          (.str "l." mnemonic " reg/reg/lo16")
-          ()
-          (.str "l." mnemonic "i $rD,$rA,$lo16")
-          (+ insn-opc rD rA lo16)
-          (set rD (mnemonic rA (signop SI (trunc HI lo16))))
+          (.str "l." mnemonic " reg/reg/simm16")
+          ((MACH ORBIS32-MACHS))
+          (.str "l." mnemonic "i $rD,$rA,$simm16")
+          (+ insn-opc rD rA simm16)
+          (set rD (mnemonic rA (ext WI (trunc HI simm16))))
           ()
      )
    )
 )
 
-(alu-insn-imm add OPC_ADDI ext )
-(alu-insn-imm and OPC_ANDI zext )
-(alu-insn-imm or  OPC_ORI  zext )
-(alu-insn-imm xor OPC_XORI ext )
-(alu-insn-imm mul OPC_MULI ext )
+(define-pmacro (alu-insn-uimm  mnemonic insn-opc)
+  (begin
+      (dni (.sym l- mnemonic "i")
+          (.str "l." mnemonic " reg/reg/uimm16")
+          ((MACH ORBIS32-MACHS))
+          (.str "l." mnemonic "i $rD,$rA,$uimm16")
+          (+ insn-opc rD rA uimm16)
+          (set rD (mnemonic rA (zext WI (trunc HI uimm16))))
+          ()
+     )
+   )
+)
 
-(dni ("l.addic")
-     ("l.addic reg/reg/lo16")
-     ()
-     ("l.addic $rD,$rA,$lo16")
-     (+ OPC_ADDIC rD rA lo16)
-     ;; TODO - get carry flag in on this
-     (set rD (add rA (ext SI (trunc HI lo16))))
+(alu-insn-uimm and OPC_ANDI )
+(alu-insn-uimm or  OPC_ORI  )
+(alu-insn-simm xor OPC_XORI )
+
+(dni (l-addi) "l.addi reg/reg/simm16"
+          ((MACH ORBIS32-MACHS))
+          ("l.addi $rD,$rA,$simm16")
+          (+ OPC_ADDI rD rA simm16)
+          (parallel ()
+                    (set rD (add WI rA (ext WI (trunc HI simm16))))
+                    (set sys-sr-ov (addc-oflag WI rA (ext WI (trunc HI simm16)) 0))
+                    (set sys-sr-cy (addc-cflag WI rA (ext WI (trunc HI simm16)) 0))
+                    )
+          ()
+)
+
+(dni (l-addic)
+     ("l.addic reg/reg/simm16")
+     ((MACH ORBIS32-MACHS))
+     ("l.addic $rD,$rA,$simm16")
+     (+ OPC_ADDIC rD rA simm16)
+     (parallel ()
+               (set rD (addc WI rA (ext WI (trunc HI simm16)) sys-sr-cy))
+               (set sys-sr-ov (add-oflag WI rA (ext WI (trunc HI simm16)) sys-sr-cy))
+               (set sys-sr-cy (add-cflag WI rA (ext WI (trunc HI simm16)) sys-sr-cy))
+               )
      ()
 )
 
-;; TODO: l.ext* , l.cust* , l.mac*
+(dni (l-muli)
+     "l.muli reg/reg/simm16"
+     ((MACH ORBIS32-MACHS))
+     ("l.muli $rD,$rA,$simm16")
+     (+ OPC_MULI rD rA simm16)
+     (sequence ()
+               (set rD (mul WI rA (ext WI (trunc HI simm16))))
+               (set sys-sr-cy 0)
+               (set sys-sr-ov (andif (ne rA 0) (ne (div WI rD rA) (ext WI (trunc HI simm16)))))
+               )
+     ()
+     )
 
+(define-pmacro (extbh-insn mnemonic insn-opc extop truncmode)
+  (begin
+    (dni (.sym l- mnemonic)
+         (.str "l." mnemonic " reg/reg")
+         ((MACH ORBIS32-MACHS))
+         (.str "l." mnemonic " $rD,$rA")
+         (+ OPC_ALU rD rA (f-resv-15-6 0) insn-opc (f-resv-5-2 0) OPC_ALU_REGREG_EXTBH)
+         (set rD (extop WI (trunc truncmode rA)))
+         ()
+         )
+    )
+  )
+
+(extbh-insn exths OPC_EXTBHS_EXTHS ext HI)
+(extbh-insn extbs OPC_EXTBHS_EXTBS ext QI)
+(extbh-insn exthz OPC_EXTBHS_EXTHZ zext HI)
+(extbh-insn extbz OPC_EXTBHS_EXTBZ zext QI)
+
+(define-pmacro (extw-insn mnemonic insn-opc extop truncmode)
+  (begin
+    (dni (.sym l- mnemonic)
+         (.str "l." mnemonic " reg/reg")
+         ((MACH ORBIS32-MACHS))
+         (.str "l." mnemonic " $rD,$rA")
+         (+ OPC_ALU rD rA (f-resv-15-6 0) insn-opc (f-resv-5-2 0) OPC_ALU_REGREG_EXTW)
+         (set rD (extop WI (trunc truncmode rA)))
+         ()
+         )
+    )
+  )
+
+(extw-insn extws OPC_EXTWS_EXTWS ext SI)
+(extw-insn extwz OPC_EXTWS_EXTWZ zext SI)
+
+;; TODO: l.cust* , l.mac*
 
 ; Compare instructions
 
@@ -643,10 +852,10 @@
   (begin
      (dni (.sym l- "sf" (.sym sem-op "s"))
           (.str "l.sf" (.str sem-op) "s reg/reg")
-          ()
+          ((MACH ORBIS32-MACHS))
           (.str "l.sf" (.str sem-op) "s $rA,$rB")
           (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
-          (set cbit (sem-op rA rB)) ;; TODO: ensure signed compare
+          (set sys-sr-f (sem-op WI rA rB))
           ()
      )
   )
@@ -657,10 +866,10 @@
   (begin
      (dni (.sym l- "sf" (.sym sem-op "u"))
           (.str "l." (.str sem-op) "u reg/reg")
-          ()
+          ((MACH ORBIS32-MACHS))
           (.str "l.sf" (.str sem-op) "u $rA,$rB")
           (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
-          (set cbit (sem-op rA rB)) ;; TODO: ensure unsigned compare
+          (set sys-sr-f (sem-op UWI rA rB))
           ()
      )
   )
@@ -670,47 +879,47 @@
 (define-pmacro (sf-insn-si opc-sf sem-op)
   (begin
      (dni (.sym l- "sf" (.sym sem-op "si"))
-          (.str "l." (.str sem-op) "si reg/imm")
-          ()
-          (.str "l.sf" (.str sem-op) "si $rA,${simm-16}")
-          (+ OPC_SFI opc-sf rA simm-16)
-          (set cbit (sem-op rA simm-16))
-          ()
-     )
-  )
-)
-
-; Immediate compare (both signed and unsigned)
-(define-pmacro (sf-insn-ui opc-sf sem-op)
-  (begin
-     (dni (.sym l- "sf" (.sym sem-op "ui"))
-          (.str "l." (.str sem-op) "ui reg/imm")
-          ()
-          (.str "l.sf" (.str sem-op) "ui $rA,$lo16")
-          (+ OPC_SFI opc-sf rA lo16)
-          (set cbit (sem-op rA (ext SI (trunc HI lo16))))
+          (.str "l." (.str sem-op) "si reg/simm16")
+          ((MACH ORBIS32-MACHS))
+          (.str "l.sf" (.str sem-op) "si $rA,${simm16}")
+          (+ OPC_SFI opc-sf rA simm16)
+          (set sys-sr-f (sem-op WI rA simm16))
           ()
      )
   )
 )
 
 ; Immediate compare unsigned
+(define-pmacro (sf-insn-ui opc-sf sem-op)
+  (begin
+     (dni (.sym l- "sf" (.sym sem-op "ui"))
+          (.str "l." (.str sem-op) "ui reg/uimm16")
+          ((MACH ORBIS32-MACHS))
+          (.str "l.sf" (.str sem-op) "ui $rA,$uimm16")
+          (+ OPC_SFI opc-sf rA uimm16)
+          (set sys-sr-f (sem-op UWI rA (ext WI (trunc HI uimm16))))
+          ()
+     )
+  )
+)
+
+; Equality Compare
 (define-pmacro (sf-insn opc-sf sem-op)
   (begin
      (dni (.sym l- "sf" sem-op)
           (.str "l." (.str sem-op) " reg/reg")
-          ()
+          ((MACH ORBIS32-MACHS))
           (.str "l.sf" (.str sem-op) " $rA,$rB")
           (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
-          (set cbit (sem-op rA rB))
+          (set sys-sr-f (sem-op UWI rA rB))
           ()
      )
      (dni (.sym l- "sf" (.sym sem-op "i"))
-          (.str "l.sf" (.str sem-op) "i reg/imm")
-          ()
-          (.str "l.sf" (.str sem-op) "i $rA,$lo16")
-          (+ OPC_SFI opc-sf rA lo16)
-          (set cbit (sem-op rA (ext SI (trunc HI lo16)))) ;; TODO: ensure rA interpreted w/ sign.
+          (.str "l.sf" (.str sem-op) "i reg/simm16")
+          ((MACH ORBIS32-MACHS))
+          (.str "l.sf" (.str sem-op) "i $rA,$simm16")
+          (+ OPC_SFI opc-sf rA simm16)
+          (set sys-sr-f (sem-op UWI rA (ext WI (trunc HI simm16))))
           ()
      )
    )
@@ -739,3 +948,39 @@
 
 (sf-insn    OPC_SF_EQ  eq)
 (sf-insn    OPC_SF_NEQ ne)
+
+(dni l-mac
+     "l.mac reg/reg"
+     ((MACH ORBIS32-MACHS))
+     "l.mac $rA,$rB"
+     (+  OPC_MAC (f-op-25-5 0) rA rB (f-resv-10-7 0) OPC_MAC_MAC)
+     (sequence ((WI prod))
+               (set WI prod (mul WI rA rB))
+               (set DI (join DI SI mac-machi mac-maclo) (add (join DI SI mac-machi mac-maclo) (ext DI prod)))
+               )
+     ()
+     )
+
+(dni l-msb
+     "l.msb reg/reg"
+     ((MACH ORBIS32-MACHS))
+     "l.msb $rA,$rB"
+     (+  OPC_MAC (f-op-25-5 0) rA rB (f-resv-10-7 0) OPC_MAC_MSB)
+     (sequence ((WI prod))
+               (set WI prod (mul WI rA rB))
+               (set DI (join DI SI mac-machi mac-maclo) (sub (join DI SI mac-machi mac-maclo) (ext DI prod)))
+               )
+     ()
+     )
+
+(dni l-maci
+     "l.maci reg/simm16"
+     ((MACH ORBIS32-MACHS))
+     "l.maci $rA,${simm16}"
+     (+ OPC_MACI (f-resv-20-5 0) rA simm16)
+     (sequence ((WI prod))
+               (set WI prod (mul WI (ext WI simm16-split) rA))
+               (set DI (join DI SI mac-machi mac-maclo) (add (join DI SI mac-machi mac-maclo) (ext DI prod)))
+               )
+     ()
+     )

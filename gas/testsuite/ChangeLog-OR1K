@@ -1,3 +1,9 @@
+2012-02-18  Peter Gavin  <pgavin@gmail.com>
+
+	* gas/testsuite/gas/or1k/allinsn.s: add testcase for 65536 as
+          an immediate
+	* gas/testsuite/gas/or1k/allinsn.d: fix to match actual output
+
 2012-02-13  Peter Gavin  <pgavin@gmail.com>
 
 	* gas/all/gas.exp: openrisc passes the test now

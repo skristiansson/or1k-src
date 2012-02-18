@@ -36,7 +36,7 @@ static reloc_howto_type or1k_elf_howto_table[] =
 	 32,			/* bitsize */
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
+	 complain_overflow_dont, /* complain_on_overflow */
 	 bfd_elf_generic_reloc,	/* special_function */
 	 "R_OR1K_NONE",		/* name */
 	 FALSE,			/* partial_inplace */
@@ -50,58 +50,42 @@ static reloc_howto_type or1k_elf_howto_table[] =
 	 32,			/* bitsize */
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
+	 complain_overflow_unsigned, /* complain_on_overflow */
 	 bfd_elf_generic_reloc,	/* special_function */
 	 "R_OR1K_32",		/* name */
 	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
+	 0,			/* src_mask */
 	 0xffffffff,		/* dst_mask */
 	 FALSE),		/* pcrel_offset */
   
-  HOWTO (R_OR1K_32_PCREL,
+  HOWTO (R_OR1K_16,
 	 0,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 32,			/* bitsize */
-	 TRUE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_bitfield, /* complain_on_overflow */
-	 bfd_elf_generic_reloc,	/* special_function */
-	 "R_OR1K_32_PCREL",	/* name */
-	 FALSE,			/* partial_inplace */
-	 0xffffffff,		/* src_mask */
-	 0xffffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-  
-  /* A PC relative 26 bit relocation, right shifted by 2.  */
-  HOWTO (R_OR1K_INSN_REL_26, /* type */
-	 2,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 26,			/* bitsize */
-	 TRUE,			/* pc_relative */
-	 0,			/* bitpos */
-	 complain_overflow_signed, /* complain_on_overflow */
-	 bfd_elf_generic_reloc,	/* special_function */
-	 "R_OR1K_INSN_REL_26", /* name */
-	 FALSE,			/* partial_inplace */
-	 0x00000000,		/* src_mask */
-	 0x03ffffff,		/* dst_mask */
-	 FALSE),		/* pcrel_offset */
-
-  /* A absolute 26 bit relocation, right shifted by 2.  */
-  HOWTO (R_OR1K_INSN_ABS_26, /* type */
-	 2,			/* rightshift */
-	 2,			/* size (0 = byte, 1 = short, 2 = long) */
-	 26,			/* bitsize */
+	 1,			/* size (0 = byte, 1 = short, 2 = long) */
+	 16,			/* bitsize */
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
-	 complain_overflow_signed, /* complain_on_overflow */
+	 complain_overflow_unsigned, /* complain_on_overflow */
 	 bfd_elf_generic_reloc,	/* special_function */
-	 "R_OR1K_INSN_ABS_26", /* name */
+	 "R_OR1K_16",		/* name */
 	 FALSE,			/* partial_inplace */
-	 0x00000000,		/* src_mask */
-	 0x03ffffff,		/* dst_mask */
+	 0,			/* src_mask */
+	 0xffff,		/* dst_mask */
 	 FALSE),		/* pcrel_offset */
-
+  
+  HOWTO (R_OR1K_8,
+	 0,			/* rightshift */
+	 0,			/* size (0 = byte, 1 = short, 2 = long) */
+	 8,			/* bitsize */
+	 FALSE,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_unsigned, /* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 "R_OR1K_8",		/* name */
+	 FALSE,			/* partial_inplace */
+	 0,			/* src_mask */
+	 0xff,			/* dst_mask */
+	 FALSE),		/* pcrel_offset */
+  
   HOWTO (R_OR1K_LO_16_IN_INSN, /* type */
 	 0,			/* rightshift */
 	 2,			/* size (0 = byte, 1 = short, 2 = long) */
@@ -122,13 +106,28 @@ static reloc_howto_type or1k_elf_howto_table[] =
 	 16,			/* bitsize */
 	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
-	 complain_overflow_dont,	/* complain_on_overflow */
+	 complain_overflow_dont, /* complain_on_overflow */
 	 bfd_elf_generic_reloc,	/* special_function */
-	 "R_OR1K_HI_16_IN_INSN",	/* name */
+	 "R_OR1K_HI_16_IN_INSN", /* name */
 	 FALSE,			/* partial_inplace */
 	 0,			/* src_mask */
 	 0x0000ffff,		/* dst_mask */
 	 FALSE),		/* pcrel_offset */
+  
+  /* A PC relative 26 bit relocation, right shifted by 2.  */
+  HOWTO (R_OR1K_INSN_REL_26, /* type */
+	 2,			/* rightshift */
+	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 26,			/* bitsize */
+	 TRUE,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_signed, /* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 "R_OR1K_INSN_REL_26", /* name */
+	 FALSE,			/* partial_inplace */
+	 0,			/* src_mask */
+	 0x03ffffff,		/* dst_mask */
+	 TRUE),			/* pcrel_offset */
 
   /* GNU extension to record C++ vtable hierarchy.  */
   HOWTO (R_OR1K_GNU_VTINHERIT, /* type */
@@ -159,6 +158,49 @@ static reloc_howto_type or1k_elf_howto_table[] =
 	 0,			/* src_mask */
 	 0,			/* dst_mask */
 	 FALSE),		/* pcrel_offset */
+
+  HOWTO (R_OR1K_32_PCREL,
+	 0,			/* rightshift */
+	 2,			/* size (0 = byte, 1 = short, 2 = long) */
+	 32,			/* bitsize */
+	 TRUE,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_signed, /* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 "R_OR1K_32_PCREL",	/* name */
+	 FALSE,			/* partial_inplace */
+	 0,			/* src_mask */
+	 0xffffffff,		/* dst_mask */
+	 FALSE),		/* pcrel_offset */
+
+  HOWTO (R_OR1K_16_PCREL,
+	 0,			/* rightshift */
+	 1,			/* size (0 = byte, 1 = short, 2 = long) */
+	 16,			/* bitsize */
+	 TRUE,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_signed, /* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 "R_OR1K_16_PCREL",	/* name */
+	 FALSE,			/* partial_inplace */
+	 0,			/* src_mask */
+	 0xffff,		/* dst_mask */
+	 FALSE),		/* pcrel_offset */
+  
+  HOWTO (R_OR1K_8_PCREL,
+	 0,			/* rightshift */
+	 0,			/* size (0 = byte, 1 = short, 2 = long) */
+	 8,			/* bitsize */
+	 TRUE,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_signed, /* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 "R_OR1K_8_PCREL",	/* name */
+	 FALSE,			/* partial_inplace */
+	 0,			/* src_mask */
+	 0xff,			/* dst_mask */
+	 FALSE),		/* pcrel_offset */
+  
 };
 
 /* Map BFD reloc types to Or1k ELF reloc types.  */
@@ -173,13 +215,16 @@ static const struct or1k_reloc_map or1k_reloc_map[] =
 {
   { BFD_RELOC_NONE, 		R_OR1K_NONE },
   { BFD_RELOC_32, 		R_OR1K_32 },
-  { BFD_RELOC_32_PCREL,		R_OR1K_32_PCREL },
-  { BFD_RELOC_OR1K_REL_26,	R_OR1K_INSN_REL_26 },
-  { BFD_RELOC_OR1K_ABS_26,	R_OR1K_INSN_ABS_26 },
-  { BFD_RELOC_HI16, 		R_OR1K_HI_16_IN_INSN },
+  { BFD_RELOC_16, 		R_OR1K_16 },
+  { BFD_RELOC_8, 		R_OR1K_8 },
   { BFD_RELOC_LO16, 		R_OR1K_LO_16_IN_INSN },
+  { BFD_RELOC_HI16, 		R_OR1K_HI_16_IN_INSN },
+  { BFD_RELOC_OR1K_REL_26,	R_OR1K_INSN_REL_26 },
+  { BFD_RELOC_VTABLE_ENTRY, 	R_OR1K_GNU_VTENTRY },
   { BFD_RELOC_VTABLE_INHERIT,	R_OR1K_GNU_VTINHERIT },
-  { BFD_RELOC_VTABLE_ENTRY, 	R_OR1K_GNU_VTENTRY }
+  { BFD_RELOC_32_PCREL,		R_OR1K_32_PCREL },
+  { BFD_RELOC_16_PCREL,		R_OR1K_16_PCREL },
+  { BFD_RELOC_8_PCREL,		R_OR1K_8_PCREL },
 };
 
 static reloc_howto_type *
@@ -225,37 +270,6 @@ or1k_info_to_howto_rela (bfd * abfd ATTRIBUTE_UNUSED,
   r_type = ELF32_R_TYPE (dst->r_info);
   BFD_ASSERT (r_type < (unsigned int) R_OR1K_max);
   cache_ptr->howto = & or1k_elf_howto_table[r_type];
-}
-
-/* Perform a single relocation.  By default we use the standard BFD
-   routines, but a few relocs, we have to do them ourselves.  */
-
-static bfd_reloc_status_type
-or1k_final_link_relocate (reloc_howto_type *howto,
-			      bfd *input_bfd,
-			      asection *input_section,
-			      bfd_byte *contents,
-			      Elf_Internal_Rela *rel,
-			      bfd_vma relocation)
-{
-  bfd_reloc_status_type r = bfd_reloc_ok;
-
-  switch (howto->type)
-    {
-    case R_OR1K_LO_16_IN_INSN:
-      relocation &= 0xffff;
-      r = _bfd_final_link_relocate (howto, input_bfd, input_section,
-				    contents, rel->r_offset,
-				    relocation, rel->r_addend);
-      break;
-
-    default:
-      r = _bfd_final_link_relocate (howto, input_bfd, input_section,
-				    contents, rel->r_offset,
-				    relocation, rel->r_addend);
-    }
-
-  return r;
 }
 
 /* Relocate an Or1k ELF section.
@@ -326,15 +340,17 @@ or1k_elf_relocate_section (bfd *output_bfd,
 	  || r_type == R_OR1K_GNU_VTENTRY)
 	continue;
 
-      if ((unsigned int) r_type >
-	  (sizeof or1k_elf_howto_table / sizeof (reloc_howto_type)))
-	abort ();
+      if (r_type < 0 || r_type >= (int) R_OR1K_max)
+        {
+          bfd_set_error (bfd_error_bad_value);
+          return FALSE;
+        }
 
       howto = or1k_elf_howto_table + ELF32_R_TYPE (rel->r_info);
       h = NULL;
       sym = NULL;
       sec = NULL;
-
+      
       if (r_symndx < symtab_hdr->sh_info)
 	{
 	  sym = local_syms + r_symndx;
@@ -362,8 +378,8 @@ or1k_elf_relocate_section (bfd *output_bfd,
       if (info->relocatable)
 	continue;
 
-      r = or1k_final_link_relocate (howto, input_bfd, input_section,
-					contents, rel, relocation);
+      r = _bfd_final_link_relocate (howto, input_bfd, input_section, contents,
+                                    rel->r_offset, relocation, rel->r_addend);
 
       if (r != bfd_reloc_ok)
 	{
@@ -524,7 +540,7 @@ or1k_elf_final_write_processing (bfd *abfd,
 
 #define ELF_ARCH			bfd_arch_or1k
 #define ELF_MACHINE_CODE		EM_OR1K
-#define ELF_MAXPAGESIZE			0x1000
+#define ELF_MAXPAGESIZE			0x2000
 
 #define TARGET_BIG_SYM			bfd_elf32_or1k_vec
 #define TARGET_BIG_NAME			"elf32-or1k"

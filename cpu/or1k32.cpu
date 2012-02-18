@@ -27,19 +27,188 @@
 ;; Perhaps specify each of the important bits of the SPRs with a layout..?
 (define-hardware
   (name h-spr) (comment "special purpose registers")
-  (type register WI (#x20000))    
-  (get (index) (c-call SI "@cpu@_h_spr_get_handler" index))
+  (type register WI (#x20000))
+  (get (index) (c-call WI "@cpu@_h_spr_get_handler" index))
   (set (index newval) (c-call VOID "@cpu@_h_spr_set_handler" index newval))
 )
 
-(define-pmacro (spr-npc)  (reg h-spr   16))
-(define-pmacro (spr-sr)  (reg h-spr   17))
-(define-pmacro (spr-ppc)  (reg h-spr   18))
+(define-pmacro (spr-address spr-group spr-index)
+  (or UINT (sll UINT (enum UINT spr-group) 11) (enum UINT spr-index))
+  )
+
+(define-pmacro (h-spr-reg spr-name spr-comment spr-group spr-index)
+  (begin
+    (define-hardware
+      (name spr-name)
+      (comment spr-comment)
+      (type register WI)
+      (get ()       (reg WI h-spr (spr-address spr-group spr-index)))
+      (set (newval) (set (reg WI h-spr (spr-address spr-group spr-index)) newval))
+      )
+    )
+  )
+
+(define-pmacro (h-spr-field spr-field-name spr-field-comment spr-group spr-index spr-field-start spr-field-length)
+  (begin
+    (define-hardware
+      (name spr-field-name)
+      (comment spr-field-comment)
+      (attrs)
+      (type register (UINT spr-field-length))
+      (get () (c-call WI "@cpu@_h_spr_field_get_handler" (spr-address spr-group spr-index) (enum UINT spr-field-start) (enum UINT spr-field-length)))
+      (set (value) (c-call WI "@cpu@_h_field_bit_set_handler" (spr-address spr-group spr-index) (enum UINT spr-field-start) (enum UINT spr-field-length)))
+      )
+    )
+  )
+
+(define-normal-enum
+  spr-groups
+  "special purpose register groups"
+  ()
+  SPR-GROUP-
+  (("SYS"          #x0)
+   ("DMMU"         #x1)
+   ("IMMU"         #x2)
+   ("DCACHE"       #x3)
+   ("ICACHE"       #x4)
+   ("MAC"          #x5)
+   ("DEBUG"        #x6)
+   ("PERF"         #x7)
+   ("POWER"        #x8)
+   ("PIC"          #x9)
+   ("TICK"         #xa)
+   ("FPU"          #xb)
+   )
+  )
+
+(define-normal-enum
+  spr-sys-indices
+  "SYS SPR register indices"
+  ()
+  SPR-INDEX-SYS-
+  (("VR"       #x000)
+   ("UPR"      #x001)
+   ("CPUCFGR"  #x002)
+   ("DMMUCFGR" #x003)
+   ("IMMUCFGR" #x004)
+   ("DCCFGR"   #x005)
+   ("ICCFGR"   #x006)
+   ("DCFGR"    #x007)
+   ("PCCFGR"   #x008)
+   ("NPC"      #x010)
+   ("SR"       #x011)
+   ("PPC"      #x012)
+   ("FPCSR"    #x014)
+   ("EPCR0"    #x020)
+   ("EPCR1"    #x021)
+   ("EPCR2"    #x022)
+   ("EPCR3"    #x023)
+   ("EPCR4"    #x024)
+   ("EPCR5"    #x025)
+   ("EPCR6"    #x026)
+   ("EPCR7"    #x027)
+   ("EPCR8"    #x028)
+   ("EPCR9"    #x029)
+   ("EPCR10"   #x02a)
+   ("EPCR11"   #x02b)
+   ("EPCR12"   #x02c)
+   ("EPCR13"   #x02d)
+   ("EPCR14"   #x02e)
+   ("EPCR15"   #x02f)
+   ("EEAR0"    #x030)
+   ("EEAR1"    #x031)
+   ("EEAR2"    #x032)
+   ("EEAR3"    #x033)
+   ("EEAR4"    #x034)
+   ("EEAR5"    #x035)
+   ("EEAR6"    #x036)
+   ("EEAR7"    #x037)
+   ("EEAR8"    #x038)
+   ("EEAR9"    #x039)
+   ("EEAR10"   #x03a)
+   ("EEAR11"   #x03b)
+   ("EEAR12"   #x03c)
+   ("EEAR13"   #x03d)
+   ("EEAR14"   #x03e)
+   ("EEAR15"   #x03f)
+   ("ESR0"     #x040)
+   ("ESR1"     #x041)
+   ("ESR2"     #x042)
+   ("ESR3"     #x043)
+   ("ESR4"     #x044)
+   ("ESR5"     #x045)
+   ("ESR6"     #x046)
+   ("ESR7"     #x047)
+   ("ESR8"     #x048)
+   ("ESR9"     #x049)
+   ("ESR10"    #x04a)
+   ("ESR11"    #x04b)
+   ("ESR12"    #x04c)
+   ("ESR13"    #x04d)
+   ("ESR14"    #x04e)
+   ("ESR15"    #x04f)
+   )
+  )
+
+(define-normal-enum
+  spr-mac-indices
+  "SYS MAC register indices"
+  ()
+  SPR-INDEX-MAC-
+  (("MACLO"    #x001)
+   ("MACHI"    #x002)
+   )
+)
+
+(define-normal-enum
+  spr-field-starts-sys-fpcsr
+  "SYS FPCSR register field starts"
+  ()
+  SPR-FIELD-START-SYS-FPCSR-
+  (("FPEE"  #x000)
+   ("RM"    #x002)
+   ("OVF"   #x003)
+   ("UNF"   #x004)
+   ("SNF"   #x005)
+   ("QNF"   #x006)
+   ("ZF"    #x007)
+   ("IXF"   #x008)
+   ("IVF"   #x009)
+   ("INF"   #x00a)
+   ("DZF"   #x00b)
+   )
+  )
+
+(define-normal-enum
+  spr-field-lengths-fpcsr
+  "SYS FPCSR register field lengths"
+  ()
+  SPR-FIELD-LENGTH-SYS-FPCSR-
+  (("FPEE"  1)
+   ("RM"    2)
+   ("OVF"   1)
+   ("UNF"   1)
+   ("SNF"   1)
+   ("QNF"   1)
+   ("ZF"    1)
+   ("IXF"   1)
+   ("IVF"   1)
+   ("INF"   1)
+   ("DZF"   1)
+   )
+  )
 
 
+(h-spr-reg h-sys-sr    "supervision register"                 SPR-GROUP-SYS SPR-INDEX-SYS-SR)
+(h-spr-reg h-sys-esr0  "exception supervision register 0"     SPR-GROUP-SYS SPR-INDEX-SYS-ESR0)
+(h-spr-reg h-sys-epcr0 "exception PC register 0"              SPR-GROUP-SYS SPR-INDEX-SYS-EPCR0)
+(h-spr-reg h-mac-maclo "MAC lo register"                      SPR-GROUP-MAC SPR-INDEX-MAC-MACLO)
+(h-spr-reg h-mac-machi "MAC hi register"                      SPR-GROUP-MAC SPR-INDEX-MAC-MACHI)
 
-(dnh h-hi16 "high 16 bits" () (immediate (INT 16)) () () ())
-(dnh h-lo16 "low 16 bits"  () (immediate (INT 16)) () () ())
+(h-spr-field h-sys-sr-f  "SR flag bit"                        SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x09 1)
+(h-spr-field h-sys-sr-cy "SR carry bit"                       SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x0a 1)
+(h-spr-field h-sys-sr-ov "SR overflow bit"                    SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x0b 1)
 
-(dsh h-cbit "condition bit" () (register BI))
+(h-spr-field h-sys-fpcsr-rm "floating point round mode bit 0" SPR-GROUP-SYS SPR-INDEX-SYS-FPCSR #x02 2)
+
 (dsh h-delay-insn "delay insn addr" () (register SI))

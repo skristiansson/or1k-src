@@ -544,7 +544,6 @@ guess_is_rela (unsigned int e_machine)
     case EM_MIPS:
     case EM_MIPS_RS3_LE:
     case EM_CYGNUS_M32R:
-    case EM_OR1K:
     case EM_SCORE:
       return FALSE;
 
@@ -589,6 +588,7 @@ guess_is_rela (unsigned int e_machine)
     case EM_MSP430_OLD:
     case EM_MT:
     case EM_NIOS32:
+    case EM_OR1K:
     case EM_PPC64:
     case EM_PPC:
     case EM_RL78:
@@ -9919,6 +9919,8 @@ is_32bit_pcrel_reloc (unsigned int reloc_type)
       return reloc_type == 3;  /* R_ARM_REL32 */
     case EM_MICROBLAZE:
       return reloc_type == 2;  /* R_MICROBLAZE_32_PCREL.  */
+    case EM_OR1K:
+      return reloc_type == 9; /* R_OR1K_32_PCREL.  */
     case EM_PARISC:
       return reloc_type == 9;  /* R_PARISC_PCREL32.  */
     case EM_PPC:
@@ -10072,6 +10074,8 @@ is_16bit_abs_reloc (unsigned int reloc_type)
     case EM_MSP430_OLD:
     case EM_MSP430:
       return reloc_type == 5; /* R_MSP430_16_BYTE.  */
+    case EM_OR1K:
+      return reloc_type == 2; /* R_OR1K_16.  */
     case EM_ALTERA_NIOS2:
     case EM_NIOS32:
       return reloc_type == 9; /* R_NIOS_16.  */
@@ -10124,6 +10128,7 @@ is_none_reloc (unsigned int reloc_type)
     case EM_TILEPRO: /* R_TILEPRO_NONE.  */
     case EM_XC16X:
     case EM_C166:    /* R_XC16X_NONE.  */
+    case EM_OR1K:    /* R_OR1K_NONE. */
       return reloc_type == 0;
     case EM_XTENSA_OLD:
     case EM_XTENSA:

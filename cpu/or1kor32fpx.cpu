@@ -1,0 +1,176 @@
+; OpenRISC 1000 architecture.  -*- Scheme -*-
+; Copyright 2000, 2001, 2011 Free Software Foundation, Inc.
+; Contributed by Peter Gavin, pgavin@gmail.com
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 2 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program; if not, write to the Free Software
+; Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, 
+; MA 02110-1301, USA.
+
+; Initial OR32FPX instruction set
+
+; I'm not sure how CGEN handles rounding in FP operations, except for
+; in conversions to/from integers.  So lf.add, lf.sub, lf.mul, and
+; lf.div do not round according to the FPCSR RM field.
+; NaN, overflow, and underflow are not yet handled either.
+
+(define-normal-insn-enum insn-opcode-float-regreg
+  "floating point reg/reg insn opcode enums" ()
+  OPC_FLOAT_REGREG_ f-op-7-8
+  (("ADD_S"  #x00)
+   ("SUB_S"  #x01)
+   ("MUL_S"  #x02)
+   ("DIV_S"  #x03)
+   ("ITOF_S" #x04)
+   ("FTOI_S" #x05)
+   ("REM_S"  #x06)
+   ("MADD_S" #x07)
+   ("SFEQ_S" #x08)
+   ("SFNE_S" #x09)
+   ("SFGT_S" #x0a)
+   ("SFGE_S" #x0b)
+   ("SFLT_S" #x0c)
+   ("SFLE_S" #x0d)
+   ("ADD_D"  #x10)
+   ("SUB_D"  #x11)
+   ("MUL_D"  #x12)
+   ("DIV_D"  #x13)
+   ("ITOF_D" #x14)
+   ("FTOI_D" #x15)
+   ("REM_D"  #x16)
+   ("MADD_D" #x17)
+   ("SFEQ_D" #x18)
+   ("SFNE_D" #x19)
+   ("SFGT_D" #x1a)
+   ("SFGE_D" #x1b)
+   ("SFLT_D" #x1c)
+   ("SFLE_D" #x1d)
+   )
+  )
+
+(define-full-operand
+  rDSF
+  "destination register (single floating point mode)"
+  ()
+  h-gr
+  SF
+  f-r1
+  ()
+  ()
+  ()
+  )
+(define-full-operand
+  rASF
+  "source register A (single floating point mode)"
+  ()
+  h-gr
+  SF
+  f-r2
+  ()
+  ()
+  ()
+  )
+(define-full-operand
+  rBSF
+  "source register B (single floating point mode)"
+  ()
+  h-gr
+  SF
+  f-r3
+  ()
+  ()
+  ()
+  )
+  
+(define-pmacro (float-single-regreg-insn mnemonic)
+  (begin
+    (dni (.sym lf- mnemonic -s)
+         (.str "lf." mnemonic ".s reg/reg/reg")
+         ((MACH OR32FPX-MACHS))
+         (.str "lf." mnemonic ".s $rDSF,$rASF,$rBSF")
+         (+ OPC_FLOAT rDSF rASF rBSF (f-resv-10-3 0) (.sym OPC_FLOAT_REGREG_ (.upcase mnemonic) _S))
+         (set SF rDSF (mnemonic SF rASF rBSF))
+         ()
+         )
+    )
+  )
+
+(float-single-regreg-insn add)
+(float-single-regreg-insn sub)
+(float-single-regreg-insn mul)
+(float-single-regreg-insn div)
+
+(dni lf-rem-s
+     "lf.rem.s reg/reg/reg"
+     ((MACH OR32FPX-MACHS))
+     "lf.rem.s $rDSF,$rASF,$rBSF"
+     (+ OPC_FLOAT rDSF rASF rBSF (f-resv-10-3 0) OPC_FLOAT_REGREG_REM_S)
+     (set SF rDSF (mod SF rASF rBSF))
+     ()
+     )
+
+(define-pmacro (get-rounding-mode)
+  (case INT sys-fpcsr-rm
+        ((0) 1) ; TIES-TO-EVEN -- I'm assuming this is what is meant by "round to nearest"
+        ((1) 3) ; TOWARD-ZERO
+        ((2) 4) ; TOWARD-POSITIVE
+        ((3) 5) ; TOWARD-NEGATIVE
+        )
+  )
+
+(dni lf-itof-s
+     "lf.itof.s reg/reg"
+     ((MACH OR32FPX-MACHS))
+     "lf.itof.s $rDSF,$rA"
+     (+ OPC_FLOAT rDSF rA (f-r3 0) (f-resv-10-3 0) OPC_FLOAT_REGREG_ITOF_S)
+     (set SF rDSF (float SF (get-rounding-mode) rA))
+     ()
+     )
+
+(dni lf-ftoi-s
+     "lf.ftoi.s reg/reg"
+     ((MACH OR32FPX-MACHS))
+     "lf.ftoi.s $rD,$rASF"
+     (+ OPC_FLOAT rD rASF (f-r3 0) (f-resv-10-3 0) OPC_FLOAT_REGREG_FTOI_S)
+     (set WI rD (fix WI (get-rounding-mode) rASF))
+     ()
+     )
+
+(define-pmacro (float-single-setflag-insn mnemonic)
+  (begin
+    (dni (.sym lf- mnemonic -s)
+         (.str "lf.sf" mnemonic ".s reg/reg")
+         ((MACH OR32FPX-MACHS))
+         (.str "lf.sf" mnemonic ".s $rASF,$rBSF")
+         (+ OPC_FLOAT (f-r1 0) rASF rBSF (f-resv-10-3 0) (.sym OPC_FLOAT_REGREG_SF (.upcase mnemonic) _S))
+         (set BI sys-sr-f (mnemonic SF rASF rBSF))
+         ()
+         )
+    )
+  )
+
+(float-single-setflag-insn eq)
+(float-single-setflag-insn ne)
+(float-single-setflag-insn ge)
+(float-single-setflag-insn gt)
+(float-single-setflag-insn lt)
+(float-single-setflag-insn le)
+
+(dni lf-madd-s
+     "lf.madd.s reg/reg/reg"
+     ((MACH OR32FPX-MACHS))
+     "lf.madd.s $rDSF,$rASF,$rBSF"
+     (+ OPC_FLOAT rDSF rASF rBSF (f-resv-10-3 0) OPC_FLOAT_REGREG_MADD_S)
+     (set SF rDSF (add SF (mul SF rASF rBSF) rDSF))
+     ()
+     )

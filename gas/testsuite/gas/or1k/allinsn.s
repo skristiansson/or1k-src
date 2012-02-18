@@ -439,7 +439,7 @@ l_xori:
 	l.xori r16,r16,-32768
 	l.xori r15,r15,32767
 	l.xori r1,r1,1
-	l.xori r18,r16,-4670
+	l.xori r18,r16,65535
 	l.xori r25,r13,-16331
 	l.xori r12,r29,-32727
 	.text
@@ -450,7 +450,7 @@ l_muli:
 	l.muli r15,r15,32767
 	l.muli r1,r1,1
 	l.muli r27,r7,-4731
-	l.muli r7,r20,-866
+	l.muli r7,r20,65535
 	l.muli r24,r21,23219
 	.text
 l_addic:
@@ -460,7 +460,7 @@ l_addic:
 	l.addic r15,r15,32767
 	l.addic r1,r1,1
 	l.addic r6,r22,-32700
-	l.addic r19,r9,-2458
+	l.addic r19,r9,65535
 	l.addic r27,r28,6891
 	.text
 l_sfgtu:
