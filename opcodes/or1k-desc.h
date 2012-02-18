@@ -45,7 +45,7 @@ This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 #define CGEN_INT_INSN_P 1
 
 /* Maximum number of syntax elements in an instruction.  */
-#define CGEN_ACTUAL_MAX_SYNTAX_ELEMENTS 15
+#define CGEN_ACTUAL_MAX_SYNTAX_ELEMENTS 17
 
 /* CGEN_MNEMONIC_OPERANDS is defined if mnemonics have operands.
    e.g. In "b,a foo" the ",a" is an operand.  If mnemonics have operands
@@ -56,6 +56,52 @@ This file is part of the GNU Binutils and/or GDB, the GNU debugger.
 #define CGEN_ACTUAL_MAX_IFMT_OPERANDS 8
 
 /* Enums.  */
+
+/* Enum declaration for special purpose register groups.  */
+typedef enum spr_groups {
+  SPR_GROUP_SYS, SPR_GROUP_DMMU, SPR_GROUP_IMMU, SPR_GROUP_DCACHE
+ , SPR_GROUP_ICACHE, SPR_GROUP_MAC, SPR_GROUP_DEBUG, SPR_GROUP_PERF
+ , SPR_GROUP_POWER, SPR_GROUP_PIC, SPR_GROUP_TICK, SPR_GROUP_FPU
+} SPR_GROUPS;
+
+/* Enum declaration for SYS SPR register indices.  */
+typedef enum spr_sys_indices {
+  SPR_INDEX_SYS_VR = 0, SPR_INDEX_SYS_UPR = 1, SPR_INDEX_SYS_CPUCFGR = 2, SPR_INDEX_SYS_DMMUCFGR = 3
+ , SPR_INDEX_SYS_IMMUCFGR = 4, SPR_INDEX_SYS_DCCFGR = 5, SPR_INDEX_SYS_ICCFGR = 6, SPR_INDEX_SYS_DCFGR = 7
+ , SPR_INDEX_SYS_PCCFGR = 8, SPR_INDEX_SYS_NPC = 16, SPR_INDEX_SYS_SR = 17, SPR_INDEX_SYS_PPC = 18
+ , SPR_INDEX_SYS_FPCSR = 20, SPR_INDEX_SYS_EPCR0 = 32, SPR_INDEX_SYS_EPCR1 = 33, SPR_INDEX_SYS_EPCR2 = 34
+ , SPR_INDEX_SYS_EPCR3 = 35, SPR_INDEX_SYS_EPCR4 = 36, SPR_INDEX_SYS_EPCR5 = 37, SPR_INDEX_SYS_EPCR6 = 38
+ , SPR_INDEX_SYS_EPCR7 = 39, SPR_INDEX_SYS_EPCR8 = 40, SPR_INDEX_SYS_EPCR9 = 41, SPR_INDEX_SYS_EPCR10 = 42
+ , SPR_INDEX_SYS_EPCR11 = 43, SPR_INDEX_SYS_EPCR12 = 44, SPR_INDEX_SYS_EPCR13 = 45, SPR_INDEX_SYS_EPCR14 = 46
+ , SPR_INDEX_SYS_EPCR15 = 47, SPR_INDEX_SYS_EEAR0 = 48, SPR_INDEX_SYS_EEAR1 = 49, SPR_INDEX_SYS_EEAR2 = 50
+ , SPR_INDEX_SYS_EEAR3 = 51, SPR_INDEX_SYS_EEAR4 = 52, SPR_INDEX_SYS_EEAR5 = 53, SPR_INDEX_SYS_EEAR6 = 54
+ , SPR_INDEX_SYS_EEAR7 = 55, SPR_INDEX_SYS_EEAR8 = 56, SPR_INDEX_SYS_EEAR9 = 57, SPR_INDEX_SYS_EEAR10 = 58
+ , SPR_INDEX_SYS_EEAR11 = 59, SPR_INDEX_SYS_EEAR12 = 60, SPR_INDEX_SYS_EEAR13 = 61, SPR_INDEX_SYS_EEAR14 = 62
+ , SPR_INDEX_SYS_EEAR15 = 63, SPR_INDEX_SYS_ESR0 = 64, SPR_INDEX_SYS_ESR1 = 65, SPR_INDEX_SYS_ESR2 = 66
+ , SPR_INDEX_SYS_ESR3 = 67, SPR_INDEX_SYS_ESR4 = 68, SPR_INDEX_SYS_ESR5 = 69, SPR_INDEX_SYS_ESR6 = 70
+ , SPR_INDEX_SYS_ESR7 = 71, SPR_INDEX_SYS_ESR8 = 72, SPR_INDEX_SYS_ESR9 = 73, SPR_INDEX_SYS_ESR10 = 74
+ , SPR_INDEX_SYS_ESR11 = 75, SPR_INDEX_SYS_ESR12 = 76, SPR_INDEX_SYS_ESR13 = 77, SPR_INDEX_SYS_ESR14 = 78
+ , SPR_INDEX_SYS_ESR15 = 79
+} SPR_SYS_INDICES;
+
+/* Enum declaration for SYS MAC register indices.  */
+typedef enum spr_mac_indices {
+  SPR_INDEX_MAC_MACLO = 1, SPR_INDEX_MAC_MACHI = 2
+} SPR_MAC_INDICES;
+
+/* Enum declaration for SYS FPCSR register field starts.  */
+typedef enum spr_field_starts_sys_fpcsr {
+  SPR_FIELD_START_SYS_FPCSR_FPEE = 0, SPR_FIELD_START_SYS_FPCSR_RM = 2, SPR_FIELD_START_SYS_FPCSR_OVF = 3, SPR_FIELD_START_SYS_FPCSR_UNF = 4
+ , SPR_FIELD_START_SYS_FPCSR_SNF = 5, SPR_FIELD_START_SYS_FPCSR_QNF = 6, SPR_FIELD_START_SYS_FPCSR_ZF = 7, SPR_FIELD_START_SYS_FPCSR_IXF = 8
+ , SPR_FIELD_START_SYS_FPCSR_IVF = 9, SPR_FIELD_START_SYS_FPCSR_INF = 10, SPR_FIELD_START_SYS_FPCSR_DZF = 11
+} SPR_FIELD_STARTS_SYS_FPCSR;
+
+/* Enum declaration for SYS FPCSR register field lengths.  */
+typedef enum spr_field_lengths_fpcsr {
+  SPR_FIELD_LENGTH_SYS_FPCSR_FPEE = 1, SPR_FIELD_LENGTH_SYS_FPCSR_RM = 2, SPR_FIELD_LENGTH_SYS_FPCSR_OVF = 1, SPR_FIELD_LENGTH_SYS_FPCSR_UNF = 1
+ , SPR_FIELD_LENGTH_SYS_FPCSR_SNF = 1, SPR_FIELD_LENGTH_SYS_FPCSR_QNF = 1, SPR_FIELD_LENGTH_SYS_FPCSR_ZF = 1, SPR_FIELD_LENGTH_SYS_FPCSR_IXF = 1
+ , SPR_FIELD_LENGTH_SYS_FPCSR_IVF = 1, SPR_FIELD_LENGTH_SYS_FPCSR_INF = 1, SPR_FIELD_LENGTH_SYS_FPCSR_DZF = 1
+} SPR_FIELD_LENGTHS_FPCSR;
 
 /* Enum declaration for insn main opcode enums.  */
 typedef enum insn_opcode {
@@ -84,10 +130,25 @@ typedef enum insn_opcode_movehimacrc {
   OPC_MOVHIMACRC_MOVHI, OPC_MOVHIMACRC_MACRC
 } INSN_OPCODE_MOVEHIMACRC;
 
+/* Enum declaration for multiply/accumulate insn opcode enums.  */
+typedef enum insn_opcode_mac {
+  OPC_MAC_MAC = 1, OPC_MAC_MSB = 2
+} INSN_OPCODE_MAC;
+
 /* Enum declaration for shift/rotate insn opcode enums.  */
 typedef enum insn_opcode_shorts {
   OPC_SHROTS_SLL, OPC_SHROTS_SRL, OPC_SHROTS_SRA, OPC_SHROTS_ROR
 } INSN_OPCODE_SHORTS;
+
+/* Enum declaration for extend byte/half opcode enums.  */
+typedef enum insn_opcode_extbhs {
+  OPC_EXTBHS_EXTHS, OPC_EXTBHS_EXTBS, OPC_EXTBHS_EXTHZ, OPC_EXTBHS_EXTBZ
+} INSN_OPCODE_EXTBHS;
+
+/* Enum declaration for extend word opcode enums.  */
+typedef enum insn_opcode_extws {
+  OPC_EXTWS_EXTWS, OPC_EXTWS_EXTWZ
+} INSN_OPCODE_EXTWS;
 
 /* Enum declaration for alu reg/reg insn opcode enums.  */
 typedef enum insn_opcode_alu_regreg {
@@ -104,6 +165,17 @@ typedef enum insn_opcode_setflag {
  , OPC_SF_LTS = 12, OPC_SF_LES = 13
 } INSN_OPCODE_SETFLAG;
 
+/* Enum declaration for floating point reg/reg insn opcode enums.  */
+typedef enum insn_opcode_float_regreg {
+  OPC_FLOAT_REGREG_ADD_S = 0, OPC_FLOAT_REGREG_SUB_S = 1, OPC_FLOAT_REGREG_MUL_S = 2, OPC_FLOAT_REGREG_DIV_S = 3
+ , OPC_FLOAT_REGREG_ITOF_S = 4, OPC_FLOAT_REGREG_FTOI_S = 5, OPC_FLOAT_REGREG_REM_S = 6, OPC_FLOAT_REGREG_MADD_S = 7
+ , OPC_FLOAT_REGREG_SFEQ_S = 8, OPC_FLOAT_REGREG_SFNE_S = 9, OPC_FLOAT_REGREG_SFGT_S = 10, OPC_FLOAT_REGREG_SFGE_S = 11
+ , OPC_FLOAT_REGREG_SFLT_S = 12, OPC_FLOAT_REGREG_SFLE_S = 13, OPC_FLOAT_REGREG_ADD_D = 16, OPC_FLOAT_REGREG_SUB_D = 17
+ , OPC_FLOAT_REGREG_MUL_D = 18, OPC_FLOAT_REGREG_DIV_D = 19, OPC_FLOAT_REGREG_ITOF_D = 20, OPC_FLOAT_REGREG_FTOI_D = 21
+ , OPC_FLOAT_REGREG_REM_D = 22, OPC_FLOAT_REGREG_MADD_D = 23, OPC_FLOAT_REGREG_SFEQ_D = 24, OPC_FLOAT_REGREG_SFNE_D = 25
+ , OPC_FLOAT_REGREG_SFGT_D = 26, OPC_FLOAT_REGREG_SFGE_D = 27, OPC_FLOAT_REGREG_SFLT_D = 28, OPC_FLOAT_REGREG_SFLE_D = 29
+} INSN_OPCODE_FLOAT_REGREG;
+
 /* Attributes.  */
 
 /* Enum declaration for machine type selection.  */
@@ -113,11 +185,11 @@ typedef enum mach_attr {
 
 /* Enum declaration for instruction set selection.  */
 typedef enum isa_attr {
-  ISA_ORBIS32, ISA_MAX
+  ISA_ORBIS32, ISA_ORFPX32, ISA_MAX
 } ISA_ATTR;
 
 /* Number of architecture variants.  */
-#define MAX_ISAS  1
+#define MAX_ISAS  ((int) ISA_MAX)
 #define MAX_MACHS ((int) MACH_MAX)
 
 /* Ifield support.  */
@@ -128,7 +200,7 @@ typedef enum isa_attr {
 typedef enum cgen_ifld_attr {
   CGEN_IFLD_VIRTUAL, CGEN_IFLD_PCREL_ADDR, CGEN_IFLD_ABS_ADDR, CGEN_IFLD_RESERVED
  , CGEN_IFLD_SIGN_OPT, CGEN_IFLD_SIGNED, CGEN_IFLD_END_BOOLS, CGEN_IFLD_START_NBOOLS = 31
- , CGEN_IFLD_MACH, CGEN_IFLD_END_NBOOLS
+ , CGEN_IFLD_MACH, CGEN_IFLD_ISA, CGEN_IFLD_END_NBOOLS
 } CGEN_IFLD_ATTR;
 
 /* Number of non-boolean elements in cgen_ifld_attr.  */
@@ -136,6 +208,7 @@ typedef enum cgen_ifld_attr {
 
 /* cgen_ifld attribute accessor macros.  */
 #define CGEN_ATTR_CGEN_IFLD_MACH_VALUE(attrs) ((attrs)->nonbool[CGEN_IFLD_MACH-CGEN_IFLD_START_NBOOLS-1].nonbitset)
+#define CGEN_ATTR_CGEN_IFLD_ISA_VALUE(attrs) ((attrs)->nonbool[CGEN_IFLD_ISA-CGEN_IFLD_START_NBOOLS-1].bitset)
 #define CGEN_ATTR_CGEN_IFLD_VIRTUAL_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_IFLD_VIRTUAL)) != 0)
 #define CGEN_ATTR_CGEN_IFLD_PCREL_ADDR_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_IFLD_PCREL_ADDR)) != 0)
 #define CGEN_ATTR_CGEN_IFLD_ABS_ADDR_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_IFLD_ABS_ADDR)) != 0)
@@ -146,14 +219,14 @@ typedef enum cgen_ifld_attr {
 /* Enum declaration for or1k ifield types.  */
 typedef enum ifield_type {
   OR1K_F_NIL, OR1K_F_ANYOF, OR1K_F_OPCODE, OR1K_F_R1
- , OR1K_F_R2, OR1K_F_R3, OR1K_F_SIMM16, OR1K_F_UIMM16
- , OR1K_F_UIMM5, OR1K_F_UIMM6, OR1K_F_HI16, OR1K_F_LO16
- , OR1K_F_OP_25_2, OR1K_F_OP_25_5, OR1K_F_OP_16_1, OR1K_F_OP_7_4
- , OR1K_F_OP_3_4, OR1K_F_OP_9_2, OR1K_F_OP_7_2, OR1K_F_RESV_25_26
+ , OR1K_F_R2, OR1K_F_R3, OR1K_F_OP_25_2, OR1K_F_OP_25_5
+ , OR1K_F_OP_16_1, OR1K_F_OP_7_4, OR1K_F_OP_3_4, OR1K_F_OP_9_2
+ , OR1K_F_OP_9_4, OR1K_F_OP_7_8, OR1K_F_OP_7_2, OR1K_F_RESV_25_26
  , OR1K_F_RESV_25_10, OR1K_F_RESV_23_8, OR1K_F_RESV_20_5, OR1K_F_RESV_20_4
- , OR1K_F_RESV_15_8, OR1K_F_RESV_10_11, OR1K_F_RESV_10_7, OR1K_F_RESV_10_3
- , OR1K_F_RESV_5_2, OR1K_F_I16_1, OR1K_F_I16_2, OR1K_F_DISP26
- , OR1K_F_I16NC, OR1K_F_MAX
+ , OR1K_F_RESV_15_8, OR1K_F_RESV_15_6, OR1K_F_RESV_10_11, OR1K_F_RESV_10_7
+ , OR1K_F_RESV_10_3, OR1K_F_RESV_5_2, OR1K_F_IMM16_25_5, OR1K_F_IMM16_10_11
+ , OR1K_F_DISP26, OR1K_F_UIMM16, OR1K_F_SIMM16, OR1K_F_UIMM6
+ , OR1K_F_UIMM16_SPLIT, OR1K_F_SIMM16_SPLIT, OR1K_F_MAX
 } IFIELD_TYPE;
 
 #define MAX_IFLD ((int) OR1K_F_MAX)
@@ -163,7 +236,8 @@ typedef enum ifield_type {
 /* Enum declaration for cgen_hw attrs.  */
 typedef enum cgen_hw_attr {
   CGEN_HW_VIRTUAL, CGEN_HW_CACHE_ADDR, CGEN_HW_PC, CGEN_HW_PROFILE
- , CGEN_HW_END_BOOLS, CGEN_HW_START_NBOOLS = 31, CGEN_HW_MACH, CGEN_HW_END_NBOOLS
+ , CGEN_HW_END_BOOLS, CGEN_HW_START_NBOOLS = 31, CGEN_HW_MACH, CGEN_HW_ISA
+ , CGEN_HW_END_NBOOLS
 } CGEN_HW_ATTR;
 
 /* Number of non-boolean elements in cgen_hw_attr.  */
@@ -171,6 +245,7 @@ typedef enum cgen_hw_attr {
 
 /* cgen_hw attribute accessor macros.  */
 #define CGEN_ATTR_CGEN_HW_MACH_VALUE(attrs) ((attrs)->nonbool[CGEN_HW_MACH-CGEN_HW_START_NBOOLS-1].nonbitset)
+#define CGEN_ATTR_CGEN_HW_ISA_VALUE(attrs) ((attrs)->nonbool[CGEN_HW_ISA-CGEN_HW_START_NBOOLS-1].bitset)
 #define CGEN_ATTR_CGEN_HW_VIRTUAL_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_HW_VIRTUAL)) != 0)
 #define CGEN_ATTR_CGEN_HW_CACHE_ADDR_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_HW_CACHE_ADDR)) != 0)
 #define CGEN_ATTR_CGEN_HW_PC_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_HW_PC)) != 0)
@@ -180,8 +255,10 @@ typedef enum cgen_hw_attr {
 typedef enum cgen_hw_type {
   HW_H_MEMORY, HW_H_SINT, HW_H_UINT, HW_H_ADDR
  , HW_H_IADDR, HW_H_PC, HW_H_GR, HW_H_SPR
- , HW_H_HI16, HW_H_LO16, HW_H_CBIT, HW_H_DELAY_INSN
- , HW_MAX
+ , HW_H_SYS_SR, HW_H_SYS_ESR0, HW_H_SYS_EPCR0, HW_H_MAC_MACLO
+ , HW_H_MAC_MACHI, HW_H_SYS_SR_F, HW_H_SYS_SR_CY, HW_H_SYS_SR_OV
+ , HW_H_SYS_FPCSR_RM, HW_H_DELAY_INSN, HW_H_SIMM16, HW_H_UIMM16
+ , HW_H_UIMM6, HW_MAX
 } CGEN_HW_TYPE;
 
 #define MAX_HW ((int) HW_MAX)
@@ -192,7 +269,8 @@ typedef enum cgen_hw_type {
 typedef enum cgen_operand_attr {
   CGEN_OPERAND_VIRTUAL, CGEN_OPERAND_PCREL_ADDR, CGEN_OPERAND_ABS_ADDR, CGEN_OPERAND_SIGN_OPT
  , CGEN_OPERAND_SIGNED, CGEN_OPERAND_NEGATIVE, CGEN_OPERAND_RELAX, CGEN_OPERAND_SEM_ONLY
- , CGEN_OPERAND_END_BOOLS, CGEN_OPERAND_START_NBOOLS = 31, CGEN_OPERAND_MACH, CGEN_OPERAND_END_NBOOLS
+ , CGEN_OPERAND_END_BOOLS, CGEN_OPERAND_START_NBOOLS = 31, CGEN_OPERAND_MACH, CGEN_OPERAND_ISA
+ , CGEN_OPERAND_END_NBOOLS
 } CGEN_OPERAND_ATTR;
 
 /* Number of non-boolean elements in cgen_operand_attr.  */
@@ -200,6 +278,7 @@ typedef enum cgen_operand_attr {
 
 /* cgen_operand attribute accessor macros.  */
 #define CGEN_ATTR_CGEN_OPERAND_MACH_VALUE(attrs) ((attrs)->nonbool[CGEN_OPERAND_MACH-CGEN_OPERAND_START_NBOOLS-1].nonbitset)
+#define CGEN_ATTR_CGEN_OPERAND_ISA_VALUE(attrs) ((attrs)->nonbool[CGEN_OPERAND_ISA-CGEN_OPERAND_START_NBOOLS-1].bitset)
 #define CGEN_ATTR_CGEN_OPERAND_VIRTUAL_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_OPERAND_VIRTUAL)) != 0)
 #define CGEN_ATTR_CGEN_OPERAND_PCREL_ADDR_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_OPERAND_PCREL_ADDR)) != 0)
 #define CGEN_ATTR_CGEN_OPERAND_ABS_ADDR_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_OPERAND_ABS_ADDR)) != 0)
@@ -211,14 +290,16 @@ typedef enum cgen_operand_attr {
 
 /* Enum declaration for or1k operand types.  */
 typedef enum cgen_operand_type {
-  OR1K_OPERAND_PC, OR1K_OPERAND_SPR, OR1K_OPERAND_CBIT, OR1K_OPERAND_SIMM_16
- , OR1K_OPERAND_UIMM_16, OR1K_OPERAND_DISP_26, OR1K_OPERAND_UIMM_5, OR1K_OPERAND_UIMM_6
- , OR1K_OPERAND_RD, OR1K_OPERAND_RA, OR1K_OPERAND_RB, OR1K_OPERAND_HI16
- , OR1K_OPERAND_LO16, OR1K_OPERAND_UI16NC, OR1K_OPERAND_MAX
+  OR1K_OPERAND_PC, OR1K_OPERAND_SYS_SR, OR1K_OPERAND_SYS_ESR0, OR1K_OPERAND_SYS_EPCR0
+ , OR1K_OPERAND_SYS_SR_F, OR1K_OPERAND_SYS_SR_CY, OR1K_OPERAND_SYS_SR_OV, OR1K_OPERAND_SYS_FPCSR_RM
+ , OR1K_OPERAND_MAC_MACHI, OR1K_OPERAND_MAC_MACLO, OR1K_OPERAND_DISP26, OR1K_OPERAND_UIMM6
+ , OR1K_OPERAND_RD, OR1K_OPERAND_RA, OR1K_OPERAND_RB, OR1K_OPERAND_SIMM16
+ , OR1K_OPERAND_UIMM16, OR1K_OPERAND_SIMM16_SPLIT, OR1K_OPERAND_UIMM16_SPLIT, OR1K_OPERAND_RDSF
+ , OR1K_OPERAND_RASF, OR1K_OPERAND_RBSF, OR1K_OPERAND_MAX
 } CGEN_OPERAND_TYPE;
 
 /* Number of operands types.  */
-#define MAX_OPERANDS 14
+#define MAX_OPERANDS 22
 
 /* Maximum number of operands referenced by any insn.  */
 #define MAX_OPERAND_INSTANCES 8
@@ -230,7 +311,7 @@ typedef enum cgen_insn_attr {
   CGEN_INSN_ALIAS, CGEN_INSN_VIRTUAL, CGEN_INSN_UNCOND_CTI, CGEN_INSN_COND_CTI
  , CGEN_INSN_SKIP_CTI, CGEN_INSN_DELAY_SLOT, CGEN_INSN_RELAXABLE, CGEN_INSN_RELAXED
  , CGEN_INSN_NO_DIS, CGEN_INSN_PBB, CGEN_INSN_NOT_IN_DELAY_SLOT, CGEN_INSN_END_BOOLS
- , CGEN_INSN_START_NBOOLS = 31, CGEN_INSN_MACH, CGEN_INSN_END_NBOOLS
+ , CGEN_INSN_START_NBOOLS = 31, CGEN_INSN_MACH, CGEN_INSN_ISA, CGEN_INSN_END_NBOOLS
 } CGEN_INSN_ATTR;
 
 /* Number of non-boolean elements in cgen_insn_attr.  */
@@ -238,6 +319,7 @@ typedef enum cgen_insn_attr {
 
 /* cgen_insn attribute accessor macros.  */
 #define CGEN_ATTR_CGEN_INSN_MACH_VALUE(attrs) ((attrs)->nonbool[CGEN_INSN_MACH-CGEN_INSN_START_NBOOLS-1].nonbitset)
+#define CGEN_ATTR_CGEN_INSN_ISA_VALUE(attrs) ((attrs)->nonbool[CGEN_INSN_ISA-CGEN_INSN_START_NBOOLS-1].bitset)
 #define CGEN_ATTR_CGEN_INSN_ALIAS_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_INSN_ALIAS)) != 0)
 #define CGEN_ATTR_CGEN_INSN_VIRTUAL_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_INSN_VIRTUAL)) != 0)
 #define CGEN_ATTR_CGEN_INSN_UNCOND_CTI_VALUE(attrs) (((attrs)->bool_ & (1 << CGEN_INSN_UNCOND_CTI)) != 0)

@@ -54,6 +54,7 @@ static const CGEN_ATTR_ENTRY MACH_attr[] ATTRIBUTE_UNUSED =
 static const CGEN_ATTR_ENTRY ISA_attr[] ATTRIBUTE_UNUSED =
 {
   { "ORBIS32", ISA_ORBIS32 },
+  { "ORFPX32", ISA_ORFPX32 },
   { "max", ISA_MAX },
   { 0, 0 }
 };
@@ -61,6 +62,7 @@ static const CGEN_ATTR_ENTRY ISA_attr[] ATTRIBUTE_UNUSED =
 const CGEN_ATTR_TABLE or1k_cgen_ifield_attr_table[] =
 {
   { "MACH", & MACH_attr[0], & MACH_attr[0] },
+  { "ISA", & ISA_attr[0], & ISA_attr[0] },
   { "VIRTUAL", &bool_attr[0], &bool_attr[0] },
   { "PCREL-ADDR", &bool_attr[0], &bool_attr[0] },
   { "ABS-ADDR", &bool_attr[0], &bool_attr[0] },
@@ -73,6 +75,7 @@ const CGEN_ATTR_TABLE or1k_cgen_ifield_attr_table[] =
 const CGEN_ATTR_TABLE or1k_cgen_hardware_attr_table[] =
 {
   { "MACH", & MACH_attr[0], & MACH_attr[0] },
+  { "ISA", & ISA_attr[0], & ISA_attr[0] },
   { "VIRTUAL", &bool_attr[0], &bool_attr[0] },
   { "CACHE-ADDR", &bool_attr[0], &bool_attr[0] },
   { "PC", &bool_attr[0], &bool_attr[0] },
@@ -83,6 +86,7 @@ const CGEN_ATTR_TABLE or1k_cgen_hardware_attr_table[] =
 const CGEN_ATTR_TABLE or1k_cgen_operand_attr_table[] =
 {
   { "MACH", & MACH_attr[0], & MACH_attr[0] },
+  { "ISA", & ISA_attr[0], & ISA_attr[0] },
   { "VIRTUAL", &bool_attr[0], &bool_attr[0] },
   { "PCREL-ADDR", &bool_attr[0], &bool_attr[0] },
   { "ABS-ADDR", &bool_attr[0], &bool_attr[0] },
@@ -97,6 +101,7 @@ const CGEN_ATTR_TABLE or1k_cgen_operand_attr_table[] =
 const CGEN_ATTR_TABLE or1k_cgen_insn_attr_table[] =
 {
   { "MACH", & MACH_attr[0], & MACH_attr[0] },
+  { "ISA", & ISA_attr[0], & ISA_attr[0] },
   { "ALIAS", &bool_attr[0], &bool_attr[0] },
   { "VIRTUAL", &bool_attr[0], &bool_attr[0] },
   { "UNCOND-CTI", &bool_attr[0], &bool_attr[0] },
@@ -115,6 +120,7 @@ const CGEN_ATTR_TABLE or1k_cgen_insn_attr_table[] =
 
 static const CGEN_ISA or1k_cgen_isa_table[] = {
   { "ORBIS32", 32, 32, 32, 32 },
+  { "ORFPX32", 32, 32, 65535, 0 },
   { 0, 0, 0, 0, 0 }
 };
 
@@ -178,19 +184,28 @@ CGEN_KEYWORD or1k_cgen_opval_h_gr =
 
 const CGEN_HW_ENTRY or1k_cgen_hw_table[] =
 {
-  { "h-memory", HW_H_MEMORY, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-sint", HW_H_SINT, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-uint", HW_H_UINT, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-addr", HW_H_ADDR, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-iaddr", HW_H_IADDR, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-pc", HW_H_PC, CGEN_ASM_NONE, 0, { 0|A(PROFILE)|A(PC), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-gr", HW_H_GR, CGEN_ASM_KEYWORD, (PTR) & or1k_cgen_opval_h_gr, { 0|A(PROFILE), { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-spr", HW_H_SPR, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-hi16", HW_H_HI16, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-lo16", HW_H_LO16, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-cbit", HW_H_CBIT, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { "h-delay-insn", HW_H_DELAY_INSN, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-  { 0, 0, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } }
+  { "h-memory", HW_H_MEMORY, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } } },
+  { "h-sint", HW_H_SINT, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } } },
+  { "h-uint", HW_H_UINT, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } } },
+  { "h-addr", HW_H_ADDR, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } } },
+  { "h-iaddr", HW_H_IADDR, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } } },
+  { "h-pc", HW_H_PC, CGEN_ASM_NONE, 0, { 0|A(PROFILE)|A(PC), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-gr", HW_H_GR, CGEN_ASM_KEYWORD, (PTR) & or1k_cgen_opval_h_gr, { 0|A(PROFILE), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-spr", HW_H_SPR, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-sys-sr", HW_H_SYS_SR, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-sys-esr0", HW_H_SYS_ESR0, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-sys-epcr0", HW_H_SYS_EPCR0, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-mac-maclo", HW_H_MAC_MACLO, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-mac-machi", HW_H_MAC_MACHI, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-sys-sr-f", HW_H_SYS_SR_F, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-sys-sr-cy", HW_H_SYS_SR_CY, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-sys-sr-ov", HW_H_SYS_SR_OV, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-sys-fpcsr-rm", HW_H_SYS_FPCSR_RM, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-delay-insn", HW_H_DELAY_INSN, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-simm16", HW_H_SIMM16, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-uimm16", HW_H_UIMM16, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { "h-uimm6", HW_H_UIMM6, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+  { 0, 0, CGEN_ASM_NONE, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } }
 };
 
 #undef A
@@ -202,40 +217,41 @@ const CGEN_HW_ENTRY or1k_cgen_hw_table[] =
 
 const CGEN_IFLD or1k_cgen_ifld_table[] =
 {
-  { OR1K_F_NIL, "f-nil", 0, 0, 0, 0, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_ANYOF, "f-anyof", 0, 0, 0, 0, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_OPCODE, "f-opcode", 0, 32, 31, 6, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_R1, "f-r1", 0, 32, 25, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_R2, "f-r2", 0, 32, 20, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_R3, "f-r3", 0, 32, 15, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_SIMM16, "f-simm16", 0, 32, 15, 16, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_UIMM16, "f-uimm16", 0, 32, 15, 16, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_UIMM5, "f-uimm5", 0, 32, 4, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_UIMM6, "f-uimm6", 0, 32, 5, 6, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_HI16, "f-hi16", 0, 32, 15, 16, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_LO16, "f-lo16", 0, 32, 15, 16, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_OP_25_2, "f-op-25-2", 0, 32, 25, 2, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_OP_25_5, "f-op-25-5", 0, 32, 25, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_OP_16_1, "f-op-16-1", 0, 32, 16, 1, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_OP_7_4, "f-op-7-4", 0, 32, 7, 4, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_OP_3_4, "f-op-3-4", 0, 32, 3, 4, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_OP_9_2, "f-op-9-2", 0, 32, 9, 2, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_OP_7_2, "f-op-7-2", 0, 32, 7, 2, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_25_26, "f-resv-25-26", 0, 32, 25, 26, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_25_10, "f-resv-25-10", 0, 32, 25, 10, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_23_8, "f-resv-23-8", 0, 32, 23, 8, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_20_5, "f-resv-20-5", 0, 32, 20, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_20_4, "f-resv-20-4", 0, 32, 20, 4, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_15_8, "f-resv-15-8", 0, 32, 15, 8, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_10_11, "f-resv-10-11", 0, 32, 10, 11, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_10_7, "f-resv-10-7", 0, 32, 10, 7, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_10_3, "f-resv-10-3", 0, 32, 10, 3, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_RESV_5_2, "f-resv-5-2", 0, 32, 5, 2, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_I16_1, "f-i16-1", 0, 32, 10, 11, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_I16_2, "f-i16-2", 0, 32, 25, 5, { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_DISP26, "f-disp26", 0, 32, 25, 26, { 0|A(PCREL_ADDR), { { { (1<<MACH_BASE), 0 } } } }  },
-  { OR1K_F_I16NC, "f-i16nc", 0, 0, 0, 0,{ 0|A(SIGN_OPT)|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
-  { 0, 0, 0, 0, 0, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } }
+  { OR1K_F_NIL, "f-nil", 0, 0, 0, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+  { OR1K_F_ANYOF, "f-anyof", 0, 0, 0, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+  { OR1K_F_OPCODE, "f-opcode", 0, 32, 31, 6, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_R1, "f-r1", 0, 32, 25, 5, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_R2, "f-r2", 0, 32, 20, 5, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_R3, "f-r3", 0, 32, 15, 5, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_25_2, "f-op-25-2", 0, 32, 25, 2, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_25_5, "f-op-25-5", 0, 32, 25, 5, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_16_1, "f-op-16-1", 0, 32, 16, 1, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_7_4, "f-op-7-4", 0, 32, 7, 4, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_3_4, "f-op-3-4", 0, 32, 3, 4, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_9_2, "f-op-9-2", 0, 32, 9, 2, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_9_4, "f-op-9-4", 0, 32, 9, 4, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_7_8, "f-op-7-8", 0, 32, 7, 8, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_OP_7_2, "f-op-7-2", 0, 32, 7, 2, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_25_26, "f-resv-25-26", 0, 32, 25, 26, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_25_10, "f-resv-25-10", 0, 32, 25, 10, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_23_8, "f-resv-23-8", 0, 32, 23, 8, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_20_5, "f-resv-20-5", 0, 32, 20, 5, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_20_4, "f-resv-20-4", 0, 32, 20, 4, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_15_8, "f-resv-15-8", 0, 32, 15, 8, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_15_6, "f-resv-15-6", 0, 32, 15, 6, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_10_11, "f-resv-10-11", 0, 32, 10, 11, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_10_7, "f-resv-10-7", 0, 32, 10, 7, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_10_3, "f-resv-10-3", 0, 32, 10, 3, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_5_2, "f-resv-5-2", 0, 32, 5, 2, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_IMM16_25_5, "f-imm16-25-5", 0, 32, 25, 5, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_IMM16_10_11, "f-imm16-10-11", 0, 32, 10, 11, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_DISP26, "f-disp26", 0, 32, 25, 26, { 0|A(PCREL_ADDR), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_UIMM16, "f-uimm16", 0, 32, 15, 16, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_SIMM16, "f-simm16", 0, 32, 15, 16, { 0|A(SIGN_OPT), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_UIMM6, "f-uimm6", 0, 32, 5, 6, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_UIMM16_SPLIT, "f-uimm16-split", 0, 0, 0, 0,{ 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_SIMM16_SPLIT, "f-simm16-split", 0, 0, 0, 0,{ 0|A(SIGN_OPT)|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { 0, 0, 0, 0, 0, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } }
 };
 
 #undef A
@@ -244,15 +260,22 @@ const CGEN_IFLD or1k_cgen_ifld_table[] =
 
 /* multi ifield declarations */
 
-const CGEN_MAYBE_MULTI_IFLD OR1K_F_I16NC_MULTI_IFIELD [];
+const CGEN_MAYBE_MULTI_IFLD OR1K_F_UIMM16_SPLIT_MULTI_IFIELD [];
+const CGEN_MAYBE_MULTI_IFLD OR1K_F_SIMM16_SPLIT_MULTI_IFIELD [];
 
 
 /* multi ifield definitions */
 
-const CGEN_MAYBE_MULTI_IFLD OR1K_F_I16NC_MULTI_IFIELD [] =
+const CGEN_MAYBE_MULTI_IFLD OR1K_F_UIMM16_SPLIT_MULTI_IFIELD [] =
 {
-    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_I16_1] } },
-    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_I16_2] } },
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_IMM16_25_5] } },
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_IMM16_10_11] } },
+    { 0, { (const PTR) 0 } }
+};
+const CGEN_MAYBE_MULTI_IFLD OR1K_F_SIMM16_SPLIT_MULTI_IFIELD [] =
+{
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_IMM16_25_5] } },
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_IMM16_10_11] } },
     { 0, { (const PTR) 0 } }
 };
 
@@ -266,63 +289,95 @@ const CGEN_OPERAND or1k_cgen_operand_table[] =
 /* pc: program counter */
   { "pc", OR1K_OPERAND_PC, HW_H_PC, 0, 0,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_NIL] } }, 
-    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* spr: special purpose register */
-  { "spr", OR1K_OPERAND_SPR, HW_H_SPR, 0, 0,
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* sys-sr: supervision register */
+  { "sys-sr", OR1K_OPERAND_SYS_SR, HW_H_SYS_SR, 0, 0,
     { 0, { (const PTR) 0 } }, 
-    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* cbit: condition bit */
-  { "cbit", OR1K_OPERAND_CBIT, HW_H_CBIT, 0, 0,
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* sys-esr0: exception supervision register 0 */
+  { "sys-esr0", OR1K_OPERAND_SYS_ESR0, HW_H_SYS_ESR0, 0, 0,
     { 0, { (const PTR) 0 } }, 
-    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } } } }  },
-/* simm-16: 16 bit signed immediate */
-  { "simm-16", OR1K_OPERAND_SIMM_16, HW_H_SINT, 15, 16,
-    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_SIMM16] } }, 
-    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-/* uimm-16: 16 bit unsigned immediate */
-  { "uimm-16", OR1K_OPERAND_UIMM_16, HW_H_UINT, 15, 16,
-    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_UIMM16] } }, 
-    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-/* disp-26: pc-rel 26 bit */
-  { "disp-26", OR1K_OPERAND_DISP_26, HW_H_IADDR, 25, 26,
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* sys-epcr0: exception PC register 0 */
+  { "sys-epcr0", OR1K_OPERAND_SYS_EPCR0, HW_H_SYS_EPCR0, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* sys-sr-f: SR flag bit */
+  { "sys-sr-f", OR1K_OPERAND_SYS_SR_F, HW_H_SYS_SR_F, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* sys-sr-cy: SR carry bit */
+  { "sys-sr-cy", OR1K_OPERAND_SYS_SR_CY, HW_H_SYS_SR_CY, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* sys-sr-ov: SR overflow bit */
+  { "sys-sr-ov", OR1K_OPERAND_SYS_SR_OV, HW_H_SYS_SR_OV, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* sys-fpcsr-rm: floating point round mode */
+  { "sys-fpcsr-rm", OR1K_OPERAND_SYS_FPCSR_RM, HW_H_SYS_FPCSR_RM, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* mac-machi: MAC HI result register */
+  { "mac-machi", OR1K_OPERAND_MAC_MACHI, HW_H_MAC_MACHI, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* mac-maclo: MAC LO result register */
+  { "mac-maclo", OR1K_OPERAND_MAC_MACLO, HW_H_MAC_MACLO, 0, 0,
+    { 0, { (const PTR) 0 } }, 
+    { 0|A(SEM_ONLY), { { { (1<<MACH_BASE), 0 } }, { { 1, "\xc0" } } } }  },
+/* disp26: pc-rel 26 bit */
+  { "disp26", OR1K_OPERAND_DISP26, HW_H_IADDR, 25, 26,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_DISP26] } }, 
-    { 0|A(PCREL_ADDR), { { { (1<<MACH_BASE), 0 } } } }  },
-/* uimm-5: imm5 */
-  { "uimm-5", OR1K_OPERAND_UIMM_5, HW_H_UINT, 4, 5,
-    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_UIMM5] } }, 
-    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-/* uimm-6: imm6 */
-  { "uimm-6", OR1K_OPERAND_UIMM_6, HW_H_UINT, 5, 6,
+    { 0|A(PCREL_ADDR), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+/* uimm6: uimm6 */
+  { "uimm6", OR1K_OPERAND_UIMM6, HW_H_UIMM6, 5, 6,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_UIMM6] } }, 
-    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
 /* rD: destination register */
   { "rD", OR1K_OPERAND_RD, HW_H_GR, 25, 5,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_R1] } }, 
-    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
 /* rA: source register A */
   { "rA", OR1K_OPERAND_RA, HW_H_GR, 20, 5,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_R2] } }, 
-    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
 /* rB: source register B */
   { "rB", OR1K_OPERAND_RB, HW_H_GR, 15, 5,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_R3] } }, 
-    { 0, { { { (1<<MACH_BASE), 0 } } } }  },
-/* hi16: high 16 bit immediate, sign optional */
-  { "hi16", OR1K_OPERAND_HI16, HW_H_HI16, 15, 16,
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+/* simm16: 16-bit signed immediate */
+  { "simm16", OR1K_OPERAND_SIMM16, HW_H_SIMM16, 15, 16,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_SIMM16] } }, 
-    { 0|A(SIGN_OPT), { { { (1<<MACH_BASE), 0 } } } }  },
-/* lo16: low 16 bit immediate, sign optional */
-  { "lo16", OR1K_OPERAND_LO16, HW_H_LO16, 15, 16,
-    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_LO16] } }, 
-    { 0|A(SIGN_OPT), { { { (1<<MACH_BASE), 0 } } } }  },
-/* ui16nc: 16 bit immediate, sign optional */
-  { "ui16nc", OR1K_OPERAND_UI16NC, HW_H_LO16, 10, 16,
-    { 2, { (const PTR) &OR1K_F_I16NC_MULTI_IFIELD[0] } }, 
-    { 0|A(SIGN_OPT)|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } } } }  },
+    { 0|A(SIGN_OPT), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+/* uimm16: 16-bit unsigned immediate */
+  { "uimm16", OR1K_OPERAND_UIMM16, HW_H_UIMM16, 15, 16,
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_UIMM16] } }, 
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+/* simm16-split: split 16-bit signed immediate */
+  { "simm16-split", OR1K_OPERAND_SIMM16_SPLIT, HW_H_SIMM16, 10, 16,
+    { 2, { (const PTR) &OR1K_F_SIMM16_SPLIT_MULTI_IFIELD[0] } }, 
+    { 0|A(SIGN_OPT)|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+/* uimm16-split: split 16-bit unsigned immediate */
+  { "uimm16-split", OR1K_OPERAND_UIMM16_SPLIT, HW_H_UIMM16, 10, 16,
+    { 2, { (const PTR) &OR1K_F_UIMM16_SPLIT_MULTI_IFIELD[0] } }, 
+    { 0|A(VIRTUAL), { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+/* rDSF: destination register (single floating point mode) */
+  { "rDSF", OR1K_OPERAND_RDSF, HW_H_GR, 25, 5,
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_R1] } }, 
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+/* rASF: source register A (single floating point mode) */
+  { "rASF", OR1K_OPERAND_RASF, HW_H_GR, 20, 5,
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_R2] } }, 
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+/* rBSF: source register B (single floating point mode) */
+  { "rBSF", OR1K_OPERAND_RBSF, HW_H_GR, 15, 5,
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_R3] } }, 
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
 /* sentinel */
   { 0, 0, 0, 0, 0,
     { 0, { (const PTR) 0 } },
-    { 0, { { { (1<<MACH_BASE), 0 } } } } }
+    { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } }
 };
 
 #undef A
@@ -338,351 +393,471 @@ static const CGEN_IBASE or1k_cgen_insn_table[MAX_INSNS] =
   /* Special null first entry.
      A `num' value of zero is thus invalid.
      Also, the special `invalid' insn resides here.  */
-  { 0, 0, 0, 0, { 0, { { { (1<<MACH_BASE), 0 } } } } },
-/* l.j ${disp-26} */
+  { 0, 0, 0, 0, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } } },
+/* l.j ${disp26} */
   {
     OR1K_INSN_L_J, "l-j", "l.j", 32,
-    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.jal ${disp-26} */
+/* l.jal ${disp26} */
   {
     OR1K_INSN_L_JAL, "l-jal", "l.jal", 32,
-    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.jr $rB */
   {
     OR1K_INSN_L_JR, "l-jr", "l.jr", 32,
-    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.jalr $rB */
   {
     OR1K_INSN_L_JALR, "l-jalr", "l.jalr", 32,
-    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.bnf ${disp-26} */
+/* l.bnf ${disp26} */
   {
     OR1K_INSN_L_BNF, "l-bnf", "l.bnf", 32,
-    { 0|A(NOT_IN_DELAY_SLOT)|A(COND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NOT_IN_DELAY_SLOT)|A(COND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.bf ${disp-26} */
+/* l.bf ${disp26} */
   {
     OR1K_INSN_L_BF, "l-bf", "l.bf", 32,
-    { 0|A(NOT_IN_DELAY_SLOT)|A(COND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NOT_IN_DELAY_SLOT)|A(COND_CTI)|A(DELAY_SLOT), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.trap ${uimm-16} */
+/* l.trap ${uimm16} */
   {
     OR1K_INSN_L_TRAP, "l-trap", "l.trap", 32,
-    { 0|A(UNCOND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(UNCOND_CTI), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sys ${uimm-16} */
+/* l.sys ${uimm16} */
   {
     OR1K_INSN_L_SYS, "l-sys", "l.sys", 32,
-    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.rfe */
   {
     OR1K_INSN_L_RFE, "l-rfe", "l.rfe", 32,
-    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI), { { { (1<<MACH_BASE), 0 } } } }
+    { 0|A(NOT_IN_DELAY_SLOT)|A(UNCOND_CTI), { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.nop ${uimm-16} */
+/* l.nop ${uimm16} */
   {
     OR1K_INSN_L_NOP_IMM, "l-nop-imm", "l.nop", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.nop */
   {
     OR1K_INSN_L_NOP, "l-nop", "l.nop", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.movhi $rD,$hi16 */
+/* l.movhi $rD,$uimm16 */
   {
     OR1K_INSN_L_MOVHI, "l-movhi", "l.movhi", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.mfspr $rD,$rA,${uimm-16} */
+/* l.macrc $rD */
+  {
+    OR1K_INSN_L_MACRC, "l-macrc", "l.macrc", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.mfspr $rD,$rA,${uimm16} */
   {
     OR1K_INSN_L_MFSPR, "l-mfspr", "l.mfspr", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.mtspr $rA,$rB,${ui16nc} */
+/* l.mtspr $rA,$rB,${uimm16-split} */
   {
     OR1K_INSN_L_MTSPR, "l-mtspr", "l.mtspr", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.lwz $rD,${simm-16}($rA) */
+/* l.lwz $rD,${simm16}($rA) */
   {
     OR1K_INSN_L_LWZ, "l-lwz", "l.lwz", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.lws $rD,${simm-16}($rA) */
+/* l.lws $rD,${simm16}($rA) */
   {
     OR1K_INSN_L_LWS, "l-lws", "l.lws", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.lbz $rD,${simm-16}($rA) */
+/* l.lbz $rD,${simm16}($rA) */
   {
     OR1K_INSN_L_LBZ, "l-lbz", "l.lbz", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.lbs $rD,${simm-16}($rA) */
+/* l.lbs $rD,${simm16}($rA) */
   {
     OR1K_INSN_L_LBS, "l-lbs", "l.lbs", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.lhz $rD,${simm-16}($rA) */
+/* l.lhz $rD,${simm16}($rA) */
   {
     OR1K_INSN_L_LHZ, "l-lhz", "l.lhz", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.lhs $rD,${simm-16}($rA) */
+/* l.lhs $rD,${simm16}($rA) */
   {
     OR1K_INSN_L_LHS, "l-lhs", "l.lhs", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sw ${ui16nc}($rA),$rB */
+/* l.sw ${simm16-split}($rA),$rB */
   {
     OR1K_INSN_L_SW, "l-sw", "l.sw", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sb ${ui16nc}($rA),$rB */
+/* l.sb ${simm16-split}($rA),$rB */
   {
     OR1K_INSN_L_SB, "l-sb", "l.sb", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sh ${ui16nc}($rA),$rB */
+/* l.sh ${simm16-split}($rA),$rB */
   {
     OR1K_INSN_L_SH, "l-sh", "l.sh", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sll $rD,$rA,$rB */
   {
     OR1K_INSN_L_SLL, "l-sll", "l.sll", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.slli $rD,$rA,${uimm-6} */
+/* l.slli $rD,$rA,${uimm6} */
   {
     OR1K_INSN_L_SLLI, "l-slli", "l.slli", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.srl $rD,$rA,$rB */
   {
     OR1K_INSN_L_SRL, "l-srl", "l.srl", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.srli $rD,$rA,${uimm-6} */
+/* l.srli $rD,$rA,${uimm6} */
   {
     OR1K_INSN_L_SRLI, "l-srli", "l.srli", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sra $rD,$rA,$rB */
   {
     OR1K_INSN_L_SRA, "l-sra", "l.sra", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.srai $rD,$rA,${uimm-6} */
+/* l.srai $rD,$rA,${uimm6} */
   {
     OR1K_INSN_L_SRAI, "l-srai", "l.srai", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.ror $rD,$rA,$rB */
   {
     OR1K_INSN_L_ROR, "l-ror", "l.ror", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.rori $rD,$rA,${uimm-6} */
+/* l.rori $rD,$rA,${uimm6} */
   {
     OR1K_INSN_L_RORI, "l-rori", "l.rori", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.add $rD,$rA,$rB */
   {
     OR1K_INSN_L_ADD, "l-add", "l.add", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sub $rD,$rA,$rB */
   {
     OR1K_INSN_L_SUB, "l-sub", "l.sub", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.and $rD,$rA,$rB */
   {
     OR1K_INSN_L_AND, "l-and", "l.and", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.or $rD,$rA,$rB */
   {
     OR1K_INSN_L_OR, "l-or", "l.or", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.xor $rD,$rA,$rB */
   {
     OR1K_INSN_L_XOR, "l-xor", "l.xor", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.addc $rD,$rA,$rB */
   {
     OR1K_INSN_L_ADDC, "l-addc", "l.addc", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.mul $rD,$rA,$rB */
   {
     OR1K_INSN_L_MUL, "l-mul", "l.mul", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.mulu $rD,$rA,$rB */
   {
     OR1K_INSN_L_MULU, "l-mulu", "l.mulu", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.div $rD,$rA,$rB */
   {
     OR1K_INSN_L_DIV, "l-div", "l.div", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.divu $rD,$rA,$rB */
   {
     OR1K_INSN_L_DIVU, "l-divu", "l.divu", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.ff1 $rD,$rA */
   {
     OR1K_INSN_L_FF1, "l-ff1", "l.ff1", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.fl1 $rD,$rA */
   {
     OR1K_INSN_L_FL1, "l-fl1", "l.fl1", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.addi $rD,$rA,$lo16 */
-  {
-    OR1K_INSN_L_ADDI, "l-addi", "l.addi", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
-  },
-/* l.andi $rD,$rA,$lo16 */
+/* l.andi $rD,$rA,$uimm16 */
   {
     OR1K_INSN_L_ANDI, "l-andi", "l.andi", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.ori $rD,$rA,$lo16 */
+/* l.ori $rD,$rA,$uimm16 */
   {
     OR1K_INSN_L_ORI, "l-ori", "l.ori", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.xori $rD,$rA,$lo16 */
+/* l.xori $rD,$rA,$simm16 */
   {
     OR1K_INSN_L_XORI, "l-xori", "l.xori", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.muli $rD,$rA,$lo16 */
+/* l.addi $rD,$rA,$simm16 */
+  {
+    OR1K_INSN_L_ADDI, "l-addi", "l.addi", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.addic $rD,$rA,$simm16 */
+  {
+    OR1K_INSN_L_ADDIC, "l-addic", "l.addic", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.muli $rD,$rA,$simm16 */
   {
     OR1K_INSN_L_MULI, "l-muli", "l.muli", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.addic $rD,$rA,$lo16 */
+/* l.exths $rD,$rA */
   {
-    OR1K_INSN_L_ADDIC, "l.addic", "l.addic", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    OR1K_INSN_L_EXTHS, "l-exths", "l.exths", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.extbs $rD,$rA */
+  {
+    OR1K_INSN_L_EXTBS, "l-extbs", "l.extbs", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.exthz $rD,$rA */
+  {
+    OR1K_INSN_L_EXTHZ, "l-exthz", "l.exthz", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.extbz $rD,$rA */
+  {
+    OR1K_INSN_L_EXTBZ, "l-extbz", "l.extbz", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.extws $rD,$rA */
+  {
+    OR1K_INSN_L_EXTWS, "l-extws", "l.extws", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.extwz $rD,$rA */
+  {
+    OR1K_INSN_L_EXTWZ, "l-extwz", "l.extwz", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfgtu $rA,$rB */
   {
     OR1K_INSN_L_SFGTU, "l-sfgtu", "l.sfgtu", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfgeu $rA,$rB */
   {
     OR1K_INSN_L_SFGEU, "l-sfgeu", "l.sfgeu", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfltu $rA,$rB */
   {
     OR1K_INSN_L_SFLTU, "l-sfltu", "l.sfltu", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfleu $rA,$rB */
   {
     OR1K_INSN_L_SFLEU, "l-sfleu", "l.sfleu", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfgts $rA,$rB */
   {
     OR1K_INSN_L_SFGTS, "l-sfgts", "l.sfgts", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfges $rA,$rB */
   {
     OR1K_INSN_L_SFGES, "l-sfges", "l.sfges", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sflts $rA,$rB */
   {
     OR1K_INSN_L_SFLTS, "l-sflts", "l.sflts", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfles $rA,$rB */
   {
     OR1K_INSN_L_SFLES, "l-sfles", "l.sfles", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfgtui $rA,$lo16 */
+/* l.sfgtui $rA,$uimm16 */
   {
     OR1K_INSN_L_SFGTUI, "l-sfgtui", "l.sfgtui", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfgeui $rA,$lo16 */
+/* l.sfgeui $rA,$uimm16 */
   {
     OR1K_INSN_L_SFGEUI, "l-sfgeui", "l.sfgeui", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfltui $rA,$lo16 */
+/* l.sfltui $rA,$uimm16 */
   {
     OR1K_INSN_L_SFLTUI, "l-sfltui", "l.sfltui", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfleui $rA,$lo16 */
+/* l.sfleui $rA,$uimm16 */
   {
     OR1K_INSN_L_SFLEUI, "l-sfleui", "l.sfleui", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfgtsi $rA,${simm-16} */
+/* l.sfgtsi $rA,${simm16} */
   {
     OR1K_INSN_L_SFGTSI, "l-sfgtsi", "l.sfgtsi", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfgesi $rA,${simm-16} */
+/* l.sfgesi $rA,${simm16} */
   {
     OR1K_INSN_L_SFGESI, "l-sfgesi", "l.sfgesi", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfltsi $rA,${simm-16} */
+/* l.sfltsi $rA,${simm16} */
   {
     OR1K_INSN_L_SFLTSI, "l-sfltsi", "l.sfltsi", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sflesi $rA,${simm-16} */
+/* l.sflesi $rA,${simm16} */
   {
     OR1K_INSN_L_SFLESI, "l-sflesi", "l.sflesi", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfeq $rA,$rB */
   {
     OR1K_INSN_L_SFEQ, "l-sfeq", "l.sfeq", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfeqi $rA,$lo16 */
+/* l.sfeqi $rA,$simm16 */
   {
     OR1K_INSN_L_SFEQI, "l-sfeqi", "l.sfeqi", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfne $rA,$rB */
   {
     OR1K_INSN_L_SFNE, "l-sfne", "l.sfne", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
-/* l.sfnei $rA,$lo16 */
+/* l.sfnei $rA,$simm16 */
   {
     OR1K_INSN_L_SFNEI, "l-sfnei", "l.sfnei", 32,
-    { 0, { { { (1<<MACH_BASE), 0 } } } }
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.mac $rA,$rB */
+  {
+    OR1K_INSN_L_MAC, "l-mac", "l.mac", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.msb $rA,$rB */
+  {
+    OR1K_INSN_L_MSB, "l-msb", "l.msb", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.maci $rA,${simm16} */
+  {
+    OR1K_INSN_L_MACI, "l-maci", "l.maci", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.add.s $rDSF,$rASF,$rBSF */
+  {
+    OR1K_INSN_LF_ADD_S, "lf-add-s", "lf.add.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.sub.s $rDSF,$rASF,$rBSF */
+  {
+    OR1K_INSN_LF_SUB_S, "lf-sub-s", "lf.sub.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.mul.s $rDSF,$rASF,$rBSF */
+  {
+    OR1K_INSN_LF_MUL_S, "lf-mul-s", "lf.mul.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.div.s $rDSF,$rASF,$rBSF */
+  {
+    OR1K_INSN_LF_DIV_S, "lf-div-s", "lf.div.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.rem.s $rDSF,$rASF,$rBSF */
+  {
+    OR1K_INSN_LF_REM_S, "lf-rem-s", "lf.rem.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.itof.s $rDSF,$rA */
+  {
+    OR1K_INSN_LF_ITOF_S, "lf-itof-s", "lf.itof.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.ftoi.s $rD,$rASF */
+  {
+    OR1K_INSN_LF_FTOI_S, "lf-ftoi-s", "lf.ftoi.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.sfeq.s $rASF,$rBSF */
+  {
+    OR1K_INSN_LF_EQ_S, "lf-eq-s", "lf.sfeq.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.sfne.s $rASF,$rBSF */
+  {
+    OR1K_INSN_LF_NE_S, "lf-ne-s", "lf.sfne.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.sfge.s $rASF,$rBSF */
+  {
+    OR1K_INSN_LF_GE_S, "lf-ge-s", "lf.sfge.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.sfgt.s $rASF,$rBSF */
+  {
+    OR1K_INSN_LF_GT_S, "lf-gt-s", "lf.sfgt.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.sflt.s $rASF,$rBSF */
+  {
+    OR1K_INSN_LF_LT_S, "lf-lt-s", "lf.sflt.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.sfle.s $rASF,$rBSF */
+  {
+    OR1K_INSN_LF_LE_S, "lf-le-s", "lf.sfle.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* lf.madd.s $rDSF,$rASF,$rBSF */
+  {
+    OR1K_INSN_LF_MADD_S, "lf-madd-s", "lf.madd.s", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 };
 

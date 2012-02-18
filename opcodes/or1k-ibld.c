@@ -566,52 +566,66 @@ or1k_cgen_insert_operand (CGEN_CPU_DESC cd,
 
   switch (opindex)
     {
-    case OR1K_OPERAND_DISP_26 :
+    case OR1K_OPERAND_DISP26 :
       {
         long value = fields->f_disp26;
         value = ((SI) (((value) - (pc))) >> (2));
         errmsg = insert_normal (cd, value, 0|(1<<CGEN_IFLD_SIGNED)|(1<<CGEN_IFLD_PCREL_ADDR), 0, 25, 26, 32, total_length, buffer);
       }
       break;
-    case OR1K_OPERAND_HI16 :
-      errmsg = insert_normal (cd, fields->f_simm16, 0|(1<<CGEN_IFLD_SIGNED), 0, 15, 16, 32, total_length, buffer);
-      break;
-    case OR1K_OPERAND_LO16 :
-      errmsg = insert_normal (cd, fields->f_lo16, 0|(1<<CGEN_IFLD_SIGNED), 0, 15, 16, 32, total_length, buffer);
-      break;
     case OR1K_OPERAND_RA :
+      errmsg = insert_normal (cd, fields->f_r2, 0, 0, 20, 5, 32, total_length, buffer);
+      break;
+    case OR1K_OPERAND_RASF :
       errmsg = insert_normal (cd, fields->f_r2, 0, 0, 20, 5, 32, total_length, buffer);
       break;
     case OR1K_OPERAND_RB :
       errmsg = insert_normal (cd, fields->f_r3, 0, 0, 15, 5, 32, total_length, buffer);
       break;
+    case OR1K_OPERAND_RBSF :
+      errmsg = insert_normal (cd, fields->f_r3, 0, 0, 15, 5, 32, total_length, buffer);
+      break;
     case OR1K_OPERAND_RD :
       errmsg = insert_normal (cd, fields->f_r1, 0, 0, 25, 5, 32, total_length, buffer);
       break;
-    case OR1K_OPERAND_SIMM_16 :
-      errmsg = insert_normal (cd, fields->f_simm16, 0|(1<<CGEN_IFLD_SIGNED), 0, 15, 16, 32, total_length, buffer);
+    case OR1K_OPERAND_RDSF :
+      errmsg = insert_normal (cd, fields->f_r1, 0, 0, 25, 5, 32, total_length, buffer);
       break;
-    case OR1K_OPERAND_UI16NC :
+    case OR1K_OPERAND_SIMM16 :
+      errmsg = insert_normal (cd, fields->f_simm16, 0|(1<<CGEN_IFLD_SIGNED)|(1<<CGEN_IFLD_SIGN_OPT), 0, 15, 16, 32, total_length, buffer);
+      break;
+    case OR1K_OPERAND_SIMM16_SPLIT :
       {
 {
-  FLD (f_i16_2) = ((((HI) (FLD (f_i16nc)) >> (11))) & (31));
-  FLD (f_i16_1) = ((FLD (f_i16nc)) & (2047));
+  FLD (f_imm16_25_5) = ((((INT) (FLD (f_simm16_split)) >> (11))) & (31));
+  FLD (f_imm16_10_11) = ((FLD (f_simm16_split)) & (2047));
 }
-        errmsg = insert_normal (cd, fields->f_i16_1, 0, 0, 10, 11, 32, total_length, buffer);
+        errmsg = insert_normal (cd, fields->f_imm16_25_5, 0, 0, 25, 5, 32, total_length, buffer);
         if (errmsg)
           break;
-        errmsg = insert_normal (cd, fields->f_i16_2, 0, 0, 25, 5, 32, total_length, buffer);
+        errmsg = insert_normal (cd, fields->f_imm16_10_11, 0, 0, 10, 11, 32, total_length, buffer);
         if (errmsg)
           break;
       }
       break;
-    case OR1K_OPERAND_UIMM_16 :
+    case OR1K_OPERAND_UIMM16 :
       errmsg = insert_normal (cd, fields->f_uimm16, 0, 0, 15, 16, 32, total_length, buffer);
       break;
-    case OR1K_OPERAND_UIMM_5 :
-      errmsg = insert_normal (cd, fields->f_uimm5, 0, 0, 4, 5, 32, total_length, buffer);
+    case OR1K_OPERAND_UIMM16_SPLIT :
+      {
+{
+  FLD (f_imm16_25_5) = ((((UINT) (FLD (f_uimm16_split)) >> (11))) & (31));
+  FLD (f_imm16_10_11) = ((FLD (f_uimm16_split)) & (2047));
+}
+        errmsg = insert_normal (cd, fields->f_imm16_25_5, 0, 0, 25, 5, 32, total_length, buffer);
+        if (errmsg)
+          break;
+        errmsg = insert_normal (cd, fields->f_imm16_10_11, 0, 0, 10, 11, 32, total_length, buffer);
+        if (errmsg)
+          break;
+      }
       break;
-    case OR1K_OPERAND_UIMM_6 :
+    case OR1K_OPERAND_UIMM6 :
       errmsg = insert_normal (cd, fields->f_uimm6, 0, 0, 5, 6, 32, total_length, buffer);
       break;
 
@@ -657,7 +671,7 @@ or1k_cgen_extract_operand (CGEN_CPU_DESC cd,
 
   switch (opindex)
     {
-    case OR1K_OPERAND_DISP_26 :
+    case OR1K_OPERAND_DISP26 :
       {
         long value;
         length = extract_normal (cd, ex_info, insn_value, 0|(1<<CGEN_IFLD_SIGNED)|(1<<CGEN_IFLD_PCREL_ADDR), 0, 25, 26, 32, total_length, pc, & value);
@@ -665,42 +679,53 @@ or1k_cgen_extract_operand (CGEN_CPU_DESC cd,
         fields->f_disp26 = value;
       }
       break;
-    case OR1K_OPERAND_HI16 :
-      length = extract_normal (cd, ex_info, insn_value, 0|(1<<CGEN_IFLD_SIGNED), 0, 15, 16, 32, total_length, pc, & fields->f_simm16);
-      break;
-    case OR1K_OPERAND_LO16 :
-      length = extract_normal (cd, ex_info, insn_value, 0|(1<<CGEN_IFLD_SIGNED), 0, 15, 16, 32, total_length, pc, & fields->f_lo16);
-      break;
     case OR1K_OPERAND_RA :
+      length = extract_normal (cd, ex_info, insn_value, 0, 0, 20, 5, 32, total_length, pc, & fields->f_r2);
+      break;
+    case OR1K_OPERAND_RASF :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 20, 5, 32, total_length, pc, & fields->f_r2);
       break;
     case OR1K_OPERAND_RB :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 5, 32, total_length, pc, & fields->f_r3);
       break;
+    case OR1K_OPERAND_RBSF :
+      length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 5, 32, total_length, pc, & fields->f_r3);
+      break;
     case OR1K_OPERAND_RD :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 25, 5, 32, total_length, pc, & fields->f_r1);
       break;
-    case OR1K_OPERAND_SIMM_16 :
-      length = extract_normal (cd, ex_info, insn_value, 0|(1<<CGEN_IFLD_SIGNED), 0, 15, 16, 32, total_length, pc, & fields->f_simm16);
+    case OR1K_OPERAND_RDSF :
+      length = extract_normal (cd, ex_info, insn_value, 0, 0, 25, 5, 32, total_length, pc, & fields->f_r1);
       break;
-    case OR1K_OPERAND_UI16NC :
+    case OR1K_OPERAND_SIMM16 :
+      length = extract_normal (cd, ex_info, insn_value, 0|(1<<CGEN_IFLD_SIGNED)|(1<<CGEN_IFLD_SIGN_OPT), 0, 15, 16, 32, total_length, pc, & fields->f_simm16);
+      break;
+    case OR1K_OPERAND_SIMM16_SPLIT :
       {
-        length = extract_normal (cd, ex_info, insn_value, 0, 0, 10, 11, 32, total_length, pc, & fields->f_i16_1);
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 25, 5, 32, total_length, pc, & fields->f_imm16_25_5);
         if (length <= 0) break;
-        length = extract_normal (cd, ex_info, insn_value, 0, 0, 25, 5, 32, total_length, pc, & fields->f_i16_2);
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 10, 11, 32, total_length, pc, & fields->f_imm16_10_11);
         if (length <= 0) break;
 {
-  FLD (f_i16nc) = or1k_sign_extend_16bit (((((FLD (f_i16_2)) << (11))) | (FLD (f_i16_1))));
+  FLD (f_simm16_split) = EXTHISI (((HI) (UINT) (((((FLD (f_imm16_25_5)) << (11))) | (FLD (f_imm16_10_11))))));
 }
       }
       break;
-    case OR1K_OPERAND_UIMM_16 :
+    case OR1K_OPERAND_UIMM16 :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 15, 16, 32, total_length, pc, & fields->f_uimm16);
       break;
-    case OR1K_OPERAND_UIMM_5 :
-      length = extract_normal (cd, ex_info, insn_value, 0, 0, 4, 5, 32, total_length, pc, & fields->f_uimm5);
+    case OR1K_OPERAND_UIMM16_SPLIT :
+      {
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 25, 5, 32, total_length, pc, & fields->f_imm16_25_5);
+        if (length <= 0) break;
+        length = extract_normal (cd, ex_info, insn_value, 0, 0, 10, 11, 32, total_length, pc, & fields->f_imm16_10_11);
+        if (length <= 0) break;
+{
+  FLD (f_uimm16_split) = ZEXTHISI (((UHI) (UINT) (((((FLD (f_imm16_25_5)) << (11))) | (FLD (f_imm16_10_11))))));
+}
+      }
       break;
-    case OR1K_OPERAND_UIMM_6 :
+    case OR1K_OPERAND_UIMM6 :
       length = extract_normal (cd, ex_info, insn_value, 0, 0, 5, 6, 32, total_length, pc, & fields->f_uimm6);
       break;
 
@@ -741,37 +766,40 @@ or1k_cgen_get_int_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 
   switch (opindex)
     {
-    case OR1K_OPERAND_DISP_26 :
+    case OR1K_OPERAND_DISP26 :
       value = fields->f_disp26;
       break;
-    case OR1K_OPERAND_HI16 :
-      value = fields->f_simm16;
-      break;
-    case OR1K_OPERAND_LO16 :
-      value = fields->f_lo16;
-      break;
     case OR1K_OPERAND_RA :
+      value = fields->f_r2;
+      break;
+    case OR1K_OPERAND_RASF :
       value = fields->f_r2;
       break;
     case OR1K_OPERAND_RB :
       value = fields->f_r3;
       break;
+    case OR1K_OPERAND_RBSF :
+      value = fields->f_r3;
+      break;
     case OR1K_OPERAND_RD :
       value = fields->f_r1;
       break;
-    case OR1K_OPERAND_SIMM_16 :
+    case OR1K_OPERAND_RDSF :
+      value = fields->f_r1;
+      break;
+    case OR1K_OPERAND_SIMM16 :
       value = fields->f_simm16;
       break;
-    case OR1K_OPERAND_UI16NC :
-      value = fields->f_i16nc;
+    case OR1K_OPERAND_SIMM16_SPLIT :
+      value = fields->f_simm16_split;
       break;
-    case OR1K_OPERAND_UIMM_16 :
+    case OR1K_OPERAND_UIMM16 :
       value = fields->f_uimm16;
       break;
-    case OR1K_OPERAND_UIMM_5 :
-      value = fields->f_uimm5;
+    case OR1K_OPERAND_UIMM16_SPLIT :
+      value = fields->f_uimm16_split;
       break;
-    case OR1K_OPERAND_UIMM_6 :
+    case OR1K_OPERAND_UIMM6 :
       value = fields->f_uimm6;
       break;
 
@@ -794,37 +822,40 @@ or1k_cgen_get_vma_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 
   switch (opindex)
     {
-    case OR1K_OPERAND_DISP_26 :
+    case OR1K_OPERAND_DISP26 :
       value = fields->f_disp26;
       break;
-    case OR1K_OPERAND_HI16 :
-      value = fields->f_simm16;
-      break;
-    case OR1K_OPERAND_LO16 :
-      value = fields->f_lo16;
-      break;
     case OR1K_OPERAND_RA :
+      value = fields->f_r2;
+      break;
+    case OR1K_OPERAND_RASF :
       value = fields->f_r2;
       break;
     case OR1K_OPERAND_RB :
       value = fields->f_r3;
       break;
+    case OR1K_OPERAND_RBSF :
+      value = fields->f_r3;
+      break;
     case OR1K_OPERAND_RD :
       value = fields->f_r1;
       break;
-    case OR1K_OPERAND_SIMM_16 :
+    case OR1K_OPERAND_RDSF :
+      value = fields->f_r1;
+      break;
+    case OR1K_OPERAND_SIMM16 :
       value = fields->f_simm16;
       break;
-    case OR1K_OPERAND_UI16NC :
-      value = fields->f_i16nc;
+    case OR1K_OPERAND_SIMM16_SPLIT :
+      value = fields->f_simm16_split;
       break;
-    case OR1K_OPERAND_UIMM_16 :
+    case OR1K_OPERAND_UIMM16 :
       value = fields->f_uimm16;
       break;
-    case OR1K_OPERAND_UIMM_5 :
-      value = fields->f_uimm5;
+    case OR1K_OPERAND_UIMM16_SPLIT :
+      value = fields->f_uimm16_split;
       break;
-    case OR1K_OPERAND_UIMM_6 :
+    case OR1K_OPERAND_UIMM6 :
       value = fields->f_uimm6;
       break;
 
@@ -854,37 +885,40 @@ or1k_cgen_set_int_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 {
   switch (opindex)
     {
-    case OR1K_OPERAND_DISP_26 :
+    case OR1K_OPERAND_DISP26 :
       fields->f_disp26 = value;
       break;
-    case OR1K_OPERAND_HI16 :
-      fields->f_simm16 = value;
-      break;
-    case OR1K_OPERAND_LO16 :
-      fields->f_lo16 = value;
-      break;
     case OR1K_OPERAND_RA :
+      fields->f_r2 = value;
+      break;
+    case OR1K_OPERAND_RASF :
       fields->f_r2 = value;
       break;
     case OR1K_OPERAND_RB :
       fields->f_r3 = value;
       break;
+    case OR1K_OPERAND_RBSF :
+      fields->f_r3 = value;
+      break;
     case OR1K_OPERAND_RD :
       fields->f_r1 = value;
       break;
-    case OR1K_OPERAND_SIMM_16 :
+    case OR1K_OPERAND_RDSF :
+      fields->f_r1 = value;
+      break;
+    case OR1K_OPERAND_SIMM16 :
       fields->f_simm16 = value;
       break;
-    case OR1K_OPERAND_UI16NC :
-      fields->f_i16nc = value;
+    case OR1K_OPERAND_SIMM16_SPLIT :
+      fields->f_simm16_split = value;
       break;
-    case OR1K_OPERAND_UIMM_16 :
+    case OR1K_OPERAND_UIMM16 :
       fields->f_uimm16 = value;
       break;
-    case OR1K_OPERAND_UIMM_5 :
-      fields->f_uimm5 = value;
+    case OR1K_OPERAND_UIMM16_SPLIT :
+      fields->f_uimm16_split = value;
       break;
-    case OR1K_OPERAND_UIMM_6 :
+    case OR1K_OPERAND_UIMM6 :
       fields->f_uimm6 = value;
       break;
 
@@ -904,37 +938,40 @@ or1k_cgen_set_vma_operand (CGEN_CPU_DESC cd ATTRIBUTE_UNUSED,
 {
   switch (opindex)
     {
-    case OR1K_OPERAND_DISP_26 :
+    case OR1K_OPERAND_DISP26 :
       fields->f_disp26 = value;
       break;
-    case OR1K_OPERAND_HI16 :
-      fields->f_simm16 = value;
-      break;
-    case OR1K_OPERAND_LO16 :
-      fields->f_lo16 = value;
-      break;
     case OR1K_OPERAND_RA :
+      fields->f_r2 = value;
+      break;
+    case OR1K_OPERAND_RASF :
       fields->f_r2 = value;
       break;
     case OR1K_OPERAND_RB :
       fields->f_r3 = value;
       break;
+    case OR1K_OPERAND_RBSF :
+      fields->f_r3 = value;
+      break;
     case OR1K_OPERAND_RD :
       fields->f_r1 = value;
       break;
-    case OR1K_OPERAND_SIMM_16 :
+    case OR1K_OPERAND_RDSF :
+      fields->f_r1 = value;
+      break;
+    case OR1K_OPERAND_SIMM16 :
       fields->f_simm16 = value;
       break;
-    case OR1K_OPERAND_UI16NC :
-      fields->f_i16nc = value;
+    case OR1K_OPERAND_SIMM16_SPLIT :
+      fields->f_simm16_split = value;
       break;
-    case OR1K_OPERAND_UIMM_16 :
+    case OR1K_OPERAND_UIMM16 :
       fields->f_uimm16 = value;
       break;
-    case OR1K_OPERAND_UIMM_5 :
-      fields->f_uimm5 = value;
+    case OR1K_OPERAND_UIMM16_SPLIT :
+      fields->f_uimm16_split = value;
       break;
-    case OR1K_OPERAND_UIMM_6 :
+    case OR1K_OPERAND_UIMM6 :
       fields->f_uimm6 = value;
       break;
 

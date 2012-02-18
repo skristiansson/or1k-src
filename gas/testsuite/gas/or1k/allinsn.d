@@ -18,12 +18,10 @@ Disassembly of section \.text:
    c:	00 00 00 01 	l\.j 10 <l_j\+0x8>
   10:	00 00 00 00 	l\.j 10 <l_j\+0x8>
   14:	03 ff ff fb 	l\.j 0 <localtext>
-  18:	00 00 00 00 	l\.j .*
-			18: R_OR1K_INSN_REL_26	.*
-  1c:	03 ff ff f9 	l\.j .*
-			1c: R_OR1K_INSN_REL_26	.*
-  20:	00 00 00 00 	l\.j .*
-			20: R_OR1K_INSN_REL_26	.*
+	\.\.\.
+			18: R_OR1K_INSN_REL_26	\.data
+			1c: R_OR1K_INSN_REL_26	globaltext
+			20: R_OR1K_INSN_REL_26	globaldata
   24:	03 ff ff f9 	l\.j 8 <l_j>
   28:	00 00 00 01 	l\.j 2c <l_jal>
 
@@ -32,12 +30,12 @@ Disassembly of section \.text:
   30:	04 00 00 01 	l\.jal 34 <l_jal\+0x8>
   34:	04 00 00 00 	l\.jal 34 <l_jal\+0x8>
   38:	07 ff ff f2 	l\.jal 0 <localtext>
-  3c:	04 00 00 00 	l\.jal .*
-			3c: R_OR1K_INSN_REL_26	.*
-  40:	07 ff ff f0 	l\.jal .*
-			40: R_OR1K_INSN_REL_26	.*
-  44:	04 00 00 00 	l\.jal .*
-			44: R_OR1K_INSN_REL_26	.*
+  3c:	04 00 00 00 	l\.jal 3c <l_jal\+0x10>
+			3c: R_OR1K_INSN_REL_26	\.data
+  40:	04 00 00 00 	l\.jal 40 <l_jal\+0x14>
+			40: R_OR1K_INSN_REL_26	globaltext
+  44:	04 00 00 00 	l\.jal 44 <l_jal\+0x18>
+			44: R_OR1K_INSN_REL_26	globaldata
   48:	07 ff ff f0 	l\.jal 8 <l_j>
   4c:	07 ff ff f8 	l\.jal 2c <l_jal>
 
@@ -66,12 +64,12 @@ Disassembly of section \.text:
   94:	0c 00 00 01 	l\.bnf 98 <l_bnf\+0x8>
   98:	0c 00 00 00 	l\.bnf 98 <l_bnf\+0x8>
   9c:	0f ff ff d9 	l\.bnf 0 <localtext>
-  a0:	0c 00 00 00 	l\.bnf .*
-			a0: R_OR1K_INSN_REL_26	.*
-  a4:	0f ff ff d7 	l\.bnf .*
-			a4: R_OR1K_INSN_REL_26	.*
-  a8:	0c 00 00 00 	l\.bnf .*
-			a8: R_OR1K_INSN_REL_26	.*
+  a0:	0c 00 00 00 	l\.bnf a0 <l_bnf\+0x10>
+			a0: R_OR1K_INSN_REL_26	\.data
+  a4:	0c 00 00 00 	l\.bnf a4 <l_bnf\+0x14>
+			a4: R_OR1K_INSN_REL_26	globaltext
+  a8:	0c 00 00 00 	l\.bnf a8 <l_bnf\+0x18>
+			a8: R_OR1K_INSN_REL_26	globaldata
   ac:	0f ff ff d7 	l\.bnf 8 <l_j>
   b0:	0f ff ff df 	l\.bnf 2c <l_jal>
 
@@ -80,12 +78,12 @@ Disassembly of section \.text:
   b8:	10 00 00 01 	l\.bf bc <l_bf\+0x8>
   bc:	10 00 00 00 	l\.bf bc <l_bf\+0x8>
   c0:	13 ff ff d0 	l\.bf 0 <localtext>
-  c4:	10 00 00 00 	l\.bf .*
-			c4: R_OR1K_INSN_REL_26	.*
-  c8:	13 ff ff ce 	l\.bf .*
-			c8: R_OR1K_INSN_REL_26	.*
-  cc:	10 00 00 00 	l\.bf .*
-			cc: R_OR1K_INSN_REL_26	.*
+  c4:	10 00 00 00 	l\.bf c4 <l_bf\+0x10>
+			c4: R_OR1K_INSN_REL_26	\.data
+  c8:	10 00 00 00 	l\.bf c8 <l_bf\+0x14>
+			c8: R_OR1K_INSN_REL_26	globaltext
+  cc:	10 00 00 00 	l\.bf cc <l_bf\+0x18>
+			cc: R_OR1K_INSN_REL_26	globaldata
   d0:	13 ff ff ce 	l\.bf 8 <l_j>
   d4:	13 ff ff d6 	l\.bf 2c <l_jal>
 
@@ -116,14 +114,14 @@ Disassembly of section \.text:
  11c:	15 00 00 00 	l\.nop 0x0
 
 00000120 <l_movhi>:
- 120:	18 00 00 00 	l\.movhi r0,0
- 124:	1b e0 ff ff 	l\.movhi r31,-1
- 128:	1a 00 80 00 	l\.movhi r16,-32768
- 12c:	19 e0 7f ff 	l\.movhi r15,32767
- 130:	18 20 00 01 	l\.movhi r1,1
- 134:	1b 80 81 ce 	l\.movhi r28,-32306
- 138:	1a e0 e8 ac 	l\.movhi r23,-5972
- 13c:	1a 60 d8 c0 	l\.movhi r19,-10048
+ 120:	18 00 00 00 	l\.movhi r0,0x0
+ 124:	1b e0 ff ff 	l\.movhi r31,0xffff
+ 128:	1a 00 80 00 	l\.movhi r16,0x8000
+ 12c:	19 e0 7f ff 	l\.movhi r15,0x7fff
+ 130:	18 20 00 01 	l\.movhi r1,0x1
+ 134:	1b 80 81 ce 	l\.movhi r28,0x81ce
+ 138:	1a e0 e8 ac 	l\.movhi r23,0xe8ac
+ 13c:	1a 60 d8 c0 	l\.movhi r19,0xd8c0
 
 00000140 <l_mfspr>:
  140:	b4 00 00 00 	l\.mfspr r0,r0,0x0
@@ -136,14 +134,14 @@ Disassembly of section \.text:
  15c:	b7 42 f7 d6 	l\.mfspr r26,r2,0xf7d6
 
 00000160 <l_mtspr>:
- 160:	c0 00 00 00 	l\.mtspr r0,r0,0
- 164:	c3 ff ff ff 	l\.mtspr r31,r31,-1
- 168:	c2 10 80 00 	l\.mtspr r16,r16,-32768
- 16c:	c1 ef 7f ff 	l\.mtspr r15,r15,32767
- 170:	c0 01 08 01 	l\.mtspr r1,r1,1
- 174:	c0 fe 33 77 	l\.mtspr r30,r6,15223
- 178:	c2 a9 3c cc 	l\.mtspr r9,r7,-21300
- 17c:	c3 f9 3d 7b 	l\.mtspr r25,r7,-645
+ 160:	c0 00 00 00 	l\.mtspr r0,r0,0x0
+ 164:	c3 ff ff ff 	l\.mtspr r31,r31,0xffff
+ 168:	c2 10 80 00 	l\.mtspr r16,r16,0x8000
+ 16c:	c1 ef 7f ff 	l\.mtspr r15,r15,0x7fff
+ 170:	c0 01 08 01 	l\.mtspr r1,r1,0x1
+ 174:	c0 fe 33 77 	l\.mtspr r30,r6,0x3b77
+ 178:	c2 a9 3c cc 	l\.mtspr r9,r7,0xaccc
+ 17c:	c3 f9 3d 7b 	l\.mtspr r25,r7,0xfd7b
 
 00000180 <l_lwz>:
  180:	84 00 00 00 	l\.lwz r0,0\(r0\)
@@ -426,24 +424,24 @@ Disassembly of section \.text:
  4fc:	9d d0 97 3b 	l\.addi r14,r16,-26821
 
 00000500 <l_andi>:
- 500:	a4 00 00 00 	l\.andi r0,r0,0
- 504:	a7 ff ff ff 	l\.andi r31,r31,-1
- 508:	a6 10 80 00 	l\.andi r16,r16,-32768
- 50c:	a5 ef 7f ff 	l\.andi r15,r15,32767
- 510:	a4 21 00 01 	l\.andi r1,r1,1
- 514:	a7 75 2e 97 	l\.andi r27,r21,11927
- 518:	a6 b7 2f 1b 	l\.andi r21,r23,12059
- 51c:	a7 de 83 c4 	l\.andi r30,r30,-31804
+ 500:	a4 00 00 00 	l\.andi r0,r0,0x0
+ 504:	a7 ff ff ff 	l\.andi r31,r31,0xffff
+ 508:	a6 10 80 00 	l\.andi r16,r16,0x8000
+ 50c:	a5 ef 7f ff 	l\.andi r15,r15,0x7fff
+ 510:	a4 21 00 01 	l\.andi r1,r1,0x1
+ 514:	a7 75 2e 97 	l\.andi r27,r21,0x2e97
+ 518:	a6 b7 2f 1b 	l\.andi r21,r23,0x2f1b
+ 51c:	a7 de 83 c4 	l\.andi r30,r30,0x83c4
 
 00000520 <l_ori>:
- 520:	a8 00 00 00 	l\.ori r0,r0,0
- 524:	ab ff ff ff 	l\.ori r31,r31,-1
- 528:	aa 10 80 00 	l\.ori r16,r16,-32768
- 52c:	a9 ef 7f ff 	l\.ori r15,r15,32767
- 530:	a8 21 00 01 	l\.ori r1,r1,1
- 534:	aa db d8 81 	l\.ori r22,r27,-10111
- 538:	aa 3f 00 80 	l\.ori r17,r31,128
- 53c:	a9 b4 cf 6d 	l\.ori r13,r20,-12435
+ 520:	a8 00 00 00 	l\.ori r0,r0,0x0
+ 524:	ab ff ff ff 	l\.ori r31,r31,0xffff
+ 528:	aa 10 80 00 	l\.ori r16,r16,0x8000
+ 52c:	a9 ef 7f ff 	l\.ori r15,r15,0x7fff
+ 530:	a8 21 00 01 	l\.ori r1,r1,0x1
+ 534:	aa db d8 81 	l\.ori r22,r27,0xd881
+ 538:	aa 3f 00 80 	l\.ori r17,r31,0x80
+ 53c:	a9 b4 cf 6d 	l\.ori r13,r20,0xcf6d
 
 00000540 <l_xori>:
  540:	ac 00 00 00 	l\.xori r0,r0,0
@@ -451,7 +449,7 @@ Disassembly of section \.text:
  548:	ae 10 80 00 	l\.xori r16,r16,-32768
  54c:	ad ef 7f ff 	l\.xori r15,r15,32767
  550:	ac 21 00 01 	l\.xori r1,r1,1
- 554:	ae 50 ed c2 	l\.xori r18,r16,-4670
+ 554:	ae 50 ff ff 	l\.xori r18,r16,-1
  558:	af 2d c0 35 	l\.xori r25,r13,-16331
  55c:	ad 9d 80 29 	l\.xori r12,r29,-32727
 
@@ -462,7 +460,7 @@ Disassembly of section \.text:
  56c:	b1 ef 7f ff 	l\.muli r15,r15,32767
  570:	b0 21 00 01 	l\.muli r1,r1,1
  574:	b3 67 ed 85 	l\.muli r27,r7,-4731
- 578:	b0 f4 fc 9e 	l\.muli r7,r20,-866
+ 578:	b0 f4 ff ff 	l\.muli r7,r20,-1
  57c:	b3 15 5a b3 	l\.muli r24,r21,23219
 
 00000580 <l_addic>:
@@ -472,7 +470,7 @@ Disassembly of section \.text:
  58c:	a1 ef 7f ff 	l\.addic r15,r15,32767
  590:	a0 21 00 01 	l\.addic r1,r1,1
  594:	a0 d6 80 44 	l\.addic r6,r22,-32700
- 598:	a2 69 f6 66 	l\.addic r19,r9,-2458
+ 598:	a2 69 ff ff 	l\.addic r19,r9,-1
  59c:	a3 7c 1a eb 	l\.addic r27,r28,6891
 
 000005a0 <l_sfgtu>:
@@ -556,44 +554,44 @@ Disassembly of section \.text:
  69c:	e5 a0 60 00 	l\.sfles r0,r12
 
 000006a0 <l_sfgtui>:
- 6a0:	bc 40 00 00 	l\.sfgtui r0,0
- 6a4:	bc 5f ff ff 	l\.sfgtui r31,-1
- 6a8:	bc 50 80 00 	l\.sfgtui r16,-32768
- 6ac:	bc 4f 7f ff 	l\.sfgtui r15,32767
- 6b0:	bc 41 00 01 	l\.sfgtui r1,1
- 6b4:	bc 45 4b 21 	l\.sfgtui r5,19233
- 6b8:	bc 57 91 22 	l\.sfgtui r23,-28382
- 6bc:	bc 51 25 dd 	l\.sfgtui r17,9693
+ 6a0:	bc 40 00 00 	l\.sfgtui r0,0x0
+ 6a4:	bc 5f ff ff 	l\.sfgtui r31,0xffff
+ 6a8:	bc 50 80 00 	l\.sfgtui r16,0x8000
+ 6ac:	bc 4f 7f ff 	l\.sfgtui r15,0x7fff
+ 6b0:	bc 41 00 01 	l\.sfgtui r1,0x1
+ 6b4:	bc 45 4b 21 	l\.sfgtui r5,0x4b21
+ 6b8:	bc 57 91 22 	l\.sfgtui r23,0x9122
+ 6bc:	bc 51 25 dd 	l\.sfgtui r17,0x25dd
 
 000006c0 <l_sfgeui>:
- 6c0:	bc 60 00 00 	l\.sfgeui r0,0
- 6c4:	bc 7f ff ff 	l\.sfgeui r31,-1
- 6c8:	bc 70 80 00 	l\.sfgeui r16,-32768
- 6cc:	bc 6f 7f ff 	l\.sfgeui r15,32767
- 6d0:	bc 61 00 01 	l\.sfgeui r1,1
- 6d4:	bc 71 ec b6 	l\.sfgeui r17,-4938
- 6d8:	bc 6f 40 13 	l\.sfgeui r15,16403
- 6dc:	bc 66 f1 a4 	l\.sfgeui r6,-3676
+ 6c0:	bc 60 00 00 	l\.sfgeui r0,0x0
+ 6c4:	bc 7f ff ff 	l\.sfgeui r31,0xffff
+ 6c8:	bc 70 80 00 	l\.sfgeui r16,0x8000
+ 6cc:	bc 6f 7f ff 	l\.sfgeui r15,0x7fff
+ 6d0:	bc 61 00 01 	l\.sfgeui r1,0x1
+ 6d4:	bc 71 ec b6 	l\.sfgeui r17,0xecb6
+ 6d8:	bc 6f 40 13 	l\.sfgeui r15,0x4013
+ 6dc:	bc 66 f1 a4 	l\.sfgeui r6,0xf1a4
 
 000006e0 <l_sfltui>:
- 6e0:	bc 80 00 00 	l\.sfltui r0,0
- 6e4:	bc 9f ff ff 	l\.sfltui r31,-1
- 6e8:	bc 90 80 00 	l\.sfltui r16,-32768
- 6ec:	bc 8f 7f ff 	l\.sfltui r15,32767
- 6f0:	bc 81 00 01 	l\.sfltui r1,1
- 6f4:	bc 83 cc af 	l\.sfltui r3,-13137
- 6f8:	bc 98 4c fd 	l\.sfltui r24,19709
- 6fc:	bc 8a 03 3e 	l\.sfltui r10,830
+ 6e0:	bc 80 00 00 	l\.sfltui r0,0x0
+ 6e4:	bc 9f ff ff 	l\.sfltui r31,0xffff
+ 6e8:	bc 90 80 00 	l\.sfltui r16,0x8000
+ 6ec:	bc 8f 7f ff 	l\.sfltui r15,0x7fff
+ 6f0:	bc 81 00 01 	l\.sfltui r1,0x1
+ 6f4:	bc 83 cc af 	l\.sfltui r3,0xccaf
+ 6f8:	bc 98 4c fd 	l\.sfltui r24,0x4cfd
+ 6fc:	bc 8a 03 3e 	l\.sfltui r10,0x33e
 
 00000700 <l_sfleui>:
- 700:	bc a0 00 00 	l\.sfleui r0,0
- 704:	bc bf ff ff 	l\.sfleui r31,-1
- 708:	bc b0 80 00 	l\.sfleui r16,-32768
- 70c:	bc af 7f ff 	l\.sfleui r15,32767
- 710:	bc a1 00 01 	l\.sfleui r1,1
- 714:	bc b7 9b 66 	l\.sfleui r23,-25754
- 718:	bc b1 b6 d7 	l\.sfleui r17,-18729
- 71c:	bc a9 a8 81 	l\.sfleui r9,-22399
+ 700:	bc a0 00 00 	l\.sfleui r0,0x0
+ 704:	bc bf ff ff 	l\.sfleui r31,0xffff
+ 708:	bc b0 80 00 	l\.sfleui r16,0x8000
+ 70c:	bc af 7f ff 	l\.sfleui r15,0x7fff
+ 710:	bc a1 00 01 	l\.sfleui r1,0x1
+ 714:	bc b7 9b 66 	l\.sfleui r23,0x9b66
+ 718:	bc b1 b6 d7 	l\.sfleui r17,0xb6d7
+ 71c:	bc a9 a8 81 	l\.sfleui r9,0xa881
 
 00000720 <l_sfgtsi>:
  720:	bd 40 00 00 	l\.sfgtsi r0,0
@@ -679,4 +677,4 @@ Disassembly of section \.text:
  820:	9c 21 be ef 	l\.addi r1,r1,-16657
 
 00000824 <l_hi>:
- 824:	18 20 de ad 	l\.movhi r1,-8531
+ 824:	18 20 de ad 	l\.movhi r1,0xdead

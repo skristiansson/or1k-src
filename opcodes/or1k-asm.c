@@ -55,106 +55,77 @@ static const char * MISSING_CLOSING_PARENTHESIS = N_("missing `)'");
 
 #define CGEN_VERBOSE_ASSEMBLER_ERRORS
 
-long
-or1k_sign_extend_16bit (long value)
-{
-  return ((value & 0xffff) ^ 0x8000) - 0x8000;
-}
-
-/* Handle hi().  */
-
 static const char *
-parse_hi16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
+parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
 {
   const char *errmsg;
   enum cgen_parse_operand_result result_type;
-  unsigned long ret;
+  long ret;
 
   if (**strp == '#')
     ++*strp;
 
   if (strncasecmp (*strp, "hi(", 3) == 0)
-    {
+        {
       bfd_vma value;
 
       *strp += 3;
       errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_HI16,
-				   & result_type, & value);
+        			   & result_type, & value);
       if (**strp != ')')
-        return MISSING_CLOSING_PARENTHESIS;
-
+        errmsg = MISSING_CLOSING_PARENTHESIS;
       ++*strp;
-      if (errmsg == NULL
-          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
-        value >>= 16;
+      
       ret = value;
+      
+      if (errmsg == NULL &&
+          result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER) {
+        ret >>= 16;
+        ret &= 0xffff;
+        ret = (ret ^ 0x8000) - 0x8000;
+      }
     }
-  else
-    {
-      if (**strp == '-')
-	{
-	  long value;
-
-	  errmsg = cgen_parse_signed_integer (cd, strp, opindex, &value);
-	  ret = value;
-	}
-      else
-	{
-	  unsigned long value;
-
-	  errmsg = cgen_parse_unsigned_integer (cd, strp, opindex, &value);
-	  ret = value;
-	}
-    }
-
-  *valuep = ((ret & 0xffff) ^ 0x8000) - 0x8000;
-  return errmsg;
-}
-
-/* Handle lo().  */
-
-static const char *
-parse_lo16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
-{
-  const char *errmsg;
-  enum cgen_parse_operand_result result_type;
-  unsigned long ret;
-
-  if (**strp == '#')
-    ++*strp;
-
-  if (strncasecmp (*strp, "lo(", 3) == 0)
+  else if (strncasecmp (*strp, "lo(", 3) == 0)
     {
       bfd_vma value;
 
       *strp += 3;
       errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_LO16,
-				   & result_type, & value);
+        			   & result_type, & value);
       if (**strp != ')')
         return MISSING_CLOSING_PARENTHESIS;
-
       ++*strp;
+      
       ret = value;
+
+      if (result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER) {
+        ret &= 0xffff;
+        ret = (ret ^ 0x8000) - 0x8000;
+      }
+      
     }
   else
     {
-      if (**strp == '-')
-	{
-	  long value;
-
-	  errmsg = cgen_parse_signed_integer (cd, strp, opindex, &value);
-	  ret = value;
-	}
-      else
-	{
-	  unsigned long value;
-
-	  errmsg = cgen_parse_unsigned_integer (cd, strp, opindex, &value);
-	  ret = value;
-	}
+      long value;
+      errmsg = cgen_parse_signed_integer (cd, strp, opindex, &value);
+      ret = value;
     }
+  
+  if (errmsg == NULL) {
 
-  *valuep = ((ret & 0xffff) ^ 0x8000) - 0x8000;
+    *valuep = ret;
+
+  }
+
+  return errmsg;
+}
+
+static const char *
+parse_uimm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, unsigned long * valuep)
+{
+  const char *errmsg = parse_simm16(cd, strp, opindex, (long *) valuep);
+  if (errmsg == NULL)
+    *valuep &= 0xffff;
   return errmsg;
 }
 
@@ -188,42 +159,45 @@ or1k_cgen_parse_operand (CGEN_CPU_DESC cd,
 
   switch (opindex)
     {
-    case OR1K_OPERAND_DISP_26 :
+    case OR1K_OPERAND_DISP26 :
       {
         bfd_vma value = 0;
-        errmsg = cgen_parse_address (cd, strp, OR1K_OPERAND_DISP_26, 0, NULL,  & value);
+        errmsg = cgen_parse_address (cd, strp, OR1K_OPERAND_DISP26, 0, NULL,  & value);
         fields->f_disp26 = value;
       }
       break;
-    case OR1K_OPERAND_HI16 :
-      errmsg = parse_hi16 (cd, strp, OR1K_OPERAND_HI16, (long *) (& fields->f_simm16));
-      break;
-    case OR1K_OPERAND_LO16 :
-      errmsg = parse_lo16 (cd, strp, OR1K_OPERAND_LO16, (long *) (& fields->f_lo16));
-      break;
     case OR1K_OPERAND_RA :
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r2);
+      break;
+    case OR1K_OPERAND_RASF :
       errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r2);
       break;
     case OR1K_OPERAND_RB :
       errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r3);
       break;
+    case OR1K_OPERAND_RBSF :
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r3);
+      break;
     case OR1K_OPERAND_RD :
       errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r1);
       break;
-    case OR1K_OPERAND_SIMM_16 :
-      errmsg = cgen_parse_signed_integer (cd, strp, OR1K_OPERAND_SIMM_16, (long *) (& fields->f_simm16));
+    case OR1K_OPERAND_RDSF :
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r1);
       break;
-    case OR1K_OPERAND_UI16NC :
-      errmsg = parse_lo16 (cd, strp, OR1K_OPERAND_UI16NC, (long *) (& fields->f_i16nc));
+    case OR1K_OPERAND_SIMM16 :
+      errmsg = parse_simm16 (cd, strp, OR1K_OPERAND_SIMM16, (long *) (& fields->f_simm16));
       break;
-    case OR1K_OPERAND_UIMM_16 :
-      errmsg = cgen_parse_unsigned_integer (cd, strp, OR1K_OPERAND_UIMM_16, (unsigned long *) (& fields->f_uimm16));
+    case OR1K_OPERAND_SIMM16_SPLIT :
+      errmsg = parse_simm16 (cd, strp, OR1K_OPERAND_SIMM16_SPLIT, (long *) (& fields->f_simm16_split));
       break;
-    case OR1K_OPERAND_UIMM_5 :
-      errmsg = cgen_parse_unsigned_integer (cd, strp, OR1K_OPERAND_UIMM_5, (unsigned long *) (& fields->f_uimm5));
+    case OR1K_OPERAND_UIMM16 :
+      errmsg = parse_uimm16 (cd, strp, OR1K_OPERAND_UIMM16, (unsigned long *) (& fields->f_uimm16));
       break;
-    case OR1K_OPERAND_UIMM_6 :
-      errmsg = cgen_parse_unsigned_integer (cd, strp, OR1K_OPERAND_UIMM_6, (unsigned long *) (& fields->f_uimm6));
+    case OR1K_OPERAND_UIMM16_SPLIT :
+      errmsg = parse_uimm16 (cd, strp, OR1K_OPERAND_UIMM16_SPLIT, (unsigned long *) (& fields->f_uimm16_split));
+      break;
+    case OR1K_OPERAND_UIMM6 :
+      errmsg = cgen_parse_unsigned_integer (cd, strp, OR1K_OPERAND_UIMM6, (unsigned long *) (& fields->f_uimm6));
       break;
 
     default :

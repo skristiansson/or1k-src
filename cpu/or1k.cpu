@@ -2,6 +2,7 @@
 ; Copyright 2000, 2001, 2011 Free Software Foundation, Inc.
 ; Contributed by Johan Rydberg, jrydberg@opencores.org
 ; Modified by Julius Baxter, juliusbaxter@gmail.com
+; Modified by Peter Gavin, pgavin@gmail.com
 ;
 ; This program is free software; you can redistribute it and/or modify
 ; it under the terms of the GNU General Public License as published by
@@ -31,7 +32,7 @@
   (comment "OpenRISC 1000")
   (insn-lsb0? #t)
   (machs or32)
-  (isas ORBIS32 );ORBIS64 ORFPX32 ORFPX64 ORVDX64)
+  (isas ORBIS32 ORFPX32) ; ORBIS64 ORFPX64 ORVDX64
 )
 
 ; Instruction set parameters.
@@ -44,6 +45,8 @@
   (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
 )
 
+(define-pmacro ORBIS32-MACHS or32)
+
 ;(define-isa
 ;  ; Name of the ISA.
 ;  (name ORBIS64)
@@ -53,15 +56,16 @@
 ;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
 ;)
 
-;(define-isa
-;  ; Name of the ISA.
-;  (name ORFPX32)
-;  ; Base insturction length.  The insns are always 32 bits wide.
-;  (base-insn-bitsize 32)
-;  ; Address of insn in delay slot
-;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
-;)
+(define-isa
+ ; Name of the ISA.
+ (name ORFPX32)
+ ; Base insturction length.  The insns are always 32 bits wide.
+ (base-insn-bitsize 32)
+ ; Address of insn in delay slot
+ (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
+)
 
+(define-pmacro OR32FPX-MACHS or32)
 
 ;(define-isa
 ;  ; Name of the ISA.
@@ -104,7 +108,7 @@
   (name or32)
   (comment "Generic OpenRISC 1000 32-bit CPU")
   (cpu or1k32f)
-  (isas ORBIS32 );ORFPX32)
+  (isas ORBIS32 ORFPX32)
   (bfd-name "or1k")
 )
 
@@ -148,4 +152,5 @@
     (include "or1korbis32.cpu"))
 
 ; TODO lf.* (float) in OR32FPX ISA file
-
+(if (keep-isa? (OR32FPX))
+    (include "or1kor32fpx.cpu"))

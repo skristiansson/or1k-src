@@ -174,8 +174,6 @@ md_undefined_symbol (char * name ATTRIBUTE_UNUSED)
 
 /* Interface to relax_segment.  */
 
-/* FIXME: Look through this.  */
-
 const relax_typeS md_relax_table[] =
 {
 /* The fields are:
@@ -188,71 +186,14 @@ const relax_typeS md_relax_table[] =
      each list.  */
   {1, 1, 0, 0},
 
-  /* The displacement used by GAS is from the end of the 2 byte insn,
-     so we subtract 2 from the following.  */
-  /* 16 bit insn, 8 bit disp -> 10 bit range.
-     This doesn't handle a branch in the right slot at the border:
-     the "& -4" isn't taken into account.  It's not important enough to
-     complicate things over it, so we subtract an extra 2 (or + 2 in -ve
-     case).  */
-  {511 - 2 - 2, -512 - 2 + 2, 0, 2 },
-  /* 32 bit insn, 24 bit disp -> 26 bit range.  */
-  {0x2000000 - 1 - 2, -0x2000000 - 2, 2, 0 },
-  /* Same thing, but with leading nop for alignment.  */
-  {0x2000000 - 1 - 2, -0x2000000 - 2, 4, 0 }
+  /* The displacement used by GAS is from the end of the 4 byte insn,
+     so we subtract 4 from the following.  */
+  {(((1 << 25) - 1) << 2) - 4, -(1 << 25) - 4, 0, 0},
 };
 
-/* Return an initial guess of the length by which a fragment must grow to
-   hold a branch to reach its destination.
-   Also updates fr_type/fr_subtype as necessary.
-
-   Called just before doing relaxation.
-   Any symbol that is now undefined will not become defined.
-   The guess for fr_var is ACTUALLY the growth beyond fr_fix.
-   Whatever we do to grow fr_fix or fr_var contributes to our returned value.
-   Although it may not be explicit in the frag, pretend fr_var starts with a
-   0 value.  */
-
 int
-md_estimate_size_before_relax (fragS * fragP, segT segment)
+md_estimate_size_before_relax (fragS * fragP, segT segment ATTRIBUTE_UNUSED)
 {
-  /* The only thing we have to handle here are symbols outside of the
-     current segment.  They may be undefined or in a different segment in
-     which case linker scripts may place them anywhere.
-     However, we can't finish the fragment here and emit the reloc as insn
-     alignment requirements may move the insn about.  */
-
-  if (S_GET_SEGMENT (fragP->fr_symbol) != segment)
-    {
-      /* The symbol is undefined in this segment.
-	 Change the relaxation subtype to the max allowable and leave
-	 all further handling to md_convert_frag.  */
-      fragP->fr_subtype = 2;
-
-      {
-	const CGEN_INSN * insn;
-	int               i;
-
-	/* Update the recorded insn.
-	   Fortunately we don't have to look very far.
-	   FIXME: Change this to record in the instruction the next higher
-	   relaxable insn to use.  */
-	for (i = 0, insn = fragP->fr_cgen.insn; i < 4; i++, insn++)
-	  {
-	    if ((strcmp (CGEN_INSN_MNEMONIC (insn),
-			 CGEN_INSN_MNEMONIC (fragP->fr_cgen.insn))
-		 == 0)
-		&& CGEN_INSN_ATTR_VALUE (insn, CGEN_INSN_RELAXED))
-	      break;
-	  }
-	if (i == 4)
-	  abort ();
-
-	fragP->fr_cgen.insn = insn;
-	return 2;
-      }
-    }
-
   return md_relax_table[fragP->fr_subtype].rlx_length;
 }
 
@@ -282,12 +223,16 @@ md_pcrel_from_section (fixS * fixP, segT sec)
 {
   if (fixP->fx_addsy != (symbolS *) NULL
       && (! S_IS_DEFINED (fixP->fx_addsy)
-	  || S_GET_SEGMENT (fixP->fx_addsy) != sec))
-    /* The symbol is undefined (or is defined but not in this section).
-       Let the linker figure it out.  */
-    return 0;
+	  || (S_GET_SEGMENT (fixP->fx_addsy) != sec)
+	  || S_IS_EXTERNAL (fixP->fx_addsy)
+	  || S_IS_WEAK (fixP->fx_addsy)))
+    {
+        /* The symbol is undefined (or is defined but not in this section).
+         Let the linker figure it out.  */
+      return 0;
+    }
 
-  return (fixP->fx_frag->fr_address + fixP->fx_where) & ~1;
+  return fixP->fx_frag->fr_address + fixP->fx_where;
 }
 
 
@@ -300,37 +245,19 @@ md_cgen_lookup_reloc (const CGEN_INSN *    insn ATTRIBUTE_UNUSED,
 		      const CGEN_OPERAND * operand,
 		      fixS *               fixP)
 {
-  bfd_reloc_code_real_type type;
-
-  switch (operand->type)
-    {
-      /*
-    case OR1K_OPERAND_ABS_26:
-      fixP->fx_pcrel = 0;
-      type = BFD_RELOC_OR1K_ABS_26;
-      goto emit;
-      */
-    case OR1K_OPERAND_DISP_26:
-      fixP->fx_pcrel = 1;
-      type = BFD_RELOC_OR1K_REL_26;
-      goto emit;
-
-    case OR1K_OPERAND_HI16:
-      type = BFD_RELOC_HI16;
-      goto emit;
-
-    case OR1K_OPERAND_LO16:
-      type = BFD_RELOC_LO16;
-      goto emit;
-
-    emit:
-      return type;
-
-    default : /* avoid -Wall warning */
-      break;
-    }
-
-  return BFD_RELOC_NONE;
+  if (fixP->fx_cgen.opinfo) {
+      return fixP->fx_cgen.opinfo;
+  } else {
+    switch (operand->type)
+      {
+      case OR1K_OPERAND_DISP26:
+        fixP->fx_pcrel = 1;
+        return BFD_RELOC_OR1K_REL_26;
+        
+      default: /* avoid -Wall warning */
+        return BFD_RELOC_NONE;
+      }
+  }
 }
 
 /* Write a value out to the object file, using the appropriate endianness.  */
