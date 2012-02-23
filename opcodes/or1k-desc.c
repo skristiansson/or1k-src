@@ -242,6 +242,8 @@ const CGEN_IFLD or1k_cgen_ifld_table[] =
   { OR1K_F_RESV_10_11, "f-resv-10-11", 0, 32, 10, 11, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
   { OR1K_F_RESV_10_7, "f-resv-10-7", 0, 32, 10, 7, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
   { OR1K_F_RESV_10_3, "f-resv-10-3", 0, 32, 10, 3, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_10_1, "f-resv-10-1", 0, 32, 10, 1, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
+  { OR1K_F_RESV_7_4, "f-resv-7-4", 0, 32, 7, 4, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
   { OR1K_F_RESV_5_2, "f-resv-5-2", 0, 32, 5, 2, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
   { OR1K_F_IMM16_25_5, "f-imm16-25-5", 0, 32, 25, 5, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
   { OR1K_F_IMM16_10_11, "f-imm16-10-11", 0, 32, 10, 11, { 0, { { { (1<<MACH_BASE), 0 } }, { { 1, "\x80" } } } }  },
@@ -672,6 +674,11 @@ static const CGEN_IBASE or1k_cgen_insn_table[MAX_INSNS] =
 /* l.extwz $rD,$rA */
   {
     OR1K_INSN_L_EXTWZ, "l-extwz", "l.extwz", 32,
+    { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
+  },
+/* l.cmov $rD,$rA,$rB */
+  {
+    OR1K_INSN_L_CMOV, "l-cmov", "l.cmov", 32,
     { 0, { { { (1<<MACH_OR32), 0 } }, { { 1, "\x80" } } } }
   },
 /* l.sfgtu $rA,$rB */

@@ -66,7 +66,7 @@ parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
     ++*strp;
 
   if (strncasecmp (*strp, "hi(", 3) == 0)
-        {
+    {
       bfd_vma value;
 
       *strp += 3;
