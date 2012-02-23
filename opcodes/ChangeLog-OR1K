@@ -1,3 +1,11 @@
+2012-02-23  Peter Gavin  <pgavin@gmail.com>
+
+	* or1k-asm.c: regenerate
+	* or1k-desc.c: regenerate
+	* or1k-desc.h: regenerate
+	* or1k-opc.c: regenerate
+	* or1k-opc.h: regenerate
+
 2012-02-18  Peter Gavin  <pgavin@gmail.com>
 
 	* Makefile.am: add dependencies to stamp-or1k for all cpu files
