@@ -92,6 +92,7 @@ const char or1k_comment_chars [] = ";#";
 /* The target specific pseudo-ops which we support.  */
 const pseudo_typeS md_pseudo_table[] =
 {
+  { "align",    s_align_bytes,  0 },
   { "word",     cons,           4 },
   { "proc",     ignore_pseudo,  0 },
   { "endproc",  ignore_pseudo,  0 },

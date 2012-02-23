@@ -1,5 +1,10 @@
 2012-02-23  Peter Gavin  <pgavin@gmail.com>
 
+	* config/tc-or1k.c: handle .align pseudo with s_align_bytes
+	instead of default (s_align_pow2)
+
+2012-02-23  Peter Gavin  <pgavin@gmail.com>
+
 	* configure.tgt: remote or1k-*-rtems*, add or1k-*-linux*, add
 	endian=big, make bfd_gas=yes for or1k
 
