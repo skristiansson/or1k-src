@@ -1083,11 +1083,7 @@ case "${targ}" in
     targ_underscore=yes
     ;;
 
-  openrisc-*-elf)
-    targ_defvec=bfd_elf32_openrisc_vec
-    ;;
-
-  or1k-*-elf)
+  or1k-*-elf | or1k-*-linux*)
     targ_defvec=bfd_elf32_or1k_vec
     ;;
 
