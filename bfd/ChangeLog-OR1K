@@ -1,3 +1,7 @@
+2012-02-23  Peter Gavin  <pgavin@gmail.com>
+
+	* config.bfd: remove openrisc-*-elf, add or1k-*-linux
+
 2012-02-18  Peter Gavin  <pgavin@gmail.com>
 
 	* elf32-or1k.c: fix howtos, make it binary compatible again;

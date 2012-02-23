@@ -1,3 +1,7 @@
+2012-02-23  Peter Gavin  <pgavin@gmail.com>
+
+	* configure.tgt: add or1k-*-linux
+
 2012-02-18  Peter Gavin  <pgavin@gmail.com>
 
 	* emulparams/elf32or1k.sh: use RELA relocs; add NOP value
