@@ -45,6 +45,8 @@
 (dnf f-resv-10-11       "resv-10-11"              () 10 11)
 (dnf f-resv-10-7        "resv-10-7"               () 10 7)
 (dnf f-resv-10-3        "resv-10-3"               () 10 3)
+(dnf f-resv-10-1        "resv-10-1"               () 10 1)
+(dnf f-resv-7-4         "resv-7-4"                () 7 4)
 (dnf f-resv-5-2         "resv-5-2"                () 5 2)
 
 (dnf f-imm16-25-5       "imm16-25-5"              () 25  5)
@@ -843,7 +845,17 @@
 (extw-insn extws OPC_EXTWS_EXTWS ext SI)
 (extw-insn extwz OPC_EXTWS_EXTWZ zext SI)
 
-;; TODO: l.cust* , l.mac*
+(dni l-cmov
+     "l.cmov reg/reg/reg"
+     ((MACH ORBIS32-MACHS))
+     "l.cmov $rD,$rA,$rB"
+     (+ OPC_ALU rD rA rB (f-resv-10-1 0) (f-op-9-2 0) (f-resv-7-4 0) OPC_ALU_REGREG_CMOV)
+     (if sys-sr-f
+         (set WI rD rA)
+         (set WI rD rB)
+         )
+     ()
+     )
 
 ; Compare instructions
 
