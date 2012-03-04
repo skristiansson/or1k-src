@@ -1,0 +1,351 @@
+2010-02-12  Doug Evans  <dje@sebabeach.org>
+
+	* sh5-media-decode.cxx: Regenerate.
+
+2010-02-11  Doug Evans  <dje@sebabeach.org>
+
+	* sh2-decode.cxx, * sh2-decode.h, * sh2-model.cxx, * sh2-sem.cxx,
+	* sh2a-fpu-decode.cxx, * sh2a-fpu-decode.h,
+	* sh2a-fpu-model.cxx, * sh2a-fpu-sem.cxx,
+	* sh2a-nofpu-decode.cxx, * sh2a-nofpu-decode.h,
+	* sh2a-nofpu-model.cxx, * sh2a-nofpu-sem.cxx,
+	* sh2e-decode.cxx, * sh2e-decode.h, * sh2e-model.cxx, * sh2e-sem.cxx,
+	* sh3-decode.cxx, * sh3-decode.h, * sh3-model.cxx, * sh3-sem.cxx,
+	* sh3e-decode.cxx, * sh3e-decode.h, * sh3e-model.cxx, * sh3e-sem.cxx,
+	* sh4-decode.cxx, * sh4-decode.h, * sh4-model.cxx, * sh4-sem.cxx,
+	* sh4-nofpu-decode.cxx, * sh4-nofpu-decode.h,
+	* sh4-nofpu-model.cxx, * sh4-nofpu-sem.cxx,
+	* sh4a-decode.cxx, * sh4a-decode.h, * sh4a-model.cxx, * sh4a-sem.cxx,
+	* sh4a-nofpu-decode.cxx, * sh4a-nofpu-decode.h,
+	* sh4a-nofpu-model.cxx, * sh4a-nofpu-sem.cxx,
+	* sh4al-decode.cxx, * sh4al-decode.h,
+	* sh4al-model.cxx, * sh4al-sem.cxx,
+	* sh5-compact-decode.cxx, * sh5-compact-decode.h,
+	* sh5-compact-model.cxx, * sh5-compact-sem.cxx,
+	* sh5-media-decode.cxx, * sh5-media-decode.h,
+	* sh5-media-model.cxx, * sh5-media-sem.cxx: Regenerate.
+
+2010-01-24  Doug Evans  <dje@sebabeach.org>
+
+	* sh.cxx (sh64_fldi0): Update call to floating point convertion func.
+	(sh64_fldi1, sh64_fcnvds, sh64_fcnvsd, sh64_floatld, sh64_floatls,
+	sh64_floatqd, sh64_floatqs, sh64_ftrcdl, sh64_ftrcsl, sh64_ftrcdq,
+	sh64_ftrcsq, sh64_ftrvs): Ditto.
+	* sh2a-fpu-cpu.h, * sh2e-cpu.h, * sh3e-cpu.h, * sh4-cpu.h,
+	* sh4a-cpu.h, * sh5-cpu.h: Regenerate.
+
+2010-01-02  Doug Evans  <dje@sebabeach.org>
+
+	* sh-desc.h, * sh2-cpu.h, * sh2-decode.cxx, * sh2-decode.h,
+	* sh2-defs.h, * sh2-model.cxx, * sh2-model.h, * sh2-sem.cxx,
+	* sh2-write.cxx, * sh2a-fpu-cpu.h, * sh2a-fpu-decode.cxx,
+	* sh2a-fpu-decode.h, * sh2a-fpu-defs.h, * sh2a-fpu-model.cxx,
+	* sh2a-fpu-model.h, * sh2a-fpu-sem.cxx, * sh2a-fpu-write.cxx,
+	* sh2a-nofpu-cpu.h, * sh2a-nofpu-decode.cxx, * sh2a-nofpu-decode.h,
+	* sh2a-nofpu-defs.h, * sh2a-nofpu-model.cxx, * sh2a-nofpu-model.h,
+	* sh2a-nofpu-sem.cxx, * sh2a-nofpu-write.cxx, * sh2e-cpu.h,
+	* sh2e-decode.cxx, * sh2e-decode.h, * sh2e-defs.h, * sh2e-model.cxx,
+	* sh2e-model.h, * sh2e-sem.cxx, * sh2e-write.cxx, * sh3-cpu.h,
+	* sh3-decode.cxx, * sh3-decode.h, * sh3-defs.h, * sh3-model.cxx,
+	* sh3-model.h, * sh3-sem.cxx, * sh3-write.cxx, * sh3e-cpu.h,
+	* sh3e-decode.cxx, * sh3e-decode.h, * sh3e-defs.h, * sh3e-model.cxx,
+	* sh3e-model.h, * sh3e-sem.cxx, * sh3e-write.cxx, * sh4-cpu.h,
+	* sh4-decode.cxx, * sh4-decode.h, * sh4-defs.h, * sh4-model.cxx,
+	* sh4-model.h, * sh4-nofpu-cpu.h, * sh4-nofpu-decode.cxx,
+	* sh4-nofpu-decode.h, * sh4-nofpu-defs.h, * sh4-nofpu-model.cxx,
+	* sh4-nofpu-model.h, * sh4-nofpu-sem.cxx, * sh4-nofpu-write.cxx,
+	* sh4-sem.cxx, * sh4-write.cxx, * sh4a-cpu.h, * sh4a-decode.cxx,
+	* sh4a-decode.h, * sh4a-defs.h, * sh4a-model.cxx, * sh4a-model.h,
+	* sh4a-nofpu-cpu.h, * sh4a-nofpu-decode.cxx, * sh4a-nofpu-decode.h,
+	* sh4a-nofpu-defs.h, * sh4a-nofpu-model.cxx, * sh4a-nofpu-model.h,
+	* sh4a-nofpu-sem.cxx, * sh4a-nofpu-write.cxx, * sh4a-sem.cxx,
+	* sh4a-write.cxx, * sh4al-cpu.h, * sh4al-decode.cxx, * sh4al-decode.h,
+	* sh4al-defs.h, * sh4al-model.cxx, * sh4al-model.h, * sh4al-sem.cxx,
+	* sh4al-write.cxx, * sh5-compact-decode.cxx, * sh5-compact-decode.h,
+	* sh5-compact-defs.h, * sh5-compact-model.cxx, * sh5-compact-model.h,
+	* sh5-compact-sem.cxx, * sh5-compact-write.cxx, * sh5-cpu.h,
+	* sh5-media-decode.cxx, * sh5-media-decode.h, * sh5-media-defs.h,
+	* sh5-media-model.cxx, * sh5-media-model.h, * sh5-media-sem.cxx,
+	* sh5-media-write.cxx: Regenerate.
+
+2009-11-23  Doug Evans  <dje@sebabeach.org>
+
+	* sh2-decode.cxx: Regenerate.
+	* sh2a-fpu-decode.cxx: Regenerate.
+	* sh2a-nofpu-decode.cxx: Regenerate.
+	* sh2e-decode.cxx: Regenerate.
+	* sh3-decode.cxx: Regenerate.
+	* sh3e-decode.cxx: Regenerate.
+	* sh4-decode.cxx: Regenerate.
+	* sh4-nofpu-decode.cxx: Regenerate.
+	* sh4a-decode.cxx: Regenerate.
+	* sh4a-nofpu-decode.cxx: Regenerate.
+	* sh4al-decode.cxx: Regenerate.
+	* sh5-compact-decode.cxx: Regenerate.
+	* sh5-media-decode.cxx: Regenerate.
+
+2009-10-23  Doug Evans  <dje@sebabeach.org>
+
+	* sh-desc.h: Regenerate.
+	* sh2-decode.cxx: Regenerate.
+	* sh2a-fpu-decode.cxx: Regenerate.
+	* sh2a-nofpu-decode.cxx: Regenerate.
+	* sh2e-decode.cxx: Regenerate.
+	* sh3-decode.cxx: Regenerate.
+	* sh3e-decode.cxx: Regenerate.
+	* sh4-decode.cxx: Regenerate.
+	* sh4-nofpu-decode.cxx: Regenerate.
+	* sh4a-decode.cxx: Regenerate.
+	* sh4a-nofpu-decode.cxx: Regenerate.
+	* sh4al-decode.cxx: Regenerate.
+	* sh5-compact-decode.cxx: Regenerate.
+	* sh5-media-decode.cxx: Regenerate.
+
+2007-08-13  Frank Ch. Eigler  <fche@redhat.com>
+
+	* sh.h: Protect CGEN_CPU_FPU macro against multiple definitions.
+	* common_model.h: Change #include guard name.
+
+2006-10-18  Dave Brolley  <brolley@redhat.com>
+
+	* Contribute the following changes:
+
+	2006-06-26  Dave Brolley  <brolley@redhat.com>
+
+	* sh5.h (get_pc_hi): New method of sh5_cpu.
+	* sh.h (set_pc): New method of sh_cpu.
+
+	2006-06-20  Dave Brolley  <brolley@redhat.com>
+
+	* sh_vliw.cxx (step_insns): After catching fp::error,
+	use insn_size and h_ism_get to compute the new pc.
+	* sh5.cxx (prefetch): Use GETIMEMHI.
+	* common_model.cxx: Add missing template instantiations.
+	* sh2a-fpu-decode.cxx: Regenerated.
+	* sh2a-nofpu-decode.cxx: Regenerated.
+	* sh4-decode.cxx: Regenerated.
+	* sh4-nofpu-decode.cxx: Regenerated.
+	* sh5-compact-decode.cxx: Regenerated.
+	* sh5-compact-decode.h: Regenerated.
+	* sh5-compact-model.cxx: Regenerated.
+	* sh5-compact-model.h: Regenerated.
+	* sh5-compact-sem.cxx: Regenerated.
+
+	2006-06-14  Dave Brolley  <brolley@redhat.com>
+
+	* sh_compact.h:	(step_insns): Moved from sh_cpu.
+	(step_one_insn): Likewise.
+	(model_insn_before, model_step_latency, model_before) 
+	(model_after, model_insn_after): Moved to sh5.cxx.
+	(cfg_address,branch_prediction,branch_optimization):
+	Moved lower in the class heirarchy.
+	(thisp): New member.
+	* sh_compact.cxx: Don't #include "config.h".
+	(step_insns): Moved from sh_cpu.
+	(step_one_insn): Likewise.
+	* sh5.h (SH5_CPU_BASE): New macro.
+	(SH5_CPU_NON_VLIW_BASE): New macro.
+	(execute_insn): New method takes scache argument.
+	(prefetch): New method.
+	(trace_counter): New method.
+	(model_insn_before, model_step_latency, model_before) 
+	(model_after, model_insn_after): New methods.
+	(sh64_save_cfg_address,sh64_get_cfg_address)
+	(save_branch_predication,get_branch_predication)
+	(save_branch_optimization,get_branch_optimization)
+	(prefetch,compact_insn_pending,fetch_insn): New methods.
+	(model_insn_before, model_step_latency, model_before) 
+	(model_after, model_insn_after): Moved to sh5.cxx.
+	(cfg_address,branch_prediction,branch_optimization):
+	New members.
+	* sh5.cxx: Don't #include "config.h".
+	(decode_insn): Check compact_insn_pending.
+	(fetch_insn): Check compact_p.
+	(execute_insn): New method takes scache argument.
+	(prefetch): New method.
+	(trace_counter): New method.
+	(model_insn_before, model_step_latency, model_before) 
+	(model_after, model_insn_after): Moved from sh5.h.
+	* sh2a_model.cxx: Don't #include "config.h".
+	#include "sh4*.h". Add additional explicit template
+	instantiations.
+	(sh2a_model): Initialize vbr_busy. 
+	(model_u_memory_access_after): Use exec_cycles.
+	(model_u_macw_after): Use exec_cycles. Use add_multiply_busy.
+	(model_u_macl_after): New method.
+	(model_u_branch_after): New method.
+	(branch_stall): New method.
+	(model_u_dmul_after): Use add_multiply_busy.
+	(model_u_mulr_after, model_u_mull_after): New methods.
+	(model_u_multiply_after): Don't check for mull.
+	(model_u_mulr_gr_after): Use UNIT_U_MULR.
+	(model_u_tas_after): 3 additional cycles.
+	(model_u_set_sr_after): Removed.
+	(model_u_ldcl_after): 1 Additional cycle.
+	(model_u_load_mac_after): Use exec_cycles.
+	(step_latency): Update gbr_busy, vbr_busy, current_branch_stall.
+	(parallel_possible): Always true.
+	(sh2a_fpu_model): Now a template.
+	(model_u_use_fpul_before): Check for sts vs stsl.
+	(model_u_lds_fpscr_before): New method.
+	(model_u_fpu_memory_access_after): Use exec_cycles.
+	(model_u_ldsl_fpscr_after): New method.
+	(model_u_load_fr_after): Use unit_cycles.
+	(model_u_fpu_load_gr_after): Use exec_cycles.
+	* sh2a_model.h	(model_u_macl_after): New method.
+	(model_u_branch_after): New method.
+	(branch_stall): New method.
+	(model_u_mulr_after, model_u_mull_after): New methods.
+	(model_u_lds_fpscr_before): New method.
+	(model_u_ldsl_fpscr_after): New method.
+	(model_u_set_sr_after): Removed.
+	(insn_is_macl,insn_is_mull): Removed.
+	(sh2a_fpu_model): Now a template.
+	(insn_is_stsl_fpul): New methods.
+	* sh2a_fpu.h (SH2A_FPU_BASE): Update template specification.
+	* sh2a.cxx (sh2a_cpu_base): Now inherits from sh_vliw_cpu.
+	(reset,reset_vliw): Removed.
+	(is_cti_insn,is_32_bit_insn): Removed.
+	(model_step_latency,save_pre_fetch_latency,model_insn_before)
+	(model_before,trace_counter,disassemble,execute_insn)
+	(model_after,model_insn_after,next_pc): Removed.
+	(parallel_possible): Now takes insn_info<SCACHE>*.
+	(fetch_insn): New method.
+	* sh2a.h: insn_info now a file scope class.
+	(sh2a_cpu_base): Now inherits from sh_vliw_cpu.
+	(reset,reset_vliw): Removed.
+	(is_cti_insn,is_32_bit_insn): Removed.
+	(model_step_latency,save_pre_fetch_latency,model_insn_before)
+	(model_before,trace_counter,disassemble,execute_insn)
+	(model_after,model_insn_after,next_pc): Removed.
+	(branch_taken,model_branch_taken,model_branch_taken_p)
+	(model_reduce_latency,cpu,next_insn_in_delay_slot_p): Removed.
+	(vliw_insns): Removed.
+	(parallel_possible): Now takes insn_info<SCACHE>*.
+	(fetch_insn): New method.
+	* sh3.h: Update sh_compact_cpu template specification.
+	* sh3e.h: Update sh_compact_cpu template specification.
+	* sh4.cxx: Don't #include "config.h".
+	(execute_insn): Now takes scache argument.
+	(parallel_allowed): New table.
+	(parallel_allowed): New method.
+	* sh4.h (execute_insn): Now takes scache argument.
+	(parallel_allowed): New table.
+	(parallel_allowed): New method.
+	* sh4_nofpu.cxx: Don't #include "config.h".
+	(execute_insn): Now takes scache argument.
+	* sh4_nofpu.h (execute_insn): Now takes scache argument.
+	* sh4a.cxx: Don't #include "config.h".
+	(execute_insn): Now takes scache argument.
+	(parallel_allowed): New table.
+	(parallel_allowed): New method.
+	* sh4a.h (execute_insn): Now takes scache argument.
+	* sh4a_nofpu.cxx: Don't #include "config.h".
+	(execute_insn): Now takes scache argument.
+	* sh4a_nofpu.h (execute_insn): Now takes scache argument.
+	* sh4al.cxx: Don't #include "config.h".
+	(execute_insn): Now takes scache argument.
+	* sh4a.h (execute_insn): Now takes scache argument.
+	* sh2.cxx: Don't #include "config.h".
+	* sh2a_fpu.cxx: Don't #include "config.h".
+	* sh2a_nofpu.cxx: Don't #include "config.h".
+	* sh2e.cxx: Don't #include "config.h".
+	* sh3.cxx: Don't #include "config.h".
+	* sh3.cxx: Don't #include "config.h".
+	* sh3e.cxx: Don't #include "config.h".
+	* sh.h (sh_cpu_cgen): Initialize fpu.
+	(fpu): New member of sh_cpu_cgen.
+	(step_insns): Moved lower in the class heirarchy.
+	(step_one_insn): Likewise.
+	(write_stacks_writeback, update_tick): Likewise.
+	(model_insn_before,model_step_latency,model_before)
+	(model_after,model_insn_after,check_vliw,reset_vliw)
+	(decode_insn,execute_insn,disassemble): Likewise.
+	(model_status): New enumeration.
+	(parallel_possible_p): New member of sh_cpu.
+	(current_insn_sampled,sample_gprof_pin): Removed.
+	(fpu): MOved to sh_cpu_cgen.
+	* sh.cxx: Don't #include "config.h". Removed unused code.
+	(sh_cpu): current_insn_sampled, fpu removed.
+	(reset): Initialize total_latency to 2 if profiling.
+	(step_insns): Moved lower in the class heirarchy.
+	(step_one_insn): Likewise.
+	* common_model.cxx: Don't #include "config.h". Remove vliw_adjust.
+	(sh_common_model): Initialize fpu_busy. Use num_gpr.
+	(set_fpu_busy): New method.
+	(model_before): Don't call check_vliw. Initialize exec_cycles.
+	(model_u_exec_after, model_u_sx_after, model_u_logic_b_after) 
+	(model_u_ldcl_after, model_u_ldcl_vbr_after) 
+	(model_u_sts_pr_after, model_u_tas_after, model_u_lds_pr_after):
+	New methods.
+	(model_u_jmp_after, model_u_jsr_after): New methods.
+	(model_u_load_pr_after): Use exec_cycles, unit_cycles.
+	(model_u_load_gr_after): Use exec_cycles.
+	(model_u_macw_after): Call model_mac_after.
+	(model_u_dmul_after, model_u_mull_after): Likewise.
+	(model_u_macl_after): New method.
+	(sh_common_model::step_latency): Don't call BASE::step_latency.
+	Use num_gr. Update fpu_busy.
+	(model_mac_after): New method.
+	(sh_common_model_with_fp): Initialize fpscr_busy. fpu_busy removed.
+	Use num_fpr.
+	(set_fpscr_busy): New method.
+	(sh_common_model_with_fp::fpu_busy): Removed.
+	(model_u_maybe_fpu_before): New method.
+	(model_u_flds_fpul_before): Call model_u_maybe_fpu_before.
+	(model_u_lds_fpscr_after, model_u_ldsl_fpscr_after): New methods.
+	(model_u_fpu_after): Set exec_cycles. Call set_fpscr_busy.
+	(model_u_maybe_fpu_after): New method.
+	(model_u_fcnv_after): New method.
+	(model_u_load_fr_after): Use exec_cycles.
+	(model_u_set_fr_after): Likewise.
+	(model_u_set_fpul_after): Likewise.
+	(model_u_load_fpul_after): Likewise.
+	(model_u_set_fr_0_before): Removed.
+	(model_u_set_fr_0_after): Don't call model_u_fpu_after.
+	(model_u_flds_fpul_after): Call model_u_maybe_fpu_after.
+	(step_latency): Use num_fpu.
+	(model_u_shift_after): Use exec_cycles.
+	(sh5_media*): Now based on sh_common_model_with_vliw.
+	* common_model.h: (set_fpu_busy): New method.
+	(model_u_sts_pr_after, model_u_tas_after, model_u_lds_pr_after):
+	New methods.
+	(model_u_jmp_after, model_u_jsr_after): New methods.
+	(model_u_macl_after): New method.
+	(model_mac_after): New method.
+	(set_fpscr_busy): New method.
+	(model_u_maybe_fpu_before): New method.
+	(model_u_lds_fpscr_after, model_u_ldsl_fpscr_after): New methods.
+	(model_u_maybe_fpu_after): New method.
+	(model_u_fcnv_after): New method.
+	(reduce_saved_latency): New method.
+	(branch_stall): New method.
+	(num_gpr): New method.
+	(sh_commmon_model::step_latency): Default parameter value now 0.
+	(fpu_busy): Moved to sh_common_Model from sh_common_model_with_fp.
+	(gpr_busy): Now 64 elements.
+	(exec_cycles): New member of sh_common_model.
+	(model_u_set_fr_0_before): Removed.
+	(sh_commmon_model_with_fp::step_latency): Default parameter value now 0.
+	(fpscr_busy): New member.
+	(fpr_busy): now 64 elements.
+	(sh_commmon_model_with_vliw::step_latency): Default parameter value now 0.
+	* Makefile.am (libsh_la_SOURCES): Add sh3_model.cxx, sh4_model.cxx,
+	sh4a_model.cxx, sh5_model.cxx, sh_vliw.cxx.
+	* Makefile.in: Regenerated.
+	* sh3_model.cxx: New file.
+	* sh3_model.h: New file.
+	* sh4_model.cxx: New file.
+	* sh4_model.h: New file.
+	* sh4a_model.cxx: New file.
+	* sh4a_model.h: New file.
+	* sh4al_model.h: New file.
+	* sh5_model.cxx: New file.
+	* sh5_model.h: New file.
+	* sh_vliw.cxx: New file.
+	* sh_vliw.h: New file.
+	* sh*-{cpu,defs,decode,model,sem,write}.{cxx,h}: Regenerated.
+
+	2006-05-11  Dave Brolley  <brolley@redhat.com>
+
+	* New cgen cpu.

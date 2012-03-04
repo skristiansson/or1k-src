@@ -1,0 +1,23 @@
+/ChangeLog/1.32/Wed Nov  7 20:50:09 2007//
+/Makefile.am/1.3/Sat Aug  4 11:20:36 2001//
+/Makefile.in/1.11/Mon Feb  5 20:28:40 2007//
+/angel.cxx/1.2/Wed Feb  6 01:25:43 2002//
+/angel.h/1.2/Wed Oct 10 17:19:16 2001//
+/compGloss.cxx/1.2/Wed Mar  1 21:07:00 2006//
+/gloss.cxx/1.23/Tue Nov  6 21:08:04 2007//
+/gloss.h/1.13/Fri Jul 14 19:44:17 2006//
+/hostops.cxx/1.2/Wed Apr 18 19:50:00 2001//
+/hostops.h/1.1/Thu Dec  7 19:30:50 2000//
+/libcygmon.h/1.2/Thu Jan  3 01:42:02 2002//
+/libgloss.h/1.7/Wed Nov  7 20:50:09 2007//
+/m32r.cxx/1.2/Thu May 30 15:28:43 2002//
+/m32r.h/1.2/Thu Jan  3 01:42:02 2002//
+/mips.cxx/1.1/Thu Dec  7 19:30:50 2000//
+/mips.h/1.1/Thu Dec  7 19:30:50 2000//
+/newlib.cxx/1.1/Thu Dec  7 19:30:50 2000//
+/newlib.h/1.1/Thu Dec  7 19:30:50 2000//
+/sh_compact.h/1.1/Wed Oct 18 18:51:02 2006//
+/sh_media.h/1.1/Wed Oct 18 18:51:02 2006//
+/sw-gloss-arm_angel.txt/1.3/Tue Nov 27 22:59:06 2001//
+/sw-gloss-arm_angel.xml/1.2/Tue Nov 27 22:59:06 2001//
+D

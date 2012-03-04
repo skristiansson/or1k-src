@@ -1,0 +1,26 @@
+/README/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/dirent.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/dirent2.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/dlfcn.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/fixstrtod.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/float.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/gettod.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/license.terms/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/limits.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/memcmp.c/1.4/Tue Nov 26 19:47:48 2002/-ko/
+/opendir.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/stdlib.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/strftime.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/string.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/strncasecmp.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/strstr.c/1.6/Wed Apr 23 18:09:42 2008/-ko/
+/strtod.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/strtol.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/strtoll.c/1.3/Tue Jan 21 19:39:57 2003//
+/strtoul.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/strtoull.c/1.3/Tue Jan 21 19:39:57 2003//
+/tclErrno.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/tmpnam.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/unistd.h/1.5/Tue Jan 21 19:39:57 2003/-ko/
+/waitpid.c/1.5/Tue Jan 21 19:39:57 2003/-ko/
+D

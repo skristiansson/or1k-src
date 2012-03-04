@@ -1,0 +1,15 @@
+/ChangeLog/1.2/Mon Dec 19 10:21:08 2005//
+/addinsns.s/1.1/Mon Dec 19 10:17:57 2005//
+/ctinsns.s/1.1/Mon Dec 19 10:17:57 2005//
+/intctrlinsns.s/1.1/Mon Dec 19 10:17:57 2005//
+/ioinsns.s/1.1/Mon Dec 19 10:17:57 2005//
+/logicalinsns.s/1.1/Mon Dec 19 10:17:57 2005//
+/memoryinsns.s/1.1/Mon Dec 19 10:17:57 2005//
+/mt-allinsn.exp/1.2/Mon Dec 19 10:21:08 2005//
+/mt-state-snapshot.exp/1.2/Mon Dec 19 10:21:08 2005//
+/mulinsns.s/1.2/Mon Dec 19 10:21:08 2005//
+/shiftinsns.s/1.2/Mon Dec 19 10:21:08 2005//
+/subinsns.s/1.2/Mon Dec 19 10:21:08 2005//
+/test-img.x/1.1/Mon Dec 19 10:17:57 2005//
+/testutils.inc/1.1/Mon Dec 19 10:17:57 2005//
+D

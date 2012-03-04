@@ -1,0 +1,22 @@
+/cygwin.mh/1.11/Sun May 24 12:27:35 2009/-ko/
+/darwin.mh/1.2/Tue Jul  7 07:47:22 2009//
+/fbsd.mh/1.20/Mon Oct 26 18:28:13 2009/-ko/
+/fbsd64.mh/1.13/Thu Feb  9 16:06:44 2012//
+/go32.mh/1.11/Thu May 14 09:37:00 2009/-ko/
+/i386gnu.mh/1.14/Tue Jan 10 16:30:44 2012/-ko/
+/i386sol2.mh/1.13/Mon Apr 26 13:53:56 2010/-ko/
+/linux.mh/1.26/Wed Aug 24 12:07:26 2011/-ko/
+/linux64.mh/1.12/Wed Aug 24 12:07:26 2011//
+/mingw.mh/1.4/Sun May 24 12:27:35 2009//
+/mingw64.mh/1.3/Sun May 24 12:27:35 2009//
+/nbsd64.mh/1.8/Sun Mar 16 08:50:43 2008//
+/nbsdaout.mh/1.11/Mon Jan  9 15:21:12 2012//
+/nbsdelf.mh/1.24/Sun Dec 17 13:30:44 2006//
+/nm-fbsd.h/1.24/Wed Jan  4 08:17:18 2012/-ko/
+/nm-i386gnu.h/1.13/Wed Jan  4 08:17:18 2012//
+/nto.mh/1.5/Tue Nov 28 19:07:50 2006//
+/obsd.mh/1.15/Sat Dec 16 10:45:52 2006//
+/obsd64.mh/1.8/Fri Oct  1 17:26:13 2004//
+/obsdaout.mh/1.9/Mon Jan  9 15:21:12 2012//
+/sol2-64.mh/1.3/Mon Apr 26 13:53:57 2010//
+D
