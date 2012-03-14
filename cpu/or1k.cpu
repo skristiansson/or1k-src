@@ -145,12 +145,12 @@
 
 ; Include the 32-bit or1k hardware if needed
 (if (keep-mach? (or32))
-    (include "or1k32.cpu"))
+    (include "or1kcommon.cpu"))
 
 ; Include the ORBIS32 ISA if required
 (if (keep-isa? (ORBIS32))
-    (include "or1korbis32.cpu"))
+    (include "or1korbis.cpu"))
 
 ; TODO lf.* (float) in OR32FPX ISA file
 (if (keep-isa? (OR32FPX))
-    (include "or1kor32fpx.cpu"))
+    (include "or1korfpx.cpu"))

@@ -1,3 +1,10 @@
+2012-03-14  Peter Gavin  <pgavin@gmail.com>
+
+	* or1k32.cpu -> or1kcommon.cpu
+	* or1korbis32.cpu -> or1korbis.cpu
+	* or1kor32fpx.cpu -> or1korfpx.cpu
+	  allow for 64-bit port
+
 2012-02-23  Peter Gavin  <pgavin@gmail.com>
 
 	* or1korbis32.cpu: add l.cmov and 2 needed fields

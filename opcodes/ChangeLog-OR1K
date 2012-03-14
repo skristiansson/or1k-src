@@ -1,3 +1,11 @@
+2012-03-14  Peter Gavin  <pgavin@gmail.com>
+
+	* Makefile.am: stamp-or1k: rename
+	  or1k32.cpu -> or1kcommon.cpu,
+	  or1korbis32.cpu -> or1korbis.cpu,
+	  or1kor32fpx.cpu -> or1korfpx.cpu
+	  allow for 64-bit port
+
 2012-02-23  Peter Gavin  <pgavin@gmail.com>
 
 	* or1k-asm.c: regenerate
