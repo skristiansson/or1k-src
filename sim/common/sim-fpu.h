@@ -152,6 +152,7 @@ typedef enum
   sim_fpu_status_overflow = 4096,
   sim_fpu_status_underflow = 8192,
   sim_fpu_status_denorm = 16384,
+  sim_fpu_status_invalid_irx = 32768, /* (inf % X) */
 } sim_fpu_status;
 
 
@@ -230,6 +231,8 @@ INLINE_SIM_FPU (int) sim_fpu_sub (sim_fpu *f,
 INLINE_SIM_FPU (int) sim_fpu_mul (sim_fpu *f,
 				  const sim_fpu *l, const sim_fpu *r);
 INLINE_SIM_FPU (int) sim_fpu_div (sim_fpu *f,
+				  const sim_fpu *l, const sim_fpu *r);
+INLINE_SIM_FPU (int) sim_fpu_rem (sim_fpu *f,
 				  const sim_fpu *l, const sim_fpu *r);
 INLINE_SIM_FPU (int) sim_fpu_max (sim_fpu *f,
 				  const sim_fpu *l, const sim_fpu *r);

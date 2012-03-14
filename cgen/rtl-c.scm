@@ -1758,6 +1758,9 @@
 (define-fn umod (*estate* options mode s1 s2)
   (s-binop *estate* "UMOD" "%" mode s1 s2)
 )
+(define-fn rem (*estate* options mode s1 s2)
+  (s-binop *estate* "REM" #f mode s1 s2)
+)
 
 (define-fn sqrt (*estate* options mode s1)
   (s-unop *estate* "SQRT" #f mode s1)

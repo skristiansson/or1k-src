@@ -783,6 +783,12 @@
      BINARY
      #f
 )
+(drn (rem &options &mode s1 s2)
+     #f
+     (OPTIONS ANYFLOATMODE RTX RTX) (NA NA MATCHEXPR MATCH2)
+     BINARY
+     #f
+)
 
 ; wip: mixed mode mul/div
 
