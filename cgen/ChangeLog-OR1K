@@ -1,0 +1,5 @@
+2012-03-14  Peter Gavin  <pgavin@gmail.com>
+
+	* rtl-c.scm: add rem (remainder) function (needed for OR1K lf.rem.[sd])
+	* rtx-funcs.scm: ditto
+
