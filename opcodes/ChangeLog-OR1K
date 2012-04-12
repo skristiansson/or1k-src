@@ -1,3 +1,7 @@
+2012-04-12  Peter Gavin  <pgavin@gmail.com>
+
+	* Makefile.am: build or1k-opinst.c
+
 2012-03-14  Peter Gavin  <pgavin@gmail.com>
 
 	* Makefile.am: stamp-or1k: rename
