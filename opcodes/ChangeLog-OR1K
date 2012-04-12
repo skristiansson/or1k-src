@@ -1,5 +1,16 @@
 2012-04-12  Peter Gavin  <pgavin@gmail.com>
 
+	* or1k-opinst.c: new file
+	* or1k-asm.c: regenerate
+	* or1k-desc.c: regenerate
+	* or1k-desc.h: regenerate
+	* or1k-dis.c: regenerate
+	* or1k-ibld.c: regenerate
+	* or1k-opc.c: regenerate
+	* or1k-opc.h: regenerate
+
+2012-04-12  Peter Gavin  <pgavin@gmail.com>
+
 	* Makefile.am: build or1k-opinst.c
 
 2012-03-14  Peter Gavin  <pgavin@gmail.com>
