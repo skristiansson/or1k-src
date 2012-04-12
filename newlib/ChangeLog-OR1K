@@ -1,0 +1,17 @@
+2012-04-12  Peter Gavin  <pgavin@gmail.com>
+
+	* configure.host: replace or16, or32 with or1k, enable or1k syscalls
+	* include/machine/ieeefp.h: add OR1K macro checks for __IEEE_BIG_ENDIAN
+	* include/machine/setjmp.h: define _JBLEN, _JBTYPE for or1k
+	* libc/machine/configure.in: add or1k target
+	* libc/machine/or1k/configure: new file, taken from existing or1k newlib port
+	* libc/machine/or1k/aclocal.m4: ditto
+	* libc/machine/or1k/Makefile.am: ditto
+	* libc/machine/or1k/include/spr-defs.h: ditto
+	* libc/machine/or1k/include/or1k-support.h: ditto
+	* libc/machine/or1k/or1k-support.c: ditto
+	* libc/machine/or1k/setjmp.S: ditto
+	* libc/machine/or1k/or1k-support-asm.S: ditto
+	* libc/machine/or1k/longjmp.S: ditto
+	* libc/machine/or1k/Makefile.in: ditto
+	* libc/machine/or1k/configure.in: ditto
