@@ -169,20 +169,29 @@ or1k_cgen_parse_operand (CGEN_CPU_DESC cd,
     case OR1K_OPERAND_RA :
       errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r2);
       break;
+    case OR1K_OPERAND_RADF :
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_fdr, & fields->f_r1);
+      break;
     case OR1K_OPERAND_RASF :
-      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r2);
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_fsr, & fields->f_r2);
       break;
     case OR1K_OPERAND_RB :
       errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r3);
       break;
+    case OR1K_OPERAND_RBDF :
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_fdr, & fields->f_r1);
+      break;
     case OR1K_OPERAND_RBSF :
-      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r3);
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_fsr, & fields->f_r3);
       break;
     case OR1K_OPERAND_RD :
       errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r1);
       break;
+    case OR1K_OPERAND_RDDF :
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_fdr, & fields->f_r1);
+      break;
     case OR1K_OPERAND_RDSF :
-      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_gr, & fields->f_r1);
+      errmsg = cgen_parse_keyword (cd, strp, & or1k_cgen_opval_h_fsr, & fields->f_r1);
       break;
     case OR1K_OPERAND_SIMM16 :
       errmsg = parse_simm16 (cd, strp, OR1K_OPERAND_SIMM16, (long *) (& fields->f_simm16));

@@ -99,7 +99,7 @@ static const CGEN_IFMT ifmt_l_slli ATTRIBUTE_UNUSED = {
   32, 32, 0xfc00ffc0, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R2) }, { F (F_RESV_15_8) }, { F (F_OP_7_2) }, { F (F_UIMM6) }, { 0 } }
 };
 
-static const CGEN_IFMT ifmt_l_add ATTRIBUTE_UNUSED = {
+static const CGEN_IFMT ifmt_l_and ATTRIBUTE_UNUSED = {
   32, 32, 0xfc0007ff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R2) }, { F (F_R3) }, { F (F_RESV_10_7) }, { F (F_OP_3_4) }, { 0 } }
 };
 
@@ -135,12 +135,20 @@ static const CGEN_IFMT ifmt_lf_add_s ATTRIBUTE_UNUSED = {
   32, 32, 0xfc0007ff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R2) }, { F (F_R3) }, { F (F_RESV_10_3) }, { F (F_OP_7_8) }, { 0 } }
 };
 
+static const CGEN_IFMT ifmt_lf_add_d ATTRIBUTE_UNUSED = {
+  32, 32, 0xfc0007ff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R1) }, { F (F_R1) }, { F (F_RESV_10_3) }, { F (F_OP_7_8) }, { 0 } }
+};
+
 static const CGEN_IFMT ifmt_lf_itof_s ATTRIBUTE_UNUSED = {
   32, 32, 0xfc00ffff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R2) }, { F (F_R3) }, { F (F_RESV_10_3) }, { F (F_OP_7_8) }, { 0 } }
 };
 
 static const CGEN_IFMT ifmt_lf_ftoi_s ATTRIBUTE_UNUSED = {
   32, 32, 0xfc00ffff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R2) }, { F (F_R3) }, { F (F_RESV_10_3) }, { F (F_OP_7_8) }, { 0 } }
+};
+
+static const CGEN_IFMT ifmt_lf_ftoi_d ATTRIBUTE_UNUSED = {
+  32, 32, 0xfc00ffff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R1) }, { F (F_R3) }, { F (F_RESV_10_3) }, { F (F_OP_7_8) }, { 0 } }
 };
 
 static const CGEN_IFMT ifmt_lf_eq_s ATTRIBUTE_UNUSED = {
@@ -354,77 +362,77 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (UIMM6), 0 } },
     & ifmt_l_slli, { 0xb80000c0 }
   },
-/* l.add $rD,$rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe0000000 }
-  },
-/* l.sub $rD,$rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe0000002 }
-  },
 /* l.and $rD,$rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe0000003 }
+    & ifmt_l_and, { 0xe0000003 }
   },
 /* l.or $rD,$rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe0000004 }
+    & ifmt_l_and, { 0xe0000004 }
   },
 /* l.xor $rD,$rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe0000005 }
+    & ifmt_l_and, { 0xe0000005 }
+  },
+/* l.add $rD,$rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_and, { 0xe0000000 }
+  },
+/* l.sub $rD,$rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_and, { 0xe0000002 }
   },
 /* l.addc $rD,$rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe0000001 }
+    & ifmt_l_and, { 0xe0000001 }
   },
 /* l.mul $rD,$rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe0000306 }
+    & ifmt_l_and, { 0xe0000306 }
   },
 /* l.mulu $rD,$rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe000030b }
+    & ifmt_l_and, { 0xe000030b }
   },
 /* l.div $rD,$rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe0000309 }
+    & ifmt_l_and, { 0xe0000309 }
   },
 /* l.divu $rD,$rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_add, { 0xe000030a }
+    & ifmt_l_and, { 0xe000030a }
   },
 /* l.ff1 $rD,$rA */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), 0 } },
-    & ifmt_l_add, { 0xe000000f }
+    & ifmt_l_and, { 0xe000000f }
   },
 /* l.fl1 $rD,$rA */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RD), ',', OP (RA), 0 } },
-    & ifmt_l_add, { 0xe000010f }
+    & ifmt_l_and, { 0xe000010f }
   },
 /* l.andi $rD,$rA,$uimm16 */
   {
@@ -648,11 +656,23 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_add_s, { 0xc8000000 }
   },
+/* lf.add.d $rDSF,$rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_add_d, { 0xc8000000 }
+  },
 /* lf.sub.s $rDSF,$rASF,$rBSF */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_add_s, { 0xc8000001 }
+  },
+/* lf.sub.d $rDSF,$rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_add_d, { 0xc8000001 }
   },
 /* lf.mul.s $rDSF,$rASF,$rBSF */
   {
@@ -660,11 +680,23 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_add_s, { 0xc8000002 }
   },
+/* lf.mul.d $rDSF,$rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_add_d, { 0xc8000002 }
+  },
 /* lf.div.s $rDSF,$rASF,$rBSF */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_add_s, { 0xc8000003 }
+  },
+/* lf.div.d $rDSF,$rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_add_d, { 0xc8000003 }
   },
 /* lf.rem.s $rDSF,$rASF,$rBSF */
   {
@@ -672,7 +704,19 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_add_s, { 0xc8000006 }
   },
+/* lf.rem.d $rDDF,$rADF,$rBDF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RDDF), ',', OP (RADF), ',', OP (RBDF), 0 } },
+    & ifmt_lf_add_d, { 0xc8000006 }
+  },
 /* lf.itof.s $rDSF,$rA */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RDSF), ',', OP (RA), 0 } },
+    & ifmt_lf_itof_s, { 0xc8000004 }
+  },
+/* lf.itof.d $rDSF,$rA */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RDSF), ',', OP (RA), 0 } },
@@ -684,7 +728,19 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RD), ',', OP (RASF), 0 } },
     & ifmt_lf_ftoi_s, { 0xc8000005 }
   },
+/* lf.ftoi.d $rD,$rADF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RD), ',', OP (RADF), 0 } },
+    & ifmt_lf_ftoi_d, { 0xc8000005 }
+  },
 /* lf.sfeq.s $rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_eq_s, { 0xc8000008 }
+  },
+/* lf.sfeq.d $rASF,$rBSF */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
@@ -696,7 +752,19 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_eq_s, { 0xc8000009 }
   },
+/* lf.sfne.d $rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_eq_s, { 0xc8000009 }
+  },
 /* lf.sfge.s $rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_eq_s, { 0xc800000b }
+  },
+/* lf.sfge.d $rASF,$rBSF */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
@@ -708,7 +776,19 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_eq_s, { 0xc800000a }
   },
+/* lf.sfgt.d $rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_eq_s, { 0xc800000a }
+  },
 /* lf.sflt.s $rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_eq_s, { 0xc800000c }
+  },
+/* lf.sflt.d $rASF,$rBSF */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
@@ -720,11 +800,23 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_eq_s, { 0xc800000d }
   },
+/* lf.sfle.d $rASF,$rBSF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RASF), ',', OP (RBSF), 0 } },
+    & ifmt_lf_eq_s, { 0xc800000d }
+  },
 /* lf.madd.s $rDSF,$rASF,$rBSF */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RDSF), ',', OP (RASF), ',', OP (RBSF), 0 } },
     & ifmt_lf_add_s, { 0xc8000007 }
+  },
+/* lf.madd.d $rDDF,$rADF,$rBDF */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RDDF), ',', OP (RADF), ',', OP (RBDF), 0 } },
+    & ifmt_lf_add_d, { 0xc8000007 }
   },
 };
 
