@@ -1,4 +1,4 @@
-; OpenRISC 1000 architecture.  -*- Scheme -*-
+ ; OpenRISC 1000 architecture.  -*- Scheme -*-
 ; Copyright 2000, 2001, 2011 Free Software Foundation, Inc.
 ; Contributed by Johan Rydberg, jrydberg@opencores.org
 ; Modified by Julius Baxter, juliusbaxter@gmail.com
@@ -31,109 +31,26 @@
   (name or1k)
   (comment "OpenRISC 1000")
   (insn-lsb0? #t)
-  (machs or32)
-  (isas ORBIS32 ORFPX32) ; ORBIS64 ORFPX64 ORVDX64
+  (machs or32 or64)
+  (isas openrisc)
 )
 
 ; Instruction set parameters.
 (define-isa
   ; Name of the ISA.
-  (name ORBIS32)
+  (name openrisc)
   ; Base insturction length.  The insns are always 32 bits wide.
   (base-insn-bitsize 32)
   ; Address of insn in delay slot
-  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
+  (setup-semantics (set-quiet (reg h-delay-pc) (add pc 4)))
 )
 
-(define-pmacro ORBIS32-MACHS or32)
-
-;(define-isa
-;  ; Name of the ISA.
-;  (name ORBIS64)
-;  ; Base insturction length.  The insns are always 32 bits wide.
-;  (base-insn-bitsize 32)
-;  ; Address of insn in delay slot
-;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
-;)
-
-(define-isa
- ; Name of the ISA.
- (name ORFPX32)
- ; Base insturction length.  The insns are always 32 bits wide.
- (base-insn-bitsize 32)
- ; Address of insn in delay slot
- (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
-)
-
-(define-pmacro OR32FPX-MACHS or32)
-
-;(define-isa
-;  ; Name of the ISA.
-;  (name ORFPX64)
-;  ; Base insturction length.  The insns are always 32 bits wide.
-;  (base-insn-bitsize 32)
-;  ; Address of insn in delay slot
-;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
-;)
-
-;(define-isa
-;  ; Name of the ISA.
-;  (name ORVDX64)
-;  ; Base insturction length.  The insns are always 32 bits wide.
-;  (base-insn-bitsize 32)
-;  ; Address of insn in delay slot
-;  (setup-semantics (set-quiet (reg h-delay-insn) (add pc 4)))
-;)
-
-
-; CPU family definitions.
-  
-(define-cpu
-  (name or1k32f)
-  (comment "OpenRISC 1000 32-bit CPU family")
-  (insn-endian big)
-  (endian either)
-  (word-bitsize 32)
-)
-
-;(define-cpu
-;  (name or1k64f)
-;  (comment "OpenRISC 1000 64-bit CPU family")
-;  (endian either)
-;  (word-bitsize 64)
-;)
-
-; Generic 32-bit or1k machine
-(define-mach
-  (name or32)
-  (comment "Generic OpenRISC 1000 32-bit CPU")
-  (cpu or1k32f)
-  (isas ORBIS32 ORFPX32)
-  (bfd-name "or1k")
-)
-
-; Generic 64-bit or1k machine
-;(define-mach
-;  (name or64)
-;  (comment "Generic OpenRISC 1000 64-bit CPU")
-;  (cpu or1k64)
-;  (bfd-name "or64")
-;)
-
-
-; Model descriptions
-
-; OpenRISC 1200 - 32-bit or1k CPU implementation
-(define-model
-  (name or1200) (comment "OpenRISC 1200 model") 
-  ; This model has both instruction and data cache
-  (attrs)
-  (mach or32)
-  ; Nothing special about this.
-  (unit u-exec "Execution Unit" () 1 1 () () () ())
-)
-
-; Attributes
+(define-pmacro OR32-MACHS    or32)
+(define-pmacro OR64-MACHS    or64)
+(define-pmacro ORBIS-MACHS   or32,or64)
+(define-pmacro ORFPX-MACHS   or32,or64)
+(define-pmacro ORFPX32-MACHS or32,or64)
+(define-pmacro ORFPX64-MACHS or64)
 
 ; An attribute to describe if an insn can be in the delay slot or not.
 (define-attr
@@ -142,15 +59,55 @@
   (name NOT-IN-DELAY-SLOT)
   (comment "insn can't go in delay slot")
 )
+
+(if (keep-mach? (OR32-MACHS))
+    (begin
+      (define-cpu
+        (name or1k32bf)
+        (comment "OpenRISC 1000 32-bit CPU family")
+        (insn-endian big)
+        (data-endian either)
+        (word-bitsize 32)
+        (file-transform "")
+        )
 
-; Include the 32-bit or1k hardware if needed
-(if (keep-mach? (or32))
-    (include "or1kcommon.cpu"))
+      (define-mach
+        (name or32)
+        (comment "Generic OpenRISC 1000 32-bit CPU")
+        (cpu or1k32bf)
+        (bfd-name "or1k")
+        )
 
-; Include the ORBIS32 ISA if required
-(if (keep-isa? (ORBIS32))
-    (include "or1korbis.cpu"))
+      ; OpenRISC 1200 - 32-bit or1k CPU implementation
+      (define-model
+        (name or1200) (comment "OpenRISC 1200 model") 
+        (attrs)
+        (mach or32)
+        (unit u-exec "Execution Unit" () 1 1 () () () ())
+        )
+      )
+    )
 
-; TODO lf.* (float) in OR32FPX ISA file
-(if (keep-isa? (OR32FPX))
-    (include "or1korfpx.cpu"))
+(if (keep-mach? (OR64-MACHS))
+    (begin
+      (define-cpu
+        (name or1k64bf)
+        (comment "OpenRISC 1000 64-bit CPU family")
+        (insn-endian big)
+        (data-endian either)
+        (word-bitsize 64)
+        (file-transform "64")
+        )
+
+      (define-mach
+        (name or64)
+        (comment "Generic OpenRISC 1000 64-bit CPU")
+        (cpu or1k64bf)
+        (bfd-name "or1k64")
+        )
+      )
+    )
+
+(include "or1kcommon.cpu")
+(include "or1korbis.cpu")
+(include "or1korfpx.cpu")
