@@ -755,6 +755,20 @@
      BINARY
      #f
 )
+; 1's complement overflow
+(drn (mul-o1flag &options &mode s1 s2)
+     BI
+     (OPTIONS ANYINTMODE RTX RTX) (NA NA MATCHEXPR MATCH2)
+     BINARY
+     #f
+)
+; 2's complement overflow
+(drn (mul-o2flag &options &mode s1 s2)
+     BI
+     (OPTIONS ANYINTMODE RTX RTX) (NA NA MATCHEXPR MATCH2)
+     BINARY
+     #f
+)
 ; ??? In non-sim case, ensure s1,s2 is in right C type for right result.
 ; ??? Need two variants, one that avoids implementation defined situations
 ; [both host and target], and one that specifies implementation defined

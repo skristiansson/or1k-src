@@ -1746,6 +1746,14 @@
 (define-fn mul (*estate* options mode s1 s2)
   (s-binop *estate* "MUL" "*" mode s1 s2)
 )
+; 1's complement overflow
+(define-fn mul-o1flag (*estate* options mode s1 s2)
+  (s-binop *estate* "MUL1OF" #f mode s1 s2)
+)
+; 2's complement overflow
+(define-fn mul-o2flag (*estate* options mode s1 s2)
+  (s-binop *estate* "MUL2OF" #f mode s1 s2)
+)
 (define-fn div (*estate* options mode s1 s2)
   (s-binop *estate* "DIV" "/" mode s1 s2)
 )
