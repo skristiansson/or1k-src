@@ -456,11 +456,11 @@ stamp-mt: $(CGENDEPS) $(CPUDIR)/mt.cpu $(CPUDIR)/mt.opc
 		archfile=$(CPUDIR)/mt.cpu \
 		opcfile=$(CPUDIR)/mt.opc extrafiles=
 
-$(srcdir)/or1k-desc.h $(srcdir)/or1k-desc.c $(srcdir)/or1k-opc.h $(srcdir)/or1k-opc.c $(srcdir)/or1k-ibld.c $(srcdir)/or1k-asm.c $(srcdir)/or1k-dis.c: $(OR1K_DEPS)
+$(srcdir)/or1k-desc.h $(srcdir)/or1k-desc.c $(srcdir)/or1k-opc.h $(srcdir)/or1k-opc.c $(srcdir)/or1k-ibld.c $(srcdir)/or1k-opinst.c $(srcdir)/or1k-asm.c $(srcdir)/or1k-dis.c: $(OR1K_DEPS)
 	@true
 stamp-or1k: $(CGENDEPS) $(CPUDIR)/or1k.cpu $(CPUDIR)/or1k.opc $(CPUDIR)/or1kcommon.cpu $(CPUDIR)/or1korbis.cpu $(CPUDIR)/or1korfpx.cpu
-	$(MAKE) run-cgen arch=or1k prefix=or1k options= \
-		archfile=$(CPUDIR)/or1k.cpu opcfile=$(CPUDIR)/or1k.opc extrafiles=
+	$(MAKE) run-cgen arch=or1k prefix=or1k options=opinst \
+		archfile=$(CPUDIR)/or1k.cpu opcfile=$(CPUDIR)/or1k.opc extrafiles=opinst
 
 $(srcdir)/xc16x-desc.h $(srcdir)/xc16x-desc.c $(srcdir)/xc16x-opc.h $(srcdir)/xc16x-opc.c $(srcdir)/xc16x-ibld.c $(srcdir)/xc16x-asm.c $(srcdir)/xc16x-dis.c: $(XC16X_DEPS)
 	@true
