@@ -8,28 +8,86 @@
 ; They're also used to provide tables and other elements of the assembly
 ; language.
 
-(dnh h-pc "program counter" (PC PROFILE) (pc) () () ())
+(define-hardware
+  (name h-pc)
+  (comment "program counter")
+  (attrs PC (MACH ORBIS-MACHS))
+  (type pc UWI)
+  )
+
+(define-pmacro REG-INDICES
+  ((r0 0)
+   (r1 1)
+   (r2 2)
+   (r3 3)
+   (r4 4)
+   (r5 5)
+   (r6 6)
+   (r7 7)
+   (r8 8)
+   (r9 9)
+   (r10 10)
+   (r11 11)
+   (r12 12)
+   (r13 13)
+   (r14 14) 
+   (r15 15)
+   (r16 16)
+   (r17 17)
+   (r18 18)
+   (r19 19)
+   (r20 20) 
+   (r21 21)
+   (r22 22)
+   (r23 23)
+   (r24 24)
+   (r25 25)
+   (r26 26) 
+   (r27 27)
+   (r28 28)
+   (r29 29)
+   (r30 30)
+   (r31 31)
+   (lr 9) 
+   (sp 1)
+   (fp 2))
+  )
 
 (define-hardware
-  (name h-gr) (comment "general registers") (attrs PROFILE)
-  (type register WI (32))
-  (indices keyword ""
-           ((r0 0) (r1 1) (r2 2) (r3 3) (r4 4) (r5 5) (r6 6) (r7 7)
-            (r8 8) (r9 9) (r10 10) (r11 11) (r12 12) (r13 13) (r14 14) 
-            (r15 15) (r16 16) (r17 17) (r18 18) (r19 19) (r20 20) 
-            (r21 21) (r22 22) (r23 23) (r24 24) (r25 25) (r26 26) 
-            (r27 27) (r28 28) (r29 29) (r30 30) (r31 31) (lr 9) 
-            (sp 1)  (fp 2)))
+  (name h-gr) (comment "general registers")
+  (attrs (MACH ORBIS-MACHS))
+  (type register UWI (32))
+  (indices keyword "" REG-INDICES)
 )
+
+(define-hardware
+  (name h-fsr)
+  (comment "floating point registers (single, virtual)")
+  (attrs VIRTUAL (MACH ORFPX32-MACHS))
+  (type register SF (32))
+  (indices keyword "" REG-INDICES)
+  (get (index) (subword SF (trunc SI (reg h-gr index)) 0))
+  (set (index newval) (set UWI (reg h-gr index) (zext UWI (subword SI newval 0))))
+  )
+
+(define-hardware
+  (name h-fdr) (comment "floating point registers (double, virtual)")
+  (attrs VIRTUAL (MACH ORFPX64-MACHS))
+  (type register DF (32))
+  (indices keyword "" REG-INDICES)
+  (get (index) (reg DF h-gr index))
+  (set (index newval) (set DF (reg DF h-gr index) mewval))
+  )
 
 ;; Perhaps put the SPR map in here via (indices keyword...) entry?
 ;; Perhaps we don't need this, even...
 ;; Perhaps specify each of the important bits of the SPRs with a layout..?
 (define-hardware
   (name h-spr) (comment "special purpose registers")
-  (type register WI (#x20000))
-  (get (index) (c-call WI "@cpu@_h_spr_get_handler" index))
-  (set (index newval) (c-call VOID "@cpu@_h_spr_set_handler" index newval))
+  (attrs VIRTUAL (MACH ORBIS-MACHS))
+  (type register UWI (#x20000))
+  (get (index) (c-call UWI "@arch@_h_spr_get_handler" index))
+  (set (index newval) (c-call VOID "@arch@_h_spr_set_handler" index newval))
 )
 
 (define-pmacro (spr-address spr-group spr-index)
@@ -41,9 +99,10 @@
     (define-hardware
       (name spr-name)
       (comment spr-comment)
-      (type register WI)
-      (get ()       (reg WI h-spr (spr-address spr-group spr-index)))
-      (set (newval) (set (reg WI h-spr (spr-address spr-group spr-index)) newval))
+      (attrs VIRTUAL (MACH ORBIS-MACHS))
+      (type register UWI)
+      (get ()       (reg UWI h-spr (spr-address spr-group spr-index)))
+      (set (newval) (set (reg UWI h-spr (spr-address spr-group spr-index)) newval))
       )
     )
   )
@@ -53,10 +112,10 @@
     (define-hardware
       (name spr-field-name)
       (comment spr-field-comment)
-      (attrs)
+      (attrs VIRTUAL (MACH ORBIS-MACHS))
       (type register (UINT spr-field-length))
-      (get () (c-call WI "@cpu@_h_spr_field_get_handler" (spr-address spr-group spr-index) (enum UINT spr-field-start) (enum UINT spr-field-length)))
-      (set (value) (c-call WI "@cpu@_h_field_bit_set_handler" (spr-address spr-group spr-index) (enum UINT spr-field-start) (enum UINT spr-field-length)))
+      (get () (c-call UWI "@arch@_h_spr_field_get_handler" (spr-address spr-group spr-index) spr-field-start spr-field-length))
+      (set (value) (c-call VOID "@arch@_h_spr_field_set_handler" (spr-address spr-group spr-index) spr-field-start spr-field-length value))
       )
     )
   )
@@ -161,43 +220,31 @@
 )
 
 (define-normal-enum
-  spr-field-starts-sys-fpcsr
-  "SYS FPCSR register field starts"
+  except-number
+  "Exception numbers"
   ()
-  SPR-FIELD-START-SYS-FPCSR-
-  (("FPEE"  #x000)
-   ("RM"    #x002)
-   ("OVF"   #x003)
-   ("UNF"   #x004)
-   ("SNF"   #x005)
-   ("QNF"   #x006)
-   ("ZF"    #x007)
-   ("IXF"   #x008)
-   ("IVF"   #x009)
-   ("INF"   #x00a)
-   ("DZF"   #x00b)
+  EXCEPT-
+  (("NONE"     #x00)
+   ("RESET"    #x01)
+   ("BUSERR"   #x02)
+   ("DPF"      #x03)
+   ("IPF"      #x04)
+   ("TICK"     #x05)
+   ("ALIGN"    #x06)
+   ("ILLEGAL"  #x07)
+   ("INT"      #x08)
+   ("DTLBMISS" #x09)
+   ("ITLBMISS" #x0a)
+   ("RANGE"    #x0b)
+   ("SYSCALL"  #x0c)
+   ("FPE"      #x0d)
+   ("TRAP"     #x0e)
    )
   )
 
-(define-normal-enum
-  spr-field-lengths-fpcsr
-  "SYS FPCSR register field lengths"
-  ()
-  SPR-FIELD-LENGTH-SYS-FPCSR-
-  (("FPEE"  1)
-   ("RM"    2)
-   ("OVF"   1)
-   ("UNF"   1)
-   ("SNF"   1)
-   ("QNF"   1)
-   ("ZF"    1)
-   ("IXF"   1)
-   ("IVF"   1)
-   ("INF"   1)
-   ("DZF"   1)
-   )
-  )
-
+(define-pmacro (raise-exception exnum)
+  (c-call VOID "@arch@_exception" exnum))
+  
 
 (h-spr-reg h-sys-sr    "supervision register"                 SPR-GROUP-SYS SPR-INDEX-SYS-SR)
 (h-spr-reg h-sys-esr0  "exception supervision register 0"     SPR-GROUP-SYS SPR-INDEX-SYS-ESR0)
@@ -205,10 +252,11 @@
 (h-spr-reg h-mac-maclo "MAC lo register"                      SPR-GROUP-MAC SPR-INDEX-MAC-MACLO)
 (h-spr-reg h-mac-machi "MAC hi register"                      SPR-GROUP-MAC SPR-INDEX-MAC-MACHI)
 
-(h-spr-field h-sys-sr-f  "SR flag bit"                        SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x09 1)
-(h-spr-field h-sys-sr-cy "SR carry bit"                       SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x0a 1)
-(h-spr-field h-sys-sr-ov "SR overflow bit"                    SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x0b 1)
+(h-spr-field h-sys-sr-f     "SR flag bit"                      SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x09 1)
+(h-spr-field h-sys-sr-cy    "SR carry bit"                     SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x0a 1)
+(h-spr-field h-sys-sr-ov    "SR overflow bit"                  SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x0b 1)
+(h-spr-field h-sys-sr-ove   "SR overflow exception enable bit" SPR-GROUP-SYS SPR-INDEX-SYS-SR    #x0c 1)
 
-(h-spr-field h-sys-fpcsr-rm "floating point round mode bit 0" SPR-GROUP-SYS SPR-INDEX-SYS-FPCSR #x02 2)
+(h-spr-field h-sys-fpcsr-rm "floating point round mode bit 0"  SPR-GROUP-SYS SPR-INDEX-SYS-FPCSR #x02 2)
 
-(dsh h-delay-insn "delay insn addr" () (register SI))
+(dsh h-delay-pc "delay insn addr" () (register IAI))

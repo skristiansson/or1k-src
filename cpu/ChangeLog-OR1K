@@ -1,3 +1,15 @@
+2012-04-12  Peter Gavin  <pgavin@gmail.com>
+
+	* or1k.cpu, or1kcommon.cpu, or1korbis.cpu, or1korfpx.cpu: many,
+	many changes:
+	Generally get more prepared for OR64.
+	Clean up handling of different machine and features.
+	Fix handling of floating point registers.
+	Prepare for eventual use by sim/gdb.
+	Fix overflow for mul instructions.
+	Fix divide by zero handling.
+	And probably some other changes I've missed.
+
 2012-03-14  Peter Gavin  <pgavin@gmail.com>
 
 	* or1k32.cpu -> or1kcommon.cpu
