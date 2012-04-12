@@ -1,5 +1,9 @@
 2012-04-12  Peter Gavin  <pgavin@gmail.com>
 
+	* or1k.opc: do not include cgen/basic-{modes,ops}.h
+
+2012-04-12  Peter Gavin  <pgavin@gmail.com>
+
 	* or1k.opc: change CGEN_DIS_HASH_SIZE to 256
 
 2012-04-12  Peter Gavin  <pgavin@gmail.com>

@@ -37,9 +37,6 @@
 
 /* -- opc.h */
 
-#include "cgen/basic-modes.h"
-#include "cgen/basic-ops.h"
-
 #undef  CGEN_DIS_HASH_SIZE
 #define CGEN_DIS_HASH_SIZE 256
 #undef  CGEN_DIS_HASH
