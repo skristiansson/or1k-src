@@ -1,5 +1,9 @@
 2012-04-12  Peter Gavin  <pgavin@gmail.com>
 
+	* or1k.opc: change CGEN_DIS_HASH_SIZE to 256
+
+2012-04-12  Peter Gavin  <pgavin@gmail.com>
+
 	* or1k.cpu, or1kcommon.cpu, or1korbis.cpu, or1korfpx.cpu: many,
 	many changes:
 	Generally get more prepared for OR64.
