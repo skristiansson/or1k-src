@@ -459,12 +459,28 @@ write_inferior_uinteger (CORE_ADDR symaddr, unsigned int val)
   return write_inferior_memory (symaddr, (unsigned char *) &val, sizeof (val));
 }
 
+static CORE_ADDR target_malloc (ULONGEST size);
+static int write_inferior_data_ptr (CORE_ADDR where, CORE_ADDR ptr);
 #endif
+
+/* Operations on various types of tracepoint actions.  */
+
+struct tracepoint_action;
+
+struct tracepoint_action_ops
+{
+  /* Download tracepoint action ACTION to IPA.  Return the address of action
+     in IPA/inferior.  */
+  CORE_ADDR (*download) (const struct tracepoint_action *action);
+};
 
 /* Base action.  Concrete actions inherit this.  */
 
 struct tracepoint_action
 {
+#ifndef IN_PROCESS_AGENT
+  const struct tracepoint_action_ops *ops;
+#endif
   char type;
 };
 
@@ -499,6 +515,87 @@ struct collect_static_trace_data_action
 {
   struct tracepoint_action base;
 };
+
+#ifndef IN_PROCESS_AGENT
+static CORE_ADDR
+m_tracepoint_action_download (const struct tracepoint_action *action)
+{
+  int size_in_ipa = (sizeof (struct collect_memory_action)
+		     - offsetof (struct tracepoint_action, type));
+  CORE_ADDR ipa_action = target_malloc (size_in_ipa);
+
+  write_inferior_memory (ipa_action, (unsigned char *) &action->type,
+			 size_in_ipa);
+
+  return ipa_action;
+}
+
+static const struct tracepoint_action_ops m_tracepoint_action_ops =
+{
+  m_tracepoint_action_download,
+};
+
+static CORE_ADDR
+r_tracepoint_action_download (const struct tracepoint_action *action)
+{
+  int size_in_ipa = (sizeof (struct collect_registers_action)
+		     - offsetof (struct tracepoint_action, type));
+  CORE_ADDR ipa_action  = target_malloc (size_in_ipa);
+
+  write_inferior_memory (ipa_action, (unsigned char *) &action->type,
+			size_in_ipa);
+
+  return ipa_action;
+}
+
+static const struct tracepoint_action_ops r_tracepoint_action_ops =
+{
+  r_tracepoint_action_download,
+};
+
+static CORE_ADDR download_agent_expr (struct agent_expr *expr);
+
+static CORE_ADDR
+x_tracepoint_action_download (const struct tracepoint_action *action)
+{
+  int size_in_ipa = (sizeof (struct eval_expr_action)
+		     - offsetof (struct tracepoint_action, type));
+  CORE_ADDR ipa_action = target_malloc (size_in_ipa);
+  CORE_ADDR expr;
+
+  write_inferior_memory (ipa_action, (unsigned char *) &action->type,
+			 size_in_ipa);
+  expr = download_agent_expr (((struct eval_expr_action *)action)->expr);
+  write_inferior_data_ptr (ipa_action + offsetof (struct eval_expr_action, expr)
+			   - offsetof (struct tracepoint_action, type),
+			   expr);
+
+  return ipa_action;
+}
+
+static const struct tracepoint_action_ops x_tracepoint_action_ops =
+{
+  x_tracepoint_action_download,
+};
+
+static CORE_ADDR
+l_tracepoint_action_download (const struct tracepoint_action *action)
+{
+  int size_in_ipa = (sizeof (struct collect_static_trace_data_action)
+		     - offsetof (struct tracepoint_action, type));
+  CORE_ADDR ipa_action = target_malloc (size_in_ipa);
+
+  write_inferior_memory (ipa_action, (unsigned char *) &action->type,
+			 size_in_ipa);
+
+  return ipa_action;
+}
+
+static const struct tracepoint_action_ops l_tracepoint_action_ops =
+{
+  l_tracepoint_action_download,
+};
+#endif
 
 /* This structure describes a piece of the source-level definition of
    the tracepoint.  The contents are not interpreted by the target,
@@ -1216,6 +1313,8 @@ static struct tracepoint *fast_tracepoint_from_ipa_tpoint_address (CORE_ADDR);
 static void install_tracepoint (struct tracepoint *, char *own_buf);
 static void download_tracepoint (struct tracepoint *);
 static int install_fast_tracepoint (struct tracepoint *, char *errbuf);
+static void clone_fast_tracepoint (struct tracepoint *to,
+				   const struct tracepoint *from);
 #endif
 
 static LONGEST get_timestamp (void);
@@ -1684,6 +1783,28 @@ find_tracepoint (int id, CORE_ADDR addr)
   return NULL;
 }
 
+/* Remove TPOINT from global list.  */
+
+static void
+remove_tracepoint (struct tracepoint *tpoint)
+{
+  struct tracepoint *tp, *tp_prev;
+
+  for (tp = tracepoints, tp_prev = NULL; tp && tp != tpoint;
+       tp_prev = tp, tp = tp->next)
+    ;
+
+  if (tp)
+    {
+      if (tp_prev)
+	tp_prev->next = tp->next;
+      else
+	tracepoints = tp->next;
+
+      xfree (tp);
+    }
+}
+
 /* There may be several tracepoints with the same number (because they
    are "locations", in GDB parlance); return the next one after the
    given tracepoint, or search from the beginning of the list if the
@@ -1749,6 +1870,7 @@ add_tracepoint_action (struct tracepoint *tpoint, char *packet)
 
 	    maction = xmalloc (sizeof *maction);
 	    maction->base.type = *act;
+	    maction->base.ops = &m_tracepoint_action_ops;
 	    action = &maction->base;
 
 	    ++act;
@@ -1774,6 +1896,7 @@ add_tracepoint_action (struct tracepoint *tpoint, char *packet)
 
 	    raction = xmalloc (sizeof *raction);
 	    raction->base.type = *act;
+	    raction->base.ops = &r_tracepoint_action_ops;
 	    action = &raction->base;
 
 	    trace_debug ("Want to collect registers");
@@ -1789,6 +1912,7 @@ add_tracepoint_action (struct tracepoint *tpoint, char *packet)
 
 	    raction = xmalloc (sizeof *raction);
 	    raction->base.type = *act;
+	    raction->base.ops = &l_tracepoint_action_ops;
 	    action = &raction->base;
 
 	    trace_debug ("Want to collect static trace data");
@@ -1805,6 +1929,7 @@ add_tracepoint_action (struct tracepoint *tpoint, char *packet)
 
 	    xaction = xmalloc (sizeof (*xaction));
 	    xaction->base.type = *act;
+	    xaction->base.ops = &x_tracepoint_action_ops;
 	    action = &xaction->base;
 
 	    trace_debug ("Want to evaluate expression");
@@ -2379,6 +2504,8 @@ cmd_qtdp (char *own_buf)
      trailing hyphen in QTDP packet.  */
   if (tracing && !trail_hyphen)
     {
+      struct tracepoint *tp = NULL;
+
       /* Pause all threads temporarily while we patch tracepoints.  */
       pause_all (0);
 
@@ -2389,8 +2516,37 @@ cmd_qtdp (char *own_buf)
       /* Freeze threads.  */
       pause_all (1);
 
+
+      if (tpoint->type != trap_tracepoint)
+	{
+	  /* Find another fast or static tracepoint at the same address.  */
+	  for (tp = tracepoints; tp; tp = tp->next)
+	    {
+	      if (tp->address == tpoint->address && tp->type == tpoint->type
+		  && tp->number != tpoint->number)
+		break;
+	    }
+
+	  /* TPOINT is installed at the same address as TP.  */
+	  if (tp)
+	    {
+	      if (tpoint->type == fast_tracepoint)
+		clone_fast_tracepoint (tpoint, tp);
+	      else if (tpoint->type == static_tracepoint)
+		tpoint->handle = (void *) -1;
+	    }
+	}
+
       download_tracepoint (tpoint);
-      install_tracepoint (tpoint, own_buf);
+
+      if (tpoint->type == trap_tracepoint || tp == NULL)
+	{
+	  install_tracepoint (tpoint, own_buf);
+	  if (strcmp (own_buf, "OK") != 0)
+	    remove_tracepoint (tpoint);
+	}
+      else
+	write_ok (own_buf);
 
       unpause_all (1);
       return;
@@ -2894,8 +3050,6 @@ install_tracepoint (struct tracepoint *tpoint, char *own_buf)
     }
   else if (tpoint->type == fast_tracepoint || tpoint->type == static_tracepoint)
     {
-      struct tracepoint *tp;
-
       if (!agent_loaded_p ())
 	{
 	  trace_debug ("Requested a %s tracepoint, but fast "
@@ -2913,30 +3067,12 @@ install_tracepoint (struct tracepoint *tpoint, char *own_buf)
 	  return;
 	}
 
-      /* Find another fast or static tracepoint at the same address.  */
-      for (tp = tracepoints; tp; tp = tp->next)
-	{
-	  if (tp->address == tpoint->address && tp->type == tpoint->type
-	      && tp->number != tpoint->number)
-	    break;
-	}
-
       if (tpoint->type == fast_tracepoint)
-	{
-	  if (tp) /* TPOINT is installed at the same address as TP.  */
-	    clone_fast_tracepoint (tpoint, tp);
-	  else
-	    install_fast_tracepoint (tpoint, own_buf);
-	}
+	install_fast_tracepoint (tpoint, own_buf);
       else
 	{
-	  if (tp)
+	  if (probe_marker_at (tpoint->address, own_buf) == 0)
 	    tpoint->handle = (void *) -1;
-	  else
-	    {
-	      if (probe_marker_at (tpoint->address, own_buf) == 0)
-		tpoint->handle = (void *) -1;
-	    }
 	}
 
     }
@@ -5654,55 +5790,8 @@ download_tracepoint_1 (struct tracepoint *tpoint)
       /* Now for each pointer, download the action.  */
       for (i = 0; i < tpoint->numactions; i++)
 	{
-	  CORE_ADDR ipa_action = 0;
 	  struct tracepoint_action *action = tpoint->actions[i];
-
-	  switch (action->type)
-	    {
-	    case 'M':
-	      ipa_action
-		= target_malloc (sizeof (struct collect_memory_action));
-	      write_inferior_memory (ipa_action,
-				     (unsigned char *) action,
-				     sizeof (struct collect_memory_action));
-	      break;
-	    case 'R':
-	      ipa_action
-		= target_malloc (sizeof (struct collect_registers_action));
-	      write_inferior_memory (ipa_action,
-				     (unsigned char *) action,
-				     sizeof (struct collect_registers_action));
-	      break;
-	    case 'X':
-	      {
-		CORE_ADDR expr;
-		struct eval_expr_action *eaction
-		  = (struct eval_expr_action *) action;
-
-		ipa_action = target_malloc (sizeof (*eaction));
-		write_inferior_memory (ipa_action,
-				       (unsigned char *) eaction,
-				       sizeof (*eaction));
-
-		expr = download_agent_expr (eaction->expr);
-		write_inferior_data_ptr
-		  (ipa_action + offsetof (struct eval_expr_action, expr),
-		   expr);
-		break;
-	      }
-	    case 'L':
-	      ipa_action = target_malloc
-		(sizeof (struct collect_static_trace_data_action));
-	      write_inferior_memory
-		(ipa_action,
-		 (unsigned char *) action,
-		 sizeof (struct collect_static_trace_data_action));
-	      break;
-	    default:
-	      trace_debug ("unknown trace action '%c', ignoring",
-			   action->type);
-	      break;
-	    }
+	  CORE_ADDR ipa_action = action->ops->download (action);
 
 	  if (ipa_action != 0)
 	    write_inferior_data_ptr

@@ -8,4 +8,18 @@
 /configure/1.8/Thu Jul 13 15:46:46 2006/-ko/
 /configure.in/1.6/Thu Jul 13 15:46:46 2006/-ko/
 /license.terms/1.5/Tue Jan 21 19:39:57 2003/-ko/
-D
+D/bitmaps////
+D/compat////
+D/cygwin////
+D/doc////
+D/generic////
+D/library////
+D/libtommath////
+D/mac////
+D/macosx////
+D/tests////
+D/testsuite////
+D/tools////
+D/unix////
+D/win////
+D/xlib////

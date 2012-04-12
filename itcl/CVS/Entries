@@ -5,4 +5,10 @@
 /aclocal.m4/1.6/Wed Jul 23 22:44:50 2008/-ko/
 /configure/1.10/Wed Jul 23 22:44:50 2008/-ko/
 /configure.ac/1.1/Wed Jul 23 22:44:50 2008//
-D
+D/config////
+D/doc////
+D/itcl////
+D/itk////
+D/iwidgets////
+D/iwidgets3.0.0////
+D/testsuite////

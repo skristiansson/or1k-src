@@ -36,7 +36,6 @@
 /attr-gnu-4-5.s/1.1/Sat Nov 17 13:38:57 2007//
 /attr-gnu-4-51.d/1.1/Sat Nov 17 13:38:57 2007//
 /branch-misc-1.d/1.3/Mon Oct 16 21:34:25 2006//
-/comm-data.exp/1.1/Tue Nov 29 12:42:10 2011//
 /dyn-sec64.d/1.1/Fri Mar 21 16:29:26 2008//
 /dyn-sec64.ld/1.1/Fri Mar 21 16:29:26 2008//
 /dyn-sec64.s/1.1/Fri Mar 21 16:29:26 2008//
@@ -353,4 +352,5 @@
 /vxworks2-static.sd/1.1/Wed Mar 22 09:28:15 2006//
 /vxworks2.s/1.1/Wed Mar 22 09:28:15 2006//
 /vxworks2.sd/1.1/Wed Mar 22 09:28:15 2006//
+/comm-data.exp/1.2/Thu Apr 12 16:02:07 2012//
 D

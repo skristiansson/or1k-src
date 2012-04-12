@@ -1,3 +1,36 @@
+2012-04-11  Ryan Mansfield  <rmansfield@qnx.com>
+
+        * objdump.c (dump_bfd): If defaulting to dwarf call
+        dwarf_select_sections_all to enable displays.
+
+2012-04-06  Roland McGrath  <mcgrathr@google.com>
+
+	* configure.in (AC_CHECK_HEADERS): Add locale.h.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2012-04-05  Nick Clifton  <nickc@redhat.com>
+
+	* configure.in (AC_CHECK_FUNCS): Add setlocale.
+	(AM_LC_MESSAGES): Add.
+	* aclocal.m4: Regenerate.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2012-03-30  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/13925
+	* stabs.c (stab_demangle_v3_arglist): Cope with the demangler
+	returning an empty context for a function with no arguments.
+
+2012-03-28  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf.c (display_gdb_index): Handle index version 6.
+
+2012-03-07  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c (is_16bit_abs_reloc): Add detection of R_MN10300_16.
+
 2012-02-29  Jeff Law  <law@redhat.com>
 
 	* doc/binutils.texi (c++filt): Fix typos.

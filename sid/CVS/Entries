@@ -8,4 +8,11 @@
 /configure/1.15/Mon Feb  5 20:28:38 2007//
 /configure.in/1.8/Mon Mar 27 22:19:18 2006//
 /sid.spec/1.5/Wed Oct 18 18:48:00 2006//
-D
+D/bsp////
+D/component////
+D/config////
+D/demos////
+D/doc////
+D/include////
+D/main////
+D/samples////

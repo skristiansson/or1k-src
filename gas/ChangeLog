@@ -1,3 +1,153 @@
+2012-04-12  Roland McGrath  <mcgrathr@google.com>
+
+	* configure.tgt (arm-*-nacl*): Match it.
+	* config/te-nacl.h (FPU_DEFAULT, EABI_DEFAULT): Define.
+	(LOCAL_LABELS_DOLLAR): Define.
+	* config/tc-arm.c (elf32_arm_target_format) [TE_NACL]:
+	Use nacl format variants.
+
+2012-04-12  Jie Zhang  <jie@codesourcery.com>
+            Meador Inge  <meadori@codesourcery.com>
+
+	* config/tc-arm.c (only_one_reg_in_list): New function.
+	(encode_ldmstm): Ditto.
+	(do_ldmstm): Use a different encoding when pushing or poping
+	a single register.
+	(A_COND_MASK): New macro.
+	(A_PUSH_POP_OP_MASK): Ditto.
+	(A1_OPCODE_PUSH): Ditto.
+	(A2_OPCODE_PUSH): Ditto.
+	(A2_OPCODE_POP): Ditto.
+
+2012-04-06  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* doc/c-mips.texi (MIPS Opts): Correct -no-mfix-24k to
+	-mno-fix-24k.
+
+2012-04-06  Roland McGrath  <mcgrathr@google.com>
+
+	* configure.in (AC_CHECK_HEADERS): Add locale.h.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2012-04-05  Nick Clifton  <nickc@redhat.com>
+
+	* configure.in (AC_CHECK_FUNCS): Add setlocale.
+	(AM_LC_MESSAGES): Add.
+	* aclocal.m4: Regenerate.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2012-04-03  DJ Delorie  <dj@redhat.com>
+
+	* config/rx-parse.y: Make the .L optional for ADC and SBB.
+
+2012-04-02  DJ Delorie  <dj@redhat.com>
+
+	* config/rx-parse.y: IMM->IMM_, take an extra parameter for the
+	transfer size.
+	(IMM): New, call IMM_ with the default 32.
+	(IMMW,IMMB): Likewise, for 16 and 8.
+	(NIMM, MBIMM): Add size parameter.
+	(immediate): Likewise.  Allow 32768..65535 for 16-bit transfers.
+	(MOV.W): Use IMMW instead of IMM.
+
+	* config/rx-parse.y (ADC,SBB): ADC and SBB only allow .L.
+	(op_dp20_rm_l): New.
+	(op_dp20_rim_l): New.
+
+	* config/rx-parse.y (op_dp20_rms): Rename to op_dp20_rr, don't allow mem.
+	(ABS, NEG, NOT): These only take REG or REG,REG (rr, not rms).
+
+2012-03-29  Terry Guo  <terry.guo@arm.com>
+
+	* config/tc-arm.c (arm_cpus): Add cortex-m0plus.
+	* doc/c-arm.texi (ARM Options): Document -mcpu=cortex-m0plus.
+
+2012-03-23  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* config/tc-mips.c (mips_cpu_info_table): Add entry for Broadcom XLP.
+	* doc/c-mips.texi: Mention XLP.
+
+2012-03-21  Thomas Schwinge  <thomas@codesourcery.com>
+
+	[SH] Support the .uaquad and .8byte directives also for non-sh64
+	configurations.
+
+	* config/tc-sh.c (sh_cons_fix_new, md_apply_fix) [!HAVE_SH64]: Handle
+	BFD_RELOC_64.
+	* doc/c-sh64.texi (SH64 Machine Directives): Move .uaquad
+	description...
+	* doc/c-sh.texi (SH Machine Directives): ... here.
+
+2012-03-20  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-arm.c (do_vmrs): Accept priviledged mode VFP system
+	registers.
+	(do_vmsr): Likewise.
+	(arm_opcode_insns): Do not default to using the FPSCR register in
+	the VMRS and VMSR registers.
+
+2012-03-16  Roland McGrath  <mcgrathr@google.com>
+
+	* config/tc-i386.h [TE_NACL] (ELF_TARGET_FORMAT32, ELF_TARGET_FORMAT64):
+	Define for this case.
+	* configure.tgt (i386-*-nacl*): If ${cpu} is x86_64*, default to x32.
+
+2012-03-16  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* config/tc-arm.c (aeabi_set_public_attributes): Correct
+	handling of Tag_DIV_use.
+
+2012-03-15  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* doc/as.texinfo (Bundle directives): Fix typo.
+
+2012-03-14  Ryan Mansfield  <rmansfield@qnx.com>
+
+	* doc/as.texinfo (Bundle directives): Replace @defn with @dfn.
+
+2012-03-13  Roland McGrath  <mcgrathr@google.com>
+
+	* config/tc-arm.c (arm_frag_max_var): New function.
+	* config/tc-arm.h: Declare it.
+	(md_frag_max_var): New macro.
+
+	* config/tc-i386.c (i386_frag_max_var): New function.
+	* config/tc-i386.h: Declare it.
+	(md_frag_max_var): New macro.
+
+	* doc/as.texinfo (Bundle directives): New node.
+	(Pseudo Ops): Add it to the menu.
+	* NEWS: Mention new feature.
+	* read.c [md_frag_max_var] (HANDLE_BUNDLE): New macro.
+	[HANDLE_BUNDLE] (bundle_align_p2): New variable.
+	[HANDLE_BUNDLE] (bundle_lock_frchain, bundle_lock_frag): New variables.
+	[HANDLE_BUNDLE] (start_bundle, pending_bundle_size, finish_bundle):
+	New functions.
+	(assemble_one): New function if [HANDLE_BUNDLE], #define directly
+	to md_assembly if not.
+	(read_a_source_file): Call assemble_one in place of md_assemble.
+	(read_a_source_file) [HANDLE_BUNDLE]: Check for unterminated
+	.bundle_lock at end of processing.
+	[HANDLE_BUNDLE] (s_bundle_align_mode, s_bundle_lock, s_bundle_unlock):
+	New functions.
+	[HANDLE_BUNDLE] (potable): Add their entries.
+	* read.h: Declare new functions.
+
+2012-03-10  Edmar Wienskoski  <edmar@freescale.com>
+
+	* config/tc-ppc.c (md_show_usage): Document -me5500 and -me6500.
+	(ppc_handle_align): Add termination nop opcode for e500mc family.
+	* doc/as.texinfo: Document options -me5500 and -me6500.
+	* doc/c-ppc.texi: Likewise.
+
+2012-03-07  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-mn10300.c (other_registers): Add SSP and USP.
+	(md_assemble): Add support for TLS relocs.
+	(mn10300_parse_name): Likewise.
+
 2012-02-27  Alan Modra  <amodra@gmail.com>
 
 	* config/tc-crx.c (check_range): Correct uint32_t misconceptions.

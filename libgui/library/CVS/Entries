@@ -1,9 +1,6 @@
-/Makefile.am/1.8/Mon Nov  9 19:23:12 2009/-ko/
-/Makefile.in/1.15/Mon Nov  9 19:23:12 2009/-ko/
 /advice.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /balloon.tcl/1.6/Tue Jul 22 20:11:35 2008/-ko/
 /bbox.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
-/bgerror.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /bindings.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /canvas.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /center.tcl/1.3/Sat Sep  8 22:34:46 2001/-ko/
@@ -18,7 +15,6 @@
 /internet.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /lframe.tcl/1.3/Tue Jul 22 20:11:35 2008/-ko/
 /list.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
-/looknfeel.tcl/1.4/Tue Feb 26 00:16:22 2002/-ko/
 /menu.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /mono.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /multibox.tcl/1.3/Tue Jul 22 20:11:35 2008/-ko/
@@ -31,11 +27,14 @@
 /prefs.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /print.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /sendpr.tcl/1.4/Tue Jul 22 20:11:35 2008/-ko/
-/tclIndex/1.5/Tue Dec  3 22:03:16 2002/-ko/
 /toolbar.tcl/1.3/Sat Sep  8 22:34:46 2001/-ko/
 /topbind.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /ulset.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
 /ventry.tcl/1.3/Tue Jul 22 20:11:35 2008/-ko/
 /wframe.tcl/1.3/Tue Jul 22 20:11:35 2008/-ko/
 /wingrab.tcl/1.2/Sat Sep  8 22:34:46 2001/-ko/
+/Makefile.am/1.9/Thu Apr 12 16:02:19 2012/-ko/
+/Makefile.in/1.16/Thu Apr 12 16:02:19 2012/-ko/
+/looknfeel.tcl/1.5/Thu Apr 12 16:02:19 2012/-ko/
+/tclIndex/1.6/Thu Apr 12 16:02:19 2012/-ko/
 D

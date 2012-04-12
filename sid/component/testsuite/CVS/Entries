@@ -1,4 +1,34 @@
 /ChangeLog/1.65/Mon Feb  5 20:28:41 2007//
 /Makefile.am/1.2/Sat Aug  4 12:10:31 2001//
 /Makefile.in/1.10/Mon Feb  5 20:28:41 2007//
-D
+D/config////
+D/lib////
+D/sidcomp.audio////
+D/sidcomp.bsp////
+D/sidcomp.cache////
+D/sidcomp.cfgroot////
+D/sidcomp.cgen-cpu////
+D/sidcomp.cgen-cpu.arm7t////
+D/sidcomp.cgen-cpu.mep////
+D/sidcomp.cgen-cpu.ms1////
+D/sidcomp.cgen-cpu.mt////
+D/sidcomp.cgen-cpu.sh////
+D/sidcomp.cgen-cpu.xstormy16////
+D/sidcomp.consoles////
+D/sidcomp.families.mep////
+D/sidcomp.gloss////
+D/sidcomp.glue////
+D/sidcomp.ide////
+D/sidcomp.interrupt////
+D/sidcomp.lcd////
+D/sidcomp.loader////
+D/sidcomp.mapper////
+D/sidcomp.memory////
+D/sidcomp.mmu////
+D/sidcomp.parport////
+D/sidcomp.pcmcia////
+D/sidcomp.profiling////
+D/sidcomp.rtc////
+D/sidcomp.sched////
+D/sidcomp.timers////
+D/sidcomp.uart////

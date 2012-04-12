@@ -1,11 +1,8 @@
-/ChangeLog/1.340/Fri Mar  2 13:20:07 2012//
 /Makefile.in/1.7/Mon Jan 10 12:08:35 2011//
-/README/1.6/Tue Feb 21 22:37:47 2012//
 /acinclude.m4/1.1/Wed Apr 19 19:44:03 2006//
 /aclocal.m4/1.1/Wed Apr 19 19:44:03 2006//
 /close.c/1.1/Fri Mar 17 22:48:49 2000//
 /configure/1.37/Fri Mar  2 13:20:08 2012//
-/configure.in/1.36/Fri Mar  2 13:20:08 2012//
 /debug.c/1.1/Fri Mar 17 22:48:49 2000//
 /debug.h/1.2/Wed Apr 17 19:10:37 2002//
 /fstat.c/1.1/Fri Mar 17 22:48:49 2000//
@@ -23,4 +20,50 @@
 /syscall.h/1.4/Tue Nov  6 23:07:06 2007//
 /unlink.c/1.1/Fri Mar 17 22:48:49 2000//
 /write.c/1.1/Fri Mar 17 22:48:49 2000//
-D
+D/arm////
+D/bfin////
+D/config////
+D/cr16////
+D/cris////
+D/crx////
+D/d30v////
+D/doc////
+D/epiphany////
+D/fr30////
+D/frv////
+D/hp74x////
+D/i386////
+D/i960////
+D/iq2000////
+D/libnosys////
+D/lm32////
+D/m32c////
+D/m32r////
+D/m68hc11////
+D/m68k////
+D/mcore////
+D/mep////
+D/microblaze////
+D/mips////
+D/mn10200////
+D/mn10300////
+D/moxie////
+D/ms1////
+D/mt////
+D/pa////
+D/rl78////
+D/rs6000////
+D/rx////
+D/sh////
+D/sparc////
+D/sparc_leon////
+D/spu////
+D/testsuite////
+D/tic6x////
+D/v850////
+D/wince////
+D/xc16x////
+D/xstormy16////
+/ChangeLog/1.344/Thu Apr 12 16:02:11 2012//
+/README/1.6/Thu Apr 12 15:59:05 2012//
+/configure.in/1.36/Thu Apr 12 15:59:05 2012//

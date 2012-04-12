@@ -45,4 +45,7 @@
 /tst.cgs/1.1/Tue Apr  1 11:07:58 2003//
 /umlal.cgs/1.1/Tue Apr  1 11:07:58 2003//
 /umull.cgs/1.1/Tue Apr  1 11:07:58 2003//
-D
+D/iwmmxt////
+D/thumb////
+D/xscale////
+/ChangeLog/1.1/Wed Mar 21 04:46:58 2012//

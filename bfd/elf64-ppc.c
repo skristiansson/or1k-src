@@ -5533,28 +5533,46 @@ opd_entry_value (asection *opd_sec,
      at a final linked executable with addr2line or somesuch.  */
   if (opd_sec->reloc_count == 0)
     {
-      char buf[8];
-
+      /* PR 13897: Cache the loaded section to speed up the search.  */
+      static asection * buf_sec = NULL;
+      static char       buf[8];
+      static bfd_vma    buf_val = 0;
+      static asection * buf_likely = NULL;
+      
+      if (buf_sec == opd_sec)
+	{
+	  if (code_sec != NULL)
+	    * code_sec = buf_likely;
+	  if (code_off != NULL && buf_likely != NULL)
+	    * code_off = buf_val - buf_likely->vma;
+	  return buf_val;
+	}
+   
       if (!bfd_get_section_contents (opd_bfd, opd_sec, buf, offset, 8))
 	return (bfd_vma) -1;
+      buf_sec = opd_sec;
 
-      val = bfd_get_64 (opd_bfd, buf);
+      buf_val = bfd_get_64 (opd_bfd, buf);
       if (code_sec != NULL)
 	{
-	  asection *sec, *likely = NULL;
+	  asection *sec;
+
+	  buf_likely = NULL;
 	  for (sec = opd_bfd->sections; sec != NULL; sec = sec->next)
-	    if (sec->vma <= val
+	    if (sec->vma <= buf_val
 		&& (sec->flags & SEC_LOAD) != 0
 		&& (sec->flags & SEC_ALLOC) != 0)
-	      likely = sec;
-	  if (likely != NULL)
+	      buf_likely = sec;
+	  if (buf_likely != NULL)
 	    {
-	      *code_sec = likely;
+	      *code_sec = buf_likely;
 	      if (code_off != NULL)
-		*code_off = val - likely->vma;
+		*code_off = buf_val - buf_likely->vma;
 	    }
 	}
-      return val;
+      else
+	buf_likely = NULL;
+      return buf_val;
     }
 
   BFD_ASSERT (is_ppc64_elf (opd_bfd));
@@ -5585,15 +5603,18 @@ opd_entry_value (asection *opd_sec,
 	      unsigned long symndx = ELF64_R_SYM (look->r_info);
 	      asection *sec;
 
-	      if (symndx < symtab_hdr->sh_info)
+	      if (symndx < symtab_hdr->sh_info
+		  || elf_sym_hashes (opd_bfd) == NULL)
 		{
 		  Elf_Internal_Sym *sym;
 
 		  sym = (Elf_Internal_Sym *) symtab_hdr->contents;
 		  if (sym == NULL)
 		    {
-		      sym = bfd_elf_get_elf_syms (opd_bfd, symtab_hdr,
-						  symtab_hdr->sh_info,
+		      size_t symcnt = symtab_hdr->sh_info;
+		      if (elf_sym_hashes (opd_bfd) == NULL)
+			symcnt = symtab_hdr->sh_size / symtab_hdr->sh_entsize;
+		      sym = bfd_elf_get_elf_syms (opd_bfd, symtab_hdr, symcnt,
 						  0, NULL, NULL, NULL);
 		      if (sym == NULL)
 			break;
@@ -6562,13 +6583,6 @@ ppc64_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
   /* This is a reference to a symbol defined by a dynamic object which
      is not a function.  */
 
-  if (h->size == 0)
-    {
-      info->callbacks->einfo (_("%P: dynamic variable `%s' is zero size\n"),
-			      h->root.root.string);
-      return TRUE;
-    }
-
   /* We must allocate the symbol in our .dynbss section, which will
      become part of the .bss section of the executable.  There will be
      an entry for this symbol in the .dynsym section.  The dynamic
@@ -6583,7 +6597,7 @@ ppc64_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
      to copy the initial value out of the dynamic object and into the
      runtime process image.  We need to remember the offset into the
      .rela.bss section we are going to use.  */
-  if ((h->root.u.def.section->flags & SEC_ALLOC) != 0)
+  if ((h->root.u.def.section->flags & SEC_ALLOC) != 0 && h->size != 0)
     {
       htab->relbss->size += sizeof (Elf64_External_Rela);
       h->needs_copy = 1;

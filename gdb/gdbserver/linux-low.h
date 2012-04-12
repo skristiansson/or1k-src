@@ -20,6 +20,7 @@
 #ifdef HAVE_THREAD_DB_H
 #include <thread_db.h>
 #endif
+#include <signal.h>
 
 #include "gdb_proc_service.h"
 
@@ -45,8 +46,6 @@ struct regset_info
 };
 extern struct regset_info target_regsets[];
 #endif
-
-struct siginfo;
 
 struct process_info_private
 {
@@ -82,6 +81,14 @@ struct linux_target_ops
      store the register, and 2 if failure to store the register
      is acceptable.  */
   int (*cannot_store_register) (int);
+
+  /* Hook to fetch a register in some non-standard way.  Used for
+     example by backends that have read-only registers with hardcoded
+     values (e.g., IA64's gr0/fr0/fr1).  Returns true if register
+     REGNO was supplied, false if not, and we should fallback to the
+     standard ptrace methods.  */
+  int (*fetch_register) (struct regcache *regcache, int regno);
+
   CORE_ADDR (*get_pc) (struct regcache *regcache);
   void (*set_pc) (struct regcache *regcache, CORE_ADDR newpc);
   const unsigned char *breakpoint;
@@ -109,7 +116,7 @@ struct linux_target_ops
      Returns true if any conversion was done; false otherwise.
      If DIRECTION is 1, then copy from INF to NATIVE.
      If DIRECTION is 0, copy from NATIVE to INF.  */
-  int (*siginfo_fixup) (struct siginfo *native, void *inf, int direction);
+  int (*siginfo_fixup) (siginfo_t *native, void *inf, int direction);
 
   /* Hook to call when a new process is created or attached to.
      If extra per-process architecture-specific data is needed,
@@ -271,7 +278,7 @@ struct lwp_info
 
 extern struct inferior_list all_lwps;
 
-int linux_pid_exe_is_elf_64_file (int pid);
+int linux_pid_exe_is_elf_64_file (int pid, unsigned int *machine);
 
 void linux_attach_lwp (unsigned long pid);
 struct lwp_info *find_lwp_pid (ptid_t ptid);

@@ -1,4 +1,3 @@
-/ChangeLog/1.387/Thu Mar  1 07:35:02 2012//
 /Makefile.in/1.27/Sun Jun 27 21:32:19 2010/-ko/
 /README/1.3/Sun Jun 27 21:32:19 2010//
 /aclocal.m4/1.1/Wed May 24 16:59:02 2006//
@@ -9,7 +8,6 @@
 /cygwin-ug-net.in.sgml/1.7/Sun Apr 11 17:43:28 2010/-ko/
 /cygwin-ug.in.sgml/1.7/Sun Apr 11 17:43:28 2010/-ko/
 /cygwin.dsl/1.4/Sun Apr 11 22:15:59 2010//
-/cygwinenv.sgml/1.42/Fri Jul 15 20:59:07 2011/-ko/
 /dll.sgml/1.9/Fri Aug 24 14:52:39 2007/-ko/
 /doctool.c/1.3/Thu Jan 12 11:31:55 2006/-ko/
 /doctool.txt/1.1.1.1/Thu Feb 17 19:38:31 2000/-ko/
@@ -27,11 +25,8 @@
 /gcc.sgml/1.6/Mon Dec 15 09:37:50 2008/-ko/
 /gdb.sgml/1.4/Wed Apr  1 16:56:08 2009/-ko/
 /legal.sgml/1.11/Sun Feb  5 14:29:14 2012/-ko/
-/new-features.sgml/1.104/Sat Feb 25 10:51:32 2012//
 /ntsec.sgml/1.27/Sat Feb  4 11:40:44 2012/-ko/
 /overview.sgml/1.16/Mon May  2 11:56:36 2011/-ko/
-/overview2.sgml/1.21/Sat Nov  5 18:42:55 2011/-ko/
-/pathnames.sgml/1.64/Sat Feb  4 11:40:44 2012/-ko/
 /programming.sgml/1.1.1.1/Thu Feb 17 19:38:31 2000/-ko/
 /setup-net.sgml/1.30/Sat Feb  4 20:19:48 2012/-ko/
 /setup.sgml/1.3/Tue May  2 22:26:41 2000/-ko/
@@ -39,4 +34,9 @@
 /textbinary.sgml/1.15/Mon Aug 30 13:19:39 2010/-ko/
 /using.sgml/1.3/Sat Mar 27 15:59:44 2004/-ko/
 /windres.sgml/1.2/Sat Jan 24 08:08:13 2004/-ko/
+/ChangeLog/1.394/Thu Apr 12 16:04:36 2012//
+/cygwinenv.sgml/1.43/Thu Apr 12 16:04:36 2012/-ko/
+/new-features.sgml/1.111/Thu Apr 12 16:04:36 2012//
+/overview2.sgml/1.22/Thu Apr 12 16:04:36 2012/-ko/
+/pathnames.sgml/1.65/Thu Apr 12 16:04:36 2012/-ko/
 D

@@ -358,6 +358,21 @@ cp_print_value_fields (struct type *type, struct type *real_type,
 					   v, stream, recurse + 1,
 					   options);
 		}
+	      else if (i == TYPE_VPTR_FIELDNO (type))
+		{
+		  int i_offset = offset + TYPE_FIELD_BITPOS (type, i) / 8;
+		  struct type *i_type = TYPE_FIELD_TYPE (type, i);
+
+		  if (valprint_check_validity (stream, i_type, i_offset, val))
+		    {
+		      CORE_ADDR addr;
+		      
+		      addr = extract_typed_address (valaddr + i_offset, i_type);
+		      print_function_pointer_address (get_type_arch (type),
+						      addr, stream,
+						      options->addressprint);
+		    }
+		}
 	      else
 		{
 		  struct value_print_options opts = *options;

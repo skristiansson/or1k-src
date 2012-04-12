@@ -8,4 +8,14 @@
 /aclocal.m4/1.2/Wed Aug 30 13:05:46 2006//
 /configure/1.35/Sat Jan 29 06:41:28 2011/-ko/
 /configure.in/1.33/Sat Jan 29 06:41:28 2011/-ko/
-D
+D/bz2lib////
+D/cygserver////
+D/cygwin////
+D/doc////
+D/lsaauth////
+D/maint////
+D/mingw////
+D/subauth////
+D/testsuite////
+D/utils////
+D/w32api////

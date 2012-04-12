@@ -30,7 +30,6 @@
 /gdbmenubar.itcl/1.13/Fri Dec 23 18:26:50 2005//
 /gdbtoolbar.itcl/1.7/Fri Dec 23 18:26:50 2005//
 /gdbwin.ith/1.5/Fri Dec 23 18:26:50 2005/-ko/
-/globalpref.itb/1.16/Sat Aug  2 22:08:32 2008/-ko/
 /globalpref.ith/1.5/Fri Dec 23 18:26:50 2005/-ko/
 /helpviewer.tcl/1.5/Sat Feb  9 01:23:42 2008//
 /interface.tcl/1.60/Fri Oct  9 01:23:55 2009/-ko/
@@ -77,4 +76,8 @@
 /vartree.ith/1.2/Fri Dec 23 18:26:50 2005//
 /warning.tcl/1.3/Fri Dec 23 18:26:50 2005/-ko/
 /watch.tcl/1.11/Fri Dec  1 03:34:39 2006/-ko/
-D
+D/help////
+D/images////
+D/images2////
+D/plugins////
+/globalpref.itb/1.17/Thu Apr 12 16:01:09 2012/-ko/

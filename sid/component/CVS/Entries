@@ -11,4 +11,28 @@
 /siddoc.in/1.2/Mon Jul 23 20:37:08 2001//
 /stamp-h.in/1.1/Thu Dec  7 19:30:45 2000//
 /tconfig.in/1.7/Mon Feb  5 20:28:38 2007//
-D
+D/audio////
+D/bochs////
+D/cache////
+D/cfgroot////
+D/cgen-cpu////
+D/consoles////
+D/families////
+D/gdb////
+D/gloss////
+D/glue////
+D/ide////
+D/interrupt////
+D/lcd////
+D/loader////
+D/mapper////
+D/memory////
+D/mmu////
+D/parport////
+D/profiling////
+D/rtc////
+D/sched////
+D/tcl////
+D/testsuite////
+D/timers////
+D/uart////

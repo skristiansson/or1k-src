@@ -23,4 +23,6 @@
 /user_malloc.c/1.1/Mon Jun 12 13:59:36 2006//
 /waitpid.c/1.2/Thu Jan 23 21:21:28 2003//
 /winsup.exp/1.16/Mon Jan  2 06:15:58 2006/-ko/
-D
+D/ltp////
+D/pthread////
+D/samples////

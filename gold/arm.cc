@@ -2515,6 +2515,9 @@ class Target_arm : public Sized_target<32, big_endian>
 	    && Target::do_section_may_have_icf_unsafe_pointers(section_name));
   }
   
+  virtual void
+  do_define_standard_symbols(Symbol_table*, Layout*);
+
  private:
   // The class which scans relocations.
   class Scan
@@ -4174,11 +4177,22 @@ Target_arm<big_endian>::got_section(Symbol_table* symtab, Layout* layout)
     {
       gold_assert(symtab != NULL && layout != NULL);
 
+      // When using -z now, we can treat .got as a relro section.
+      // Without -z now, it is modified after program startup by lazy
+      // PLT relocations.
+      bool is_got_relro = parameters->options().now();
+      Output_section_order got_order = (is_got_relro
+					? ORDER_RELRO_LAST
+					: ORDER_DATA);
+
+      // Unlike some targets (.e.g x86), ARM does not use separate .got and
+      // .got.plt sections in output.  The output .got section contains both
+      // PLT and non-PLT GOT entries.
       this->got_ = new Arm_output_data_got<big_endian>(symtab, layout);
 
       layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC | elfcpp::SHF_WRITE),
-				      this->got_, ORDER_DATA, false);
+				      this->got_, got_order, is_got_relro);
 
       // The old GNU linker creates a .got.plt section.  We just
       // create another set of data in the .got section.  Note that we
@@ -4187,7 +4201,7 @@ Target_arm<big_endian>::got_section(Symbol_table* symtab, Layout* layout)
       this->got_plt_ = new Output_data_space(4, "** GOT PLT");
       layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC | elfcpp::SHF_WRITE),
-				      this->got_plt_, ORDER_DATA, false);
+				      this->got_plt_, got_order, is_got_relro);
 
       // The first three entries are reserved.
       this->got_plt_->set_current_data_size(3 * 4);
@@ -8314,7 +8328,9 @@ Target_arm<big_endian>::Scan::global(Symbol_table* symtab,
 	    Reloc_section* rel_dyn = target->rel_dyn_section(layout);
 	    if (gsym->is_from_dynobj()
 		|| gsym->is_undefined()
-		|| gsym->is_preemptible())
+		|| gsym->is_preemptible()
+		|| (gsym->visibility() == elfcpp::STV_PROTECTED
+		    && parameters->options().shared()))
 	      got->add_global_with_rel(gsym, GOT_TYPE_STANDARD,
 				       rel_dyn, elfcpp::R_ARM_GLOB_DAT);
 	    else
@@ -8522,7 +8538,7 @@ void
 Target_arm<big_endian>::do_finalize_sections(
     Layout* layout,
     const Input_objects* input_objects,
-    Symbol_table* symtab)
+    Symbol_table*)
 {
   bool merged_any_attributes = false;
   // Merge processor-specific flags.
@@ -8609,18 +8625,6 @@ Target_arm<big_endian>::do_finalize_sections(
       if (exidx_section != NULL
           && exidx_section->type() == elfcpp::SHT_ARM_EXIDX)
         {
-          // Create __exidx_start and __exidx_end symbols.
-          symtab->define_in_output_data("__exidx_start", NULL,
-                                        Symbol_table::PREDEFINED,
-                                        exidx_section, 0, 0, elfcpp::STT_OBJECT,
-                                        elfcpp::STB_GLOBAL, elfcpp::STV_HIDDEN,
-                                        0, false, true);
-          symtab->define_in_output_data("__exidx_end", NULL,
-                                        Symbol_table::PREDEFINED,
-                                        exidx_section, 0, 0, elfcpp::STT_OBJECT,
-                                        elfcpp::STB_GLOBAL, elfcpp::STV_HIDDEN,
-                                        0, true, true);
-
           // For the ARM target, we need to add a PT_ARM_EXIDX segment for
           // the .ARM.exidx section.
           if (!layout->script_options()->saw_phdrs_clause())
@@ -8633,19 +8637,6 @@ Target_arm<big_endian>::do_finalize_sections(
               exidx_segment->add_output_section_to_nonload(exidx_section,
                                                            elfcpp::PF_R);
             }
-        }
-      else
-        {
-          symtab->define_as_constant("__exidx_start", NULL,
-                                     Symbol_table::PREDEFINED,
-                                     0, 0, elfcpp::STT_OBJECT,
-                                     elfcpp::STB_GLOBAL, elfcpp::STV_HIDDEN, 0,
-                                     true, false);
-          symtab->define_as_constant("__exidx_end", NULL,
-                                     Symbol_table::PREDEFINED,
-                                     0, 0, elfcpp::STT_OBJECT,
-                                     elfcpp::STB_GLOBAL, elfcpp::STV_HIDDEN, 0,
-                                     true, false);
         }
     }
 
@@ -11932,6 +11923,61 @@ Target_arm<big_endian>::fix_exidx_coverage(
 
   exidx_section->fix_exidx_coverage(layout, sorted_text_sections, symtab,
 				    merge_exidx_entries(), task);
+}
+
+template<bool big_endian>
+void
+Target_arm<big_endian>::do_define_standard_symbols(
+    Symbol_table* symtab,
+    Layout* layout)
+{
+  // Handle the .ARM.exidx section.
+  Output_section* exidx_section = layout->find_output_section(".ARM.exidx");
+
+  if (exidx_section != NULL)
+    {
+      // Create __exidx_start and __exidx_end symbols.
+      symtab->define_in_output_data("__exidx_start",
+				    NULL, // version
+				    Symbol_table::PREDEFINED,
+				    exidx_section,
+				    0, // value
+				    0, // symsize
+				    elfcpp::STT_NOTYPE,
+				    elfcpp::STB_GLOBAL,
+				    elfcpp::STV_HIDDEN,
+				    0, // nonvis
+				    false, // offset_is_from_end
+				    true); // only_if_ref
+
+      symtab->define_in_output_data("__exidx_end",
+				    NULL, // version
+				    Symbol_table::PREDEFINED,
+				    exidx_section,
+			 	    0, // value
+				    0, // symsize
+				    elfcpp::STT_NOTYPE,
+				    elfcpp::STB_GLOBAL,
+				    elfcpp::STV_HIDDEN,
+				    0, // nonvis
+				    true, // offset_is_from_end
+				    true); // only_if_ref
+    }
+  else
+    {
+      // Define __exidx_start and __exidx_end even when .ARM.exidx
+      // section is missing to match ld's behaviour.
+      symtab->define_as_constant("__exidx_start", NULL,
+                                 Symbol_table::PREDEFINED,
+                                 0, 0, elfcpp::STT_OBJECT,
+                                 elfcpp::STB_GLOBAL, elfcpp::STV_HIDDEN, 0,
+                                 true, false);
+      symtab->define_as_constant("__exidx_end", NULL,
+                                 Symbol_table::PREDEFINED,
+                                 0, 0, elfcpp::STT_OBJECT,
+                                 elfcpp::STB_GLOBAL, elfcpp::STV_HIDDEN, 0,
+                                 true, false);
+    }
 }
 
 Target_selector_arm<false> target_selector_arm;

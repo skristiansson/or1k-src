@@ -26,4 +26,13 @@
 /i386-mmx.xml/1.3/Wed Jan  4 08:17:23 2012//
 /i386.c/1.2/Mon Mar  1 17:26:03 2010//
 /i386.xml/1.3/Wed Jan  4 08:17:23 2012//
+/x32-avx-linux.c/1.1/Tue Apr 10 15:44:24 2012//
+/x32-avx-linux.xml/1.1/Tue Apr 10 15:44:24 2012//
+/x32-avx.c/1.1/Tue Apr 10 15:44:24 2012//
+/x32-avx.xml/1.1/Tue Apr 10 15:44:24 2012//
+/x32-core.xml/1.1/Tue Apr 10 15:44:24 2012//
+/x32-linux.c/1.1/Tue Apr 10 15:44:24 2012//
+/x32-linux.xml/1.1/Tue Apr 10 15:44:24 2012//
+/x32.c/1.1/Tue Apr 10 15:44:24 2012//
+/x32.xml/1.1/Tue Apr 10 15:44:24 2012//
 D

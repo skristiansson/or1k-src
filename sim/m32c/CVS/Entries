@@ -1,9 +1,5 @@
-/ChangeLog/1.29/Mon Jan  2 15:37:36 2012//
 /Makefile.in/1.10/Wed Jan  4 08:28:12 2012//
-/aclocal.m4/1.1/Sat Dec  3 18:23:46 2011//
 /blinky.S/1.9/Wed Jan  4 08:28:12 2012//
-/config.in/1.4/Sat Aug 22 16:56:54 2009//
-/configure/1.13/Sat Dec  3 18:23:46 2011//
 /configure.ac/1.4/Wed Jan  4 08:28:12 2012//
 /cpu.h/1.9/Wed Jan  4 08:28:12 2012//
 /gdb-if.c/1.14/Wed Jan  4 08:28:12 2012//
@@ -33,4 +29,8 @@
 /timer_a.h/1.2/Fri Jun  6 19:26:10 2008//
 /trace.c/1.9/Wed Jan  4 08:28:12 2012//
 /trace.h/1.9/Wed Jan  4 08:28:12 2012//
+/ChangeLog/1.30/Thu Apr 12 16:03:26 2012//
+/aclocal.m4/1.2/Thu Apr 12 16:03:26 2012//
+/config.in/1.5/Thu Apr 12 16:03:26 2012//
+/configure/1.14/Thu Apr 12 16:03:26 2012//
 D

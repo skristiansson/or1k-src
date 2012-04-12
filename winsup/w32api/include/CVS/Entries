@@ -149,7 +149,6 @@
 /regstr.h/1.5/Sat Mar  9 09:04:09 2002/-ko/
 /richedit.h/1.15/Wed Jul 20 11:21:49 2005/-ko/
 /richole.h/1.3/Tue Apr 11 22:56:08 2006/-ko/
-/routprot.h/1.2/Thu May 11 15:57:11 2006//
 /rpc.h/1.6/Wed Oct  4 08:57:27 2006/-ko/
 /rpcdce.h/1.9/Mon Jun 12 00:55:06 2006/-ko/
 /rpcdce2.h/1.2/Sat Mar  9 09:04:09 2002/-ko/
@@ -231,4 +230,8 @@
 /wtypes.h/1.15/Wed Jul 25 10:21:53 2007/-ko/
 /xprtdefs.h/1.1/Wed May 10 08:57:45 2006//
 /zmouse.h/1.3/Mon Jan  6 00:18:45 2003/-ko/
-D
+D/GL////
+D/ddk////
+D/directx////
+D/gdiplus////
+/routprot.h/1.3/Thu Apr 12 16:04:40 2012//

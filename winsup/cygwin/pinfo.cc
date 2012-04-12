@@ -49,8 +49,6 @@ pinfo_basic myself_initial NO_COPY;
 
 pinfo NO_COPY myself (static_cast<_pinfo *> (&myself_initial));	// Avoid myself != NULL checks
 
-bool is_toplevel_proc;
-
 /* Setup the pinfo structure for this process.  There may already be a
    _pinfo for this "pid" if h != NULL. */
 
@@ -114,6 +112,7 @@ pinfo_init (char **envp, int envc)
 
   myself->process_state |= PID_ACTIVE;
   myself->process_state &= ~(PID_INITIALIZING | PID_EXITED | PID_REAPED);
+  myself.preserve ();
   debug_printf ("pid %d, pgid %d", myself->pid, myself->pgid);
 }
 
@@ -980,63 +979,10 @@ proc_waiter (void *arg)
   return 0;
 }
 
-#ifdef DEBUGGING
-#define warn_printf api_fatal
-#else
-#define warn_printf system_printf
-#endif
-HANDLE
-_pinfo::dup_proc_pipe (HANDLE hProcess)
-{
-  DWORD flags = DUPLICATE_SAME_ACCESS;
-  HANDLE orig_wr_proc_pipe = wr_proc_pipe;
-  /* Can't set DUPLICATE_CLOSE_SOURCE for exec case because we could be
-     execing a non-cygwin process and we need to set the exit value before the
-     parent sees it.  */
-  if (this != myself || is_toplevel_proc)
-    flags |= DUPLICATE_CLOSE_SOURCE;
-  bool res = DuplicateHandle (GetCurrentProcess (), wr_proc_pipe,
-			      hProcess, &wr_proc_pipe, 0, FALSE, flags);
-  if (!res && WaitForSingleObject (hProcess, 0) != WAIT_OBJECT_0)
-    {
-      wr_proc_pipe = orig_wr_proc_pipe;
-      warn_printf ("something failed for pid %d: res %d, hProcess %p, wr_proc_pipe %p vs. %p, %E",
-		   res, pid, hProcess, wr_proc_pipe, orig_wr_proc_pipe);
-    }
-  else
-    {
-      wr_proc_pipe_owner = dwProcessId;
-      sigproc_printf ("duped wr_proc_pipe %p for pid %d(%u)", wr_proc_pipe,
-		      pid, dwProcessId);
-    }
-  return orig_wr_proc_pipe;
-}
-
 /* function to set up the process pipe and kick off proc_waiter */
 bool
 pinfo::wait ()
 {
-  /* If rd_proc_pipe != NULL we're in an execed process which already has
-     grabbed the read end of the pipe from the previous cygwin process running
-     with this pid.  */
-  if (!rd_proc_pipe)
-    {
-      /* FIXME: execed processes should be able to wait for pids that were started
-	 by the process which execed them. */
-      if (!CreatePipe (&rd_proc_pipe, &((*this)->wr_proc_pipe), &sec_none_nih, 16))
-	{
-	  system_printf ("Couldn't create pipe tracker for pid %d, %E",
-			 (*this)->pid);
-	  return false;
-	}
-
-      if (!(*this)->dup_proc_pipe (hProcess))
-	{
-	  system_printf ("Couldn't duplicate pipe topid %d(%p), %E", (*this)->pid, hProcess);
-	  return false;
-	}
-    }
-
   preserve ();		/* Preserve the shared memory associated with the pinfo */
 
   waiter_ready = false;
@@ -1054,14 +1000,6 @@ pinfo::wait ()
   return true;
 }
 
-void
-_pinfo::sync_proc_pipe ()
-{
-  if (wr_proc_pipe && wr_proc_pipe != INVALID_HANDLE_VALUE)
-    while (wr_proc_pipe_owner != GetCurrentProcessId ())
-      yield ();
-}
-
 /* function to send a "signal" to the parent when something interesting happens
    in the child. */
 bool
@@ -1074,21 +1012,18 @@ _pinfo::alert_parent (char sig)
 
      FIXME: Is there a race here if we run this while another thread is attempting
      to exec()? */
-  if (wr_proc_pipe == INVALID_HANDLE_VALUE || !myself->wr_proc_pipe || have_execed)
-    /* no parent */;
-  else
+  if (my_wr_proc_pipe)
     {
-      sync_proc_pipe ();
-      if (WriteFile (wr_proc_pipe, &sig, 1, &nb, NULL))
+      if (WriteFile (my_wr_proc_pipe, &sig, 1, &nb, NULL))
 	/* all is well */;
       else if (GetLastError () != ERROR_BROKEN_PIPE)
 	debug_printf ("sending %d notification to parent failed, %E", sig);
       else
 	{
 	  ppid = 1;
-	  HANDLE closeit = wr_proc_pipe;
-	  wr_proc_pipe = INVALID_HANDLE_VALUE;
-	  CloseHandle (closeit);
+	  HANDLE closeit = my_wr_proc_pipe;
+	  my_wr_proc_pipe = NULL;
+	  ForceCloseHandle1 (closeit, wr_proc_pipe);
 	}
     }
   return (bool) nb;

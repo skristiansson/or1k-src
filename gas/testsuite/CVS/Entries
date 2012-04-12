@@ -1,4 +1,3 @@
-/ChangeLog/1.2006/Tue Feb 14 01:01:29 2012//
 /ChangeLog-2004/1.1/Mon Jan 16 23:15:06 2006//
 /ChangeLog-2005/1.2/Sat Apr 11 14:42:17 2009//
 /ChangeLog-2006/1.1/Tue Jan  9 17:30:59 2007//
@@ -8,4 +7,9 @@
 /ChangeLog-2010/1.1/Sat Jan  1 16:44:48 2011//
 /ChangeLog-2011/1.1/Thu Jan  5 10:09:38 2012//
 /ChangeLog-9303/1.2/Sat Apr 11 14:42:17 2009//
-D
+D/config////
+D/gas////
+D/gasp////
+D/lib////
+D/z80////
+/ChangeLog/1.2018/Thu Apr 12 16:00:38 2012//

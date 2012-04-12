@@ -30,7 +30,19 @@
 #include <sys/wait.h>
 #endif
 
+/* The thread set with an `Hc' packet.  `Hc' is deprecated in favor of
+   `vCont'.  Note the multi-process extensions made `vCont' a
+   requirement, so `Hc pPID.TID' is pretty much undefined.  So
+   CONT_THREAD can be null_ptid for no `Hc' thread, minus_one_ptid for
+   resuming all threads of the process (again, `Hc' isn't used for
+   multi-process), or a specific thread ptid_t.
+
+   We also set this when handling a single-thread `vCont' resume, as
+   some places in the backends check it to know when (and for which
+   thread) single-thread scheduler-locking is in effect.  */
 ptid_t cont_thread;
+
+/* The thread set with an `Hg' packet.  */
 ptid_t general_thread;
 
 int server_waiting;
@@ -59,6 +71,8 @@ int debug_threads;
 int debug_hw_points;
 
 int pass_signals[TARGET_SIGNAL_LAST];
+int program_signals[TARGET_SIGNAL_LAST];
+int program_signals_p;
 
 jmp_buf toplevel;
 
@@ -260,6 +274,10 @@ start_inferior (char **argv)
   signal (SIGTTIN, SIG_DFL);
 #endif
 
+  /* Clear this so the backend doesn't get confused, thinking
+     CONT_THREAD died, and it needs to resume all threads.  */
+  cont_thread = null_ptid;
+
   signal_pid = create_inferior (new_argv[0], new_argv);
 
   /* FIXME: we don't actually know at this point that the create
@@ -450,6 +468,33 @@ handle_general_set (char *own_buf)
 	    }
 	  else
 	    pass_signals[i] = 0;
+	}
+      strcpy (own_buf, "OK");
+      return;
+    }
+
+  if (strncmp ("QProgramSignals:", own_buf, strlen ("QProgramSignals:")) == 0)
+    {
+      int numsigs = (int) TARGET_SIGNAL_LAST, i;
+      const char *p = own_buf + strlen ("QProgramSignals:");
+      CORE_ADDR cursig;
+
+      program_signals_p = 1;
+
+      p = decode_address_to_semicolon (&cursig, p);
+      for (i = 0; i < numsigs; i++)
+	{
+	  if (i == cursig)
+	    {
+	      program_signals[i] = 1;
+	      if (*p == '\0')
+		/* Keep looping, to clear the remaining signals.  */
+		cursig = -1;
+	      else
+		p = decode_address_to_semicolon (&cursig, p);
+	    }
+	  else
+	    program_signals[i] = 0;
 	}
       strcpy (own_buf, "OK");
       return;
@@ -969,10 +1014,6 @@ handle_qxfer_libraries (const char *annex,
 
   if (annex[0] != '\0' || !target_running ())
     return -1;
-
-  /* Do not confuse this packet with qXfer:libraries-svr4:read.  */
-  if (the_target->qxfer_libraries_svr4 != NULL)
-    return 0;
 
   /* Over-estimate the necessary memory.  Assume that every character
      in the library name must be escaped.  */
@@ -1584,7 +1625,9 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	  free (qsupported);
 	}
 
-      sprintf (own_buf, "PacketSize=%x;QPassSignals+", PBUFSIZ - 1);
+      sprintf (own_buf,
+	       "PacketSize=%x;QPassSignals+;QProgramSignals+",
+	       PBUFSIZ - 1);
 
       if (the_target->qxfer_libraries_svr4 != NULL)
 	strcat (own_buf, ";qXfer:libraries-svr4:read+");
@@ -1931,9 +1974,13 @@ handle_v_cont (char *own_buf)
   if (i < n)
     resume_info[i] = default_action;
 
-  /* Still used in occasional places in the backend.  */
+  /* `cont_thread' is still used in occasional places in the backend,
+     to implement single-thread scheduler-locking.  Doesn't make sense
+     to set it if we see a stop request, or any form of wildcard
+     vCont.  */
   if (n == 1
-      && !ptid_equal (resume_info[0].thread, minus_one_ptid)
+      && !(ptid_equal (resume_info[0].thread, minus_one_ptid)
+	   || ptid_get_lwp (resume_info[0].thread) == -1)
       && resume_info[0].kind != resume_stop)
     cont_thread = resume_info[0].thread;
   else
@@ -2877,7 +2924,8 @@ process_point_options (CORE_ADDR point_addr, char **packet)
 	{
 	  case 'X':
 	    /* Conditional expression.  */
-	    fprintf (stderr, "Found breakpoint condition.\n");
+	    if (remote_debug)
+	      fprintf (stderr, "Found breakpoint condition.\n");
 	    add_breakpoint_condition (point_addr, &dataptr);
 	    break;
 	  default:

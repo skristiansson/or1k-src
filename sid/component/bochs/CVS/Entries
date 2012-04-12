@@ -19,4 +19,17 @@
 /missing/1.1/Tue Nov 27 22:59:00 2001//
 /mkinstalldirs/1.5/Mon Mar  4 23:33:01 2002//
 /stamp-h.in/1.1/Tue Nov 27 22:59:00 2001//
-D
+D/cmos////
+D/cpu////
+D/debug////
+D/dma////
+D/floppy////
+D/fpu////
+D/gui////
+D/harddrv////
+D/keyboard////
+D/memory////
+D/pic////
+D/pit////
+D/unmapped////
+D/vga////

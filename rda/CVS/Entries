@@ -13,4 +13,9 @@
 /configure/1.6/Thu Nov 12 05:06:07 2009//
 /configure.in/1.4/Thu Nov 12 05:06:07 2009//
 /stamp-h.in/1.1/Wed Aug 28 01:22:27 2002//
-D
+D/include////
+D/lib////
+D/qe////
+D/samples////
+D/unix////
+D/win32////

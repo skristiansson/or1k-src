@@ -58,4 +58,7 @@
 /wmemmove.c/1.2/Thu Jun 13 10:20:45 2002//
 /wmemset.c/1.2/Thu Jun 13 10:20:45 2002//
 /wtoll.c/1.3/Mon Mar 17 01:03:43 2003//
-D
+D/complex////
+D/gdtoa////
+D/math////
+D/stdio////

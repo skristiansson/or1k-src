@@ -2,7 +2,6 @@
 /BUGS/1.1.1.1/Fri Apr 16 01:35:08 1999/-ko/
 /COPYING/1.1.1.1/Fri Apr 16 01:35:08 1999/-ko/
 /COPYING.LIB/1.1.1.1/Fri Apr 16 01:35:08 1999/-ko/
-/ChangeLog/1.114/Mon Jan  2 15:37:37 2012/-ko/
 /ChangeLog.00/1.1.1.1/Fri Apr 16 01:35:08 1999/-ko/
 /INSTALL/1.1.1.1/Fri Apr 16 01:35:08 1999/-ko/
 /Makefile.in/1.28/Tue Sep 15 23:26:44 2009/-ko/
@@ -50,7 +49,6 @@
 /emul_generic.h/1.1.1.1/Fri Apr 16 01:35:09 1999/-ko/
 /emul_netbsd.c/1.8/Mon Feb 14 05:14:27 2011/-ko/
 /emul_netbsd.h/1.1.1.1/Fri Apr 16 01:35:09 1999/-ko/
-/emul_unix.c/1.4/Mon Feb 14 05:14:27 2011/-ko/
 /emul_unix.h/1.1.1.1/Fri Apr 16 01:35:09 1999/-ko/
 /events.c/1.5/Thu Nov  3 15:48:17 2011/-ko/
 /events.h/1.1.1.1/Fri Apr 16 01:35:09 1999/-ko/
@@ -143,4 +141,6 @@
 /vm.h/1.1.1.1/Fri Apr 16 01:35:12 1999/-ko/
 /vm_n.h/1.1.1.1/Fri Apr 16 01:35:12 1999/-ko/
 /words.h/1.4/Wed Jan 25 17:29:44 2006/-ko/
+/ChangeLog/1.115/Thu Apr 12 16:03:30 2012/-ko/
+/emul_unix.c/1.5/Thu Apr 12 16:03:30 2012/-ko/
 D

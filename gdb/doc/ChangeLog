@@ -1,3 +1,74 @@
+2012-04-11  Siva Chandra Reddy  <sivachandra@google.com>
+
+	* gdb.texinfo (Examining Data): Document the 'explore' command.
+
+2012-03-28  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.texinfo (GDB/MI Variable Objects): Document what happens
+	to the children of a varobj and its update range when -var-update
+	returns that the varobj's type changed.
+
+2012-03-27  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.texinfo (Auto-loading): Move @menu to the end of @node.
+	Create two new links fir 'objfile-gdb.py file'
+	and 'dotdebug_gdb_scripts section'.
+
+2012-03-27  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.texinfo (Auto-loading): Rename node reference
+	'.debug_gdb_scripts section' to 'dotdebug_gdb_scripts section'.
+	Twice.
+	(.debug_gdb_scripts section): Rename the node ...
+	(dotdebug_gdb_scripts section): ... here.
+	(Maintenance Commands): Also rename this node reference.
+
+2012-03-22  Siva Chandra Reddy  <sivachandra@google.com>
+
+	* gdb.texinfo (Python API/Values From Inferior): Add description
+	about the new method Value.referenced_value.  Add description on
+	how Value.dereference is different (and similar) to
+	Value.referenced_value.
+
+2012-03-19  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.texinfo (File Options): Describe --init-command=FILE, -ix and
+	--init-eval-command=COMMAND, -iex.
+	(Startup): Describe -iex and -ix.  Simplify the example
+	for "set auto-load-scripts off".
+
+2012-03-16  Gary Benson  <gbenson@redhat.com>
+
+	PR breakpoints/10738
+	* gdb.texinfo (Inline Functions): Remove the now-unnecessary @item
+	stating that GDB cannot set breakpoints on inlined functions.
+	(Mode Options): Document --use-deprecated-index-sections.
+	(Index Section Format): Document new index section version format.
+
+2012-03-15  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Debugging C Plus Plus): Document "info vtbl".
+
+2012-03-13  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Help): Change apropos example to use "alias" instead
+	of "reload".
+	(Symbols): Delete docs for set/show symbol-reloading.
+	* gdbint.texinfo (Defining Other Architecture Features): Delete
+	SYMBOL_RELOADING_DEFAULT.
+	* refcard.tex: Delete reference to symbol-reloading.
+
+2012-03-07  Pedro Alves  <palves@redhat.com>
+
+	* gdb.texinfo (General Query Packets): Document new
+	QProgramSignals packet.
+	* gdb.texinfo (Remote configuration): Mention
+	"program-signals-packet".
+
+2012-03-05  Tristan Gingold  <gingold@adacore.com>
+
+	* gdb.texinfo (General Query Packets): Document xfer:uib:read.
+
 2012-03-03  Yao Qi  <yao@codesourcery.com>
 
 	* gdb.texinfo (In-Process Agent): New node.

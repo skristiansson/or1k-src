@@ -9,7 +9,7 @@ This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
 details. */
 
-#define _GLOBALS_H 1
+#define NO_GLOBALS_H
 #include "winsup.h"
 #include "cygtls.h"
 #include "perprocess.h"
@@ -21,6 +21,7 @@ details. */
 HANDLE NO_COPY hMainThread;
 HANDLE NO_COPY hProcToken;
 HANDLE NO_COPY hProcImpToken;
+HANDLE my_wr_proc_pipe;
 HMODULE NO_COPY cygwin_hmodule;
 int NO_COPY sigExeced;
 WCHAR windows_system_directory[MAX_PATH];
@@ -31,20 +32,20 @@ UINT system_wow64_directory_length;
 /* program exit the program */
 
 enum exit_states
-  {
-    ES_NOT_EXITING = 0,
-    ES_EXIT_STARTING,
-    ES_PROCESS_LOCKED,
-    ES_EVENTS_TERMINATE,
-    ES_SIGNAL,
-    ES_CLOSEALL,
-    ES_THREADTERM,
-    ES_HUP_PGRP,
-    ES_HUP_SID,
-    ES_EXEC_EXIT,
-    ES_TTY_TERMINATE,
-    ES_FINAL
-  };
+{
+  ES_NOT_EXITING = 0,
+  ES_EXIT_STARTING,
+  ES_PROCESS_LOCKED,
+  ES_EVENTS_TERMINATE,
+  ES_SIGNAL,
+  ES_CLOSEALL,
+  ES_THREADTERM,
+  ES_HUP_PGRP,
+  ES_HUP_SID,
+  ES_EXEC_EXIT,
+  ES_TTY_TERMINATE,
+  ES_FINAL
+};
 
 exit_states NO_COPY exit_state;
 
@@ -95,6 +96,7 @@ UNICODE_STRING _RDATA ro_u_com = _ROU (L".com");
 UNICODE_STRING _RDATA ro_u_scr = _ROU (L".scr");
 UNICODE_STRING _RDATA ro_u_sys = _ROU (L".sys");
 UNICODE_STRING _RDATA ro_u_proc = _ROU (L"proc");
+UNICODE_STRING _RDATA ro_u_dev = _ROU (L"dev");
 UNICODE_STRING _RDATA ro_u_pmem = _ROU (L"\\Device\\PhysicalMemory");
 UNICODE_STRING _RDATA ro_u_natp = _ROU (L"\\??\\");
 UNICODE_STRING _RDATA ro_u_uncp = _ROU (L"\\??\\UNC\\");

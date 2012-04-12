@@ -1,5 +1,5 @@
 # Expect script for various ELF tests.
-#   Copyright 2002, 2003, 2005, 2007, 2009, 2010, 2011
+#   Copyright 2002, 2003, 2005, 2007, 2009, 2010, 2011, 2012
 #   Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
@@ -35,6 +35,13 @@ if { [istarget alpha*-*-* ] } {
     # executable down into the low address space to match.
     # ??? How can we adjust just the one testcase?
     set LDFLAGS "$LDFLAGS -Ttext-segment 0x1000000"
+}
+
+if { [istarget "*-*-nacl*"] } {
+    # The eh[1-4] cases are written to expect ELFCLASS64 layout on x86-64.
+    # But the target default is ELFCLASS32.  So the cases explicitly use
+    # -melf_x86_64 to select that, but NaCl needs a different emulation name.
+    set options_regsub(ld) {-melf_x86_64 -melf_x86_64_nacl}
 }
 
 if { [is_remote host] } then {
@@ -77,6 +84,7 @@ foreach t $test_list {
 }
 
 if { [istarget *-*-linux*]
+     || [istarget *-*-nacl*]
      || [istarget *-*-gnu*] } {
     run_ld_link_tests {
 	{"Weak symbols in dynamic objects 1 (support)"
@@ -136,6 +144,7 @@ set xfails [list "*-*-netbsdelf*"]
 run_ld_link_exec_tests $xfails $array_tests
 
 if { [istarget *-*-linux*]
+     || [istarget *-*-nacl*]
      || [istarget *-*-gnu*] } {
     run_ld_link_exec_tests $xfails $array_tests_pie
 }

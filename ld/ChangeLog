@@ -1,3 +1,181 @@
+2012-04-12  Roland McGrath  <mcgrathr@google.com>
+
+	* configure.tgt (arm*-*-nacl*, arm*b-*-nacl*): Handle them.
+	* emulparams/armelf_nacl.sh: New file.
+	* emulparams/armelfb_nacl.sh: New file.
+	* Makefile.am (ALL_EMULATION_SOURCES): Add earmelf_nacl.c
+	and earmelfb_nacl.c here.
+	(earmelf_nacl.c, earmelfb_nacl.c): New targets.
+	* Makefile.in: Regenerated.
+
+2012-04-11  Tristan Gingold  <gingold@adacore.com>
+
+	* scripttempl/ia64vms.sc: New file.
+	* emultempl/vms.em (_before_parse): Support for ia64.
+	(elf64-ia64-vms): New fragment for ia64.
+	* emulparams/elf64_ia64_vms.sh: New file.
+	* configure.tgt (ia64-*-*vms*): Add.
+	* Makefile.am (ALL_64_EMULATION_SOURCES): Add eelf64_ia64_vms.c
+	(eelf64_ia64_vms.c): New rule.
+	* Makefile.in: Regenerate.
+
+2012-04-06  Roland McGrath  <mcgrathr@google.com>
+
+	* configure.in (AC_CHECK_HEADERS): Add locale.h.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2012-04-05  Nick Clifton  <nickc@redhat.com>
+
+	* configure.in (AC_CHECK_FUNCS): Add setlocale.
+	(AM_LC_MESSAGES): Add.
+	* aclocal.m4: Regenerate.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2012-04-03  Roland McGrath  <mcgrathr@google.com>
+
+	* configure.tgt (i[3-7]86-*-nacl*, x86_64-*-nacl*): Handle them.
+	* emulparams/elf_nacl.sh: New file.
+	* emulparams/elf_i386_nacl.sh: New file.
+	* emulparams/elf32_x86_64_nacl.sh: New file.
+	* emulparams/elf_x86_64_nacl.sh: New file.
+	* Makefile.am (ALL_EMULATION_SOURCES): Add eelf_i386_nacl.c here.
+	(ALL_64_EMULATION_SOURCES): Add eelf32_x86_64_nacl.c and
+	eelf_x86_64_nacl.c here.
+	(eelf_i386_nacl.c, eelf32_x86_64_nacl.c, eelf_x86_64_nacl.c):
+	New targets.
+	* Makefile.in: Regenerated.
+
+	* scripttempl/elf.sc: Handle SEPARATE_CODE cases.
+
+2012-04-02  Mike Frysinger  <vapier@gentoo.org>
+
+	* ldmisc.c (vfinfo): Assign new local str to fmt.  Delete
+	putc call.  If str and fmt are different, call fwrite on
+	the difference.
+
+2012-03-30  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: Updated Vietnamese translation.
+
+2012-03-27  Roland McGrath  <mcgrathr@google.com>
+
+	* configure.in: Set want64 on a 64-bit host regardless of
+	--enable-targets=all.
+	* configure: Regenerated.
+
+2012-03-26  Tristan Gingold  <gingold@adacore.com>
+
+	* lexsup.c (parse_args): Add a missing '\n'.
+
+2012-03-25  Alan Modra  <amodra@gmail.com>
+
+	* ldemul.c (before_allocation_default): Revert last change.
+	ldlang.c (lang_add_section): Likewise.
+	(strip_excluded_output_sections): Don't strip output sections with
+	user input sections when emitrelocations, unless all are SEC_EXCLUDE.
+
+2012-03-23  Alan Modra  <amodra@gmail.com>
+
+	* ldemul.c (before_allocation_default): When emitrelocations,
+	don't strip sections..
+	* ldlang.c (lang_add_section): ..and don't set up map_head, map_tail.
+
+2012-03-14  Kai Tietz  <ktietz@redhat.com>
+	    Pascal Obry  <pascal@obry.net>
+
+	* pe-dll.c (found_sym): New static variable.
+	(undef_count): Likewise.
+	(key_value): New structure.
+	(undef_sort_cmp): Compare routine for qsort/bsearch.
+	(pe_find_cdecl_alias_match): Add new argument.
+	(pe_undef_alias_cdecl_match): Removed.
+	(pe_undef_count): New helper routine.
+	(pe_create_undef_table): Likewise.
+	(pe_process_import_defs): Use pe_create_undef_table and
+	new pe_undef_alias_cdecl_match function.
+
+2012-03-14  Alan Modra  <amodra@gmail.com>
+
+	PR ld/13839
+	* ldexp.c (fold_name): Ignore undefined symbols when assigning to
+	dot in mark phase.
+	(exp_fold_tree_1): Evaluate assignment to dot expressions even when
+	discarding result, for side effects.  Fix typo in error message.
+
+2012-03-08  Tristan Gingold  <gingold@adacore.com>
+
+	* ldexp.c (exp_print_tree): Special case for SEGMENT_START.
+	(exp_print_token): Constify.
+
+2012-03-08  Alan Modra  <amodra@gmail.com>
+
+	PR ld/10340
+	* ldfile.c (is_sysrooted_pathname): Remove notsame param.
+	(ldfile_add_library_path): Don't set sysrooted flag.
+	(ldfile_open_file_search): Likewise, and don't copy them.
+	(try_open): Delete exten and code handling such.  Add sysrooted
+	param and return whether path is in sysroot.
+	(ldfile_find_command_file): Delete extend param.  Add sysrooted
+	param.  Rename local var.  Update try_open calls.
+	(ldfile_open_command_file_1): Pass sysrooted to lex_push_file.
+	* ldfile.h (search_dirs_type): Remove sysrooted field.
+	* ldlang.c (new_afile): Always set sysrooted from input_flags.
+	(load_symbols): Don't set input_flags.sysrooted.
+	* ldlang.h (struct lang_input_statement_flags): Revise sysrooted
+	comment.
+	* ldlex.h (lex_push_file): Update prototype.
+	* ldlex.l (sysrooted_stack): New array.
+	(EOF): Pop input_flags.sysrooted.
+	(lex_push_file): Add sysrooted param.  Save and set
+	input_flags.sysrooted.
+
+2012-03-06  Alan Modra  <amodra@gmail.com>
+
+	* ldlang.h (struct lang_input_statement_flags): New, extract from..
+	(lang_input_statement_type): ..here.  New field "flags".
+	(input_flags): Declare.
+	(missing_file): Delete.
+	* ldmain.h (whole_archive): Delete.
+	(add_DT_NEEDED_for_regular, add_DT_NEEDED_for_dynamic): Delete.
+	* ld.h (ld_config_type <dynamic_link>): Delete.
+	* ldmain.c (whole_archive): Delete.
+	(add_DT_NEEDED_for_regular, add_DT_NEEDED_for_dynamic): Delete.
+	* ldlang.c (missing_file, ldlang_sysrooted_script): Delete.
+	(input_flags): New variable.  Replace all uses of config.dynamic_link,
+	missing_file, ldlang_sysrooted_script, whole_archive,
+	add_DT_NEEDED_for_regular and add_DT_NEEDED_for_dynamic with fields
+	from here.
+	* ldfile.c: Likewise.
+	* ldgram.y: Likewise.
+	* ldmain.c: Likewise.
+	* ldwrite.c: Likewise.
+	* lexsup.c: Likewise.
+	* plugin.c: Likewise.
+	* emultempl/aix.em: Likewise.
+	* emultempl/armelf.em: Likewise.
+	* emultempl/elf32.em: Likewise.
+	* emultempl/hppaelf.em: Likewise.
+	* emultempl/linux.em: Likewise.
+	* emultempl/pe.em: Likewise.
+	* emultempl/pep.em: Likewise.
+	* emultempl/ppc64elf.em: Likewise.
+	* emultempl/scoreelf.em: Likewise.
+	* emultempl/spuelf.em: Likewise.
+	* emultempl/sunos.em: Likewise.
+	* emultempl/vms.em: Likewise.
+	* ldlang.c (new_afile): Use memset to init zero fields.
+	(load_symbols): Simplify save and restore of flags around command
+	file processing.
+	* ldfile.c (is_sysrooted_pathname): Tidy.
+
+2012-03-05  Hans-Peter Nilsson  <hp@axis.com>
+
+	* configure.tgt (mips64*el-*-freebsd*, mips64*-*-freebsd*)
+	(mips*el-*-freebsd*, mips*-*-freebsd*): Correct triplets by
+	replacing trailing "-*" with "*".
+
 2012-02-25  Walter Lee  <walt@tilera.com>
 
 	* Makefile.am (ALL_EMULATION_SOURCES): Add eelf32tilegx_be.c.

@@ -806,6 +806,14 @@ value_parent (struct value *value)
   return value->parent;
 }
 
+/* See value.h.  */
+
+void
+set_value_parent (struct value *value, struct value *parent)
+{
+  value->parent = parent;
+}
+
 gdb_byte *
 value_contents_raw (struct value *value)
 {
@@ -1101,7 +1109,10 @@ value_address (const struct value *value)
   if (value->lval == lval_internalvar
       || value->lval == lval_internalvar_component)
     return 0;
-  return value->location.address + value->offset;
+  if (value->parent != NULL)
+    return value_address (value->parent) + value->offset;
+  else
+    return value->location.address + value->offset;
 }
 
 CORE_ADDR
@@ -2556,11 +2567,17 @@ value_primitive_field (struct value *arg1, int offset,
       if (VALUE_LVAL (arg1) == lval_register && value_lazy (arg1))
 	value_fetch_lazy (arg1);
 
-      boffset = baseclass_offset (arg_type, fieldno,
-				  value_contents (arg1),
-				  value_embedded_offset (arg1),
-				  value_address (arg1),
-				  arg1);
+      /* We special case virtual inheritance here because this
+	 requires access to the contents, which we would rather avoid
+	 for references to ordinary fields of unavailable values.  */
+      if (BASETYPE_VIA_VIRTUAL (arg_type, fieldno))
+	boffset = baseclass_offset (arg_type, fieldno,
+				    value_contents (arg1),
+				    value_embedded_offset (arg1),
+				    value_address (arg1),
+				    arg1);
+      else
+	boffset = TYPE_FIELD_BITPOS (arg_type, fieldno) / 8;
 
       if (value_lazy (arg1))
 	v = allocate_value_lazy (value_enclosing_type (arg1));

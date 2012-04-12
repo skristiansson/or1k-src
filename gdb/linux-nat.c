@@ -62,6 +62,9 @@
 #include "symfile.h"
 #include "agent.h"
 #include "tracepoint.h"
+#include "exceptions.h"
+#include "linux-ptrace.h"
+#include "buffer.h"
 
 #ifndef SPUFS_MAGIC
 #define SPUFS_MAGIC 0x23c9b64e
@@ -185,7 +188,7 @@ static void (*linux_nat_prepare_to_resume) (struct lwp_info *);
 /* The method to call, if any, when the siginfo object needs to be
    converted between the layout returned by ptrace, and the layout in
    the architecture of the inferior.  */
-static int (*linux_nat_siginfo_fixup) (struct siginfo *,
+static int (*linux_nat_siginfo_fixup) (siginfo_t *,
 				       gdb_byte *,
 				       int);
 
@@ -1612,11 +1615,33 @@ linux_nat_attach (struct target_ops *ops, char *args, int from_tty)
   struct lwp_info *lp;
   int status;
   ptid_t ptid;
+  volatile struct gdb_exception ex;
 
   /* Make sure we report all signals during attach.  */
   linux_nat_pass_signals (0, NULL);
 
-  linux_ops->to_attach (ops, args, from_tty);
+  TRY_CATCH (ex, RETURN_MASK_ERROR)
+    {
+      linux_ops->to_attach (ops, args, from_tty);
+    }
+  if (ex.reason < 0)
+    {
+      pid_t pid = parse_pid_to_attach (args);
+      struct buffer buffer;
+      char *message, *buffer_s;
+
+      message = xstrdup (ex.message);
+      make_cleanup (xfree, message);
+
+      buffer_init (&buffer);
+      linux_ptrace_attach_warnings (pid, &buffer);
+
+      buffer_grow_str0 (&buffer, "");
+      buffer_s = buffer_finish (&buffer);
+      make_cleanup (xfree, buffer_s);
+
+      throw_error (ex.error, "%s%s", buffer_s, message);
+    }
 
   /* The ptrace base target adds the main thread with (pid,0,0)
      format.  Decorate it with lwp info.  */
@@ -2465,37 +2490,6 @@ linux_handle_extended_wait (struct lwp_info *lp, int status,
 		  _("unknown ptrace event %d"), event);
 }
 
-/* Return non-zero if LWP is a zombie.  */
-
-static int
-linux_lwp_is_zombie (long lwp)
-{
-  char buffer[MAXPATHLEN];
-  FILE *procfile;
-  int retval;
-  int have_state;
-
-  xsnprintf (buffer, sizeof (buffer), "/proc/%ld/status", lwp);
-  procfile = fopen (buffer, "r");
-  if (procfile == NULL)
-    {
-      warning (_("unable to open /proc file '%s'"), buffer);
-      return 0;
-    }
-
-  have_state = 0;
-  while (fgets (buffer, sizeof (buffer), procfile) != NULL)
-    if (strncmp (buffer, "State:", 6) == 0)
-      {
-	have_state = 1;
-	break;
-      }
-  retval = (have_state
-	    && strcmp (buffer, "State:\tZ (zombie)\n") == 0);
-  fclose (procfile);
-  return retval;
-}
-
 /* Wait for LP to stop.  Returns the wait status, or 0 if the LWP has
    exited.  */
 
@@ -2549,10 +2543,10 @@ wait_lwp (struct lwp_info *lp)
 
 	 This is racy, what if the tgl becomes a zombie right after we check?
 	 Therefore always use WNOHANG with sigsuspend - it is equivalent to
-	 waiting waitpid but the linux_lwp_is_zombie is safe this way.  */
+	 waiting waitpid but linux_proc_pid_is_zombie is safe this way.  */
 
       if (GET_PID (lp->ptid) == GET_LWP (lp->ptid)
-	  && linux_lwp_is_zombie (GET_LWP (lp->ptid)))
+	  && linux_proc_pid_is_zombie (GET_LWP (lp->ptid)))
 	{
 	  thread_dead = 1;
 	  if (debug_linux_nat)
@@ -3499,7 +3493,7 @@ check_zombie_leaders (void)
 	  /* Check if there are other threads in the group, as we may
 	     have raced with the inferior simply exiting.  */
 	  && num_lwps (inf->pid) > 1
-	  && linux_lwp_is_zombie (inf->pid))
+	  && linux_proc_pid_is_zombie (inf->pid))
 	{
 	  if (debug_linux_nat)
 	    fprintf_unfiltered (gdb_stdlog,
@@ -4000,7 +3994,7 @@ retry:
       || ourstatus->kind == TARGET_WAITKIND_SIGNALLED)
     lp->core = -1;
   else
-    lp->core = linux_nat_core_of_thread_1 (lp->ptid);
+    lp->core = linux_common_core_of_thread (lp->ptid);
 
   return lp->ptid;
 }
@@ -4238,7 +4232,7 @@ linux_nat_mourn_inferior (struct target_ops *ops)
    layout of the inferiors' architecture.  */
 
 static void
-siginfo_fixup (struct siginfo *siginfo, gdb_byte *inf_siginfo, int direction)
+siginfo_fixup (siginfo_t *siginfo, gdb_byte *inf_siginfo, int direction)
 {
   int done = 0;
 
@@ -4250,9 +4244,9 @@ siginfo_fixup (struct siginfo *siginfo, gdb_byte *inf_siginfo, int direction)
   if (!done)
     {
       if (direction == 1)
-	memcpy (siginfo, inf_siginfo, sizeof (struct siginfo));
+	memcpy (siginfo, inf_siginfo, sizeof (siginfo_t));
       else
-	memcpy (inf_siginfo, siginfo, sizeof (struct siginfo));
+	memcpy (inf_siginfo, siginfo, sizeof (siginfo_t));
     }
 }
 
@@ -4262,8 +4256,8 @@ linux_xfer_siginfo (struct target_ops *ops, enum target_object object,
 		    const gdb_byte *writebuf, ULONGEST offset, LONGEST len)
 {
   int pid;
-  struct siginfo siginfo;
-  gdb_byte inf_siginfo[sizeof (struct siginfo)];
+  siginfo_t siginfo;
+  gdb_byte inf_siginfo[sizeof (siginfo_t)];
 
   gdb_assert (object == TARGET_OBJECT_SIGNAL_INFO);
   gdb_assert (readbuf || writebuf);
@@ -5189,71 +5183,6 @@ linux_nat_thread_address_space (struct target_ops *t, ptid_t ptid)
   return inf->aspace;
 }
 
-int
-linux_nat_core_of_thread_1 (ptid_t ptid)
-{
-  struct cleanup *back_to;
-  char *filename;
-  FILE *f;
-  char *content = NULL;
-  char *p;
-  char *ts = 0;
-  int content_read = 0;
-  int i;
-  int core;
-
-  filename = xstrprintf ("/proc/%d/task/%ld/stat",
-			 GET_PID (ptid), GET_LWP (ptid));
-  back_to = make_cleanup (xfree, filename);
-
-  f = fopen (filename, "r");
-  if (!f)
-    {
-      do_cleanups (back_to);
-      return -1;
-    }
-
-  make_cleanup_fclose (f);
-
-  for (;;)
-    {
-      int n;
-
-      content = xrealloc (content, content_read + 1024);
-      n = fread (content + content_read, 1, 1024, f);
-      content_read += n;
-      if (n < 1024)
-	{
-	  content[content_read] = '\0';
-	  break;
-	}
-    }
-
-  make_cleanup (xfree, content);
-
-  p = strchr (content, '(');
-
-  /* Skip ")".  */
-  if (p != NULL)
-    p = strchr (p, ')');
-  if (p != NULL)
-    p++;
-
-  /* If the first field after program name has index 0, then core number is
-     the field with index 36.  There's no constant for that anywhere.  */
-  if (p != NULL)
-    p = strtok_r (p, " ", &ts);
-  for (i = 0; p != NULL && i != 36; ++i)
-    p = strtok_r (NULL, " ", &ts);
-
-  if (p == NULL || sscanf (p, "%d", &core) == 0)
-    core = -1;
-
-  do_cleanups (back_to);
-
-  return core;
-}
-
 /* Return the cached value of the processor core for thread PTID.  */
 
 static int
@@ -5337,7 +5266,7 @@ linux_nat_set_new_thread (struct target_ops *t,
    inferior.  */
 void
 linux_nat_set_siginfo_fixup (struct target_ops *t,
-			     int (*siginfo_fixup) (struct siginfo *,
+			     int (*siginfo_fixup) (siginfo_t *,
 						   gdb_byte *,
 						   int))
 {
@@ -5356,7 +5285,7 @@ linux_nat_set_prepare_to_resume (struct target_ops *t,
 }
 
 /* Return the saved siginfo associated with PTID.  */
-struct siginfo *
+siginfo_t *
 linux_nat_get_siginfo (ptid_t ptid)
 {
   struct lwp_info *lp = find_lwp_pid (ptid);

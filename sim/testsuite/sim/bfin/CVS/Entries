@@ -6,7 +6,6 @@
 /10799.s/1.1/Sat Jun  4 17:44:21 2011//
 /11080.s/1.1/Sat Jun  4 17:44:21 2011//
 /7641.s/1.1/Sat Jun  4 17:44:21 2011//
-/ChangeLog/1.3/Thu Sep 29 03:19:47 2011//
 /PN_generator.s/1.1/Sat Jun  4 17:44:21 2011//
 /a0.s/1.1/Sat Jun  4 17:44:21 2011//
 /a0shift.S/1.1/Sat Jun  4 17:44:21 2011//
@@ -44,7 +43,6 @@
 /addsub_flags.S/1.1/Sat Jun  4 17:44:21 2011//
 /algnbug1.s/1.1/Sat Jun  4 17:44:21 2011//
 /algnbug2.s/1.1/Sat Jun  4 17:44:21 2011//
-/allinsn.exp/1.1/Sat Jun  4 17:44:21 2011//
 /argc.c/1.1/Sat Jun  4 17:44:21 2011//
 /ashift.s/1.1/Sat Jun  4 17:44:21 2011//
 /ashift_flags.s/1.1/Sat Jun  4 17:44:21 2011//
@@ -225,9 +223,6 @@
 /c_dsp32mac_dr_a1_t.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32mac_dr_a1_tu.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32mac_dr_a1_u.s/1.1/Sat Jun  4 17:44:21 2011//
-/c_dsp32mac_dr_a1a0.s/1.1/Sat Jun  4 17:44:21 2011//
-/c_dsp32mac_dr_a1a0_iutsh.s/1.1/Sat Jun  4 17:44:21 2011//
-/c_dsp32mac_dr_a1a0_m.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32mac_mix.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32mac_pair_a0.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32mac_pair_a0_i.s/1.1/Sat Jun  4 17:44:21 2011//
@@ -314,10 +309,8 @@
 /c_dsp32shift_signbits_rh.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shift_signbits_rl.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shift_vmax.s/1.1/Sat Jun  4 17:44:21 2011//
-/c_dsp32shift_vmaxvmax.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_a0alr.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_af.s/1.1/Sat Jun  4 17:44:21 2011//
-/c_dsp32shiftim_af_s.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_ahalf_ln.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_ahalf_ln_s.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_ahalf_lp.s/1.1/Sat Jun  4 17:44:21 2011//
@@ -328,7 +321,6 @@
 /c_dsp32shiftim_ahalf_rp_s.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_ahh.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_ahh_s.s/1.1/Sat Jun  4 17:44:21 2011//
-/c_dsp32shiftim_amix.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_lf.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_lhalf_ln.s/1.1/Sat Jun  4 17:44:21 2011//
 /c_dsp32shiftim_lhalf_lp.s/1.1/Sat Jun  4 17:44:21 2011//
@@ -589,7 +581,6 @@
 /eu_dsp32mac_s.s/1.1/Sat Jun  4 17:44:21 2011//
 /events.s/1.1/Sat Jun  4 17:44:21 2011//
 /f221.s/1.1/Sat Jun  4 17:44:21 2011//
-/fact.s/1.1/Sat Jun  4 17:44:21 2011//
 /fir.s/1.1/Sat Jun  4 17:44:21 2011//
 /fsm.s/1.1/Sat Jun  4 17:44:21 2011//
 /greg2.s/1.1/Sat Jun  4 17:44:21 2011//
@@ -742,8 +733,6 @@
 /s8.s/1.1/Sat Jun  4 17:44:22 2011//
 /s9.s/1.1/Sat Jun  4 17:44:22 2011//
 /saatest.s/1.1/Sat Jun  4 17:44:22 2011//
-/se_all16bitopcodes.S/1.1/Sat Jun  4 17:44:22 2011//
-/se_all32bitopcodes.S/1.1/Sat Jun  4 17:44:22 2011//
 /se_all32bitopcodes.lds/1.1/Sat Jun  4 17:44:22 2011//
 /se_brtarget_stall.S/1.1/Sat Jun  4 17:44:22 2011//
 /se_bug_ui.S/1.1/Sat Jun  4 17:44:22 2011//
@@ -826,4 +815,27 @@
 /x1.s/1.1/Sat Jun  4 17:44:22 2011//
 /zcall.s/1.1/Sat Jun  4 17:44:22 2011//
 /zeroflagrnd.s/1.1/Sat Jun  4 17:44:22 2011//
+/ChangeLog/1.15/Thu Apr 12 16:03:34 2012//
+/allinsn.exp/1.2/Thu Apr 12 16:03:34 2012//
+/c_dsp32mac_dr_a1a0.s/1.2/Thu Apr 12 16:03:34 2012//
+/c_dsp32mac_dr_a1a0_iutsh.s/1.2/Thu Apr 12 16:03:34 2012//
+/c_dsp32mac_dr_a1a0_m.s/1.2/Thu Apr 12 16:03:34 2012//
+/c_dsp32shift_vmaxvmax.s/1.2/Thu Apr 12 16:03:34 2012//
+/c_dsp32shiftim_af_s.s/1.2/Thu Apr 12 16:03:34 2012//
+/c_dsp32shiftim_amix.s/1.2/Thu Apr 12 16:03:34 2012//
+/fact.s/1.2/Thu Apr 12 16:03:34 2012//
+/random_0014.S/1.1/Mon Mar 19 05:17:50 2012//
+/random_0015.S/1.1/Mon Mar 19 05:17:50 2012//
+/random_0016.S/1.1/Mon Mar 19 05:17:50 2012//
+/random_0017.S/1.1/Mon Apr  9 05:59:55 2012//
+/random_0018.S/1.1/Mon Apr  9 05:59:55 2012//
+/random_0025.S/1.1/Mon Apr  9 05:59:55 2012//
+/random_0036.S/1.1/Mon Apr  9 05:24:57 2012//
+/random_0037.S/1.1/Mon Apr  9 05:24:57 2012//
+/se_all16bitopcodes.S/1.4/Thu Apr 12 16:03:35 2012//
+/se_all32bitopcodes.S/1.4/Thu Apr 12 16:03:36 2012//
+/se_all64bitg0opcodes.S/1.3/Mon Apr  9 04:18:56 2012//
+/se_all64bitg1opcodes.S/1.3/Mon Apr  9 04:18:56 2012//
+/se_all64bitg2opcodes.S/1.3/Mon Apr  9 04:18:56 2012//
+/se_allopcodes.h/1.2/Mon Apr  9 03:42:43 2012//
 D

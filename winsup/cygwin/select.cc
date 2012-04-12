@@ -552,11 +552,15 @@ peek_pipe (select_record *s, bool from_select)
       switch (fh->get_major ())
 	{
 	case DEV_PTYM_MAJOR:
-	  if (((fhandler_pty_master *) fh)->need_nl)
-	    {
-	      gotone = s->read_ready = true;
-	      goto out;
-	    }
+	  {
+	    fhandler_pty_master *fhm = (fhandler_pty_master *) fh;
+	    fhm->flush_to_slave ();
+	    if (fhm->need_nl)
+	      {
+		gotone = s->read_ready = true;
+		goto out;
+	      }
+	  }
 	  break;
 	default:
 	  if (fh->get_readahead_valid ())
@@ -1293,7 +1297,7 @@ thread_socket (void *arg)
 	    event = true;
       if (!event)
 	for (int i = 0; i < si->num_w4; i += MAXIMUM_WAIT_OBJECTS)
-	  switch (WaitForMultipleObjects (min (si->num_w4 - i,
+	  switch (WaitForMultipleObjects (MIN (si->num_w4 - i,
 					       MAXIMUM_WAIT_OBJECTS),
 					  si->w4 + i, FALSE, timeout))
 	    {

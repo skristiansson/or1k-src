@@ -10,4 +10,11 @@
 /itclConfig.sh.in/1.8/Wed Jul 23 22:44:50 2008/-ko/
 /license.terms/1.4/Tue Jul 22 20:32:44 2008/-ko/
 /pkgIndex.tcl.in/1.5/Wed Jul 23 22:44:50 2008/-ko/
-D
+D/doc////
+D/generic////
+D/library////
+D/mac////
+D/tclconfig////
+D/tests////
+D/unix////
+D/win////

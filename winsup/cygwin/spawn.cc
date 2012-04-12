@@ -309,7 +309,6 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
     }
 
   /* FIXME: There is a small race here and FIXME: not thread safe! */
-
   pthread_cleanup cleanup;
   if (mode == _P_SYSTEM)
     {
@@ -335,7 +334,6 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
   bool null_app_name = false;
   STARTUPINFOW si = {};
   int looped = 0;
-  HANDLE orig_wr_proc_pipe = NULL;
 
   myfault efault;
   if (efault.faulted ())
@@ -349,10 +347,10 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
     }
 
   child_info_types chtype;
-  if (mode != _P_OVERLAY)
-    chtype = _CH_SPAWN;
-  else
+  if (mode == _P_OVERLAY)
     chtype = _CH_EXEC;
+  else
+    chtype = _CH_SPAWN;
 
   moreinfo = cygheap_exec_info::alloc ();
 
@@ -613,6 +611,14 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
       && fhandler_console::tc_getpgid () != myself->pgid)
     c_flags |= CREATE_NEW_PROCESS_GROUP;
   refresh_cygheap ();
+
+  if (mode == _P_DETACH)
+    /* all set */;
+  else if (mode != _P_OVERLAY || !my_wr_proc_pipe)
+    prefork ();
+  else
+    wr_proc_pipe = my_wr_proc_pipe;
+
   /* When ruid != euid we create the new process under the current original
      account and impersonate in child, this way maintaining the different
      effective vs. real ids.
@@ -734,6 +740,8 @@ loop:
 	  myself->exec_sendsig = NULL;
 	}
       myself->process_state &= ~PID_NOTCYGWIN;
+      if (wr_proc_pipe == my_wr_proc_pipe)
+	wr_proc_pipe = NULL;	/* We still own it: don't nuke in destructor */
       res = -1;
       goto out;
     }
@@ -759,7 +767,6 @@ loop:
   /* Name the handle similarly to proc_subproc. */
   ProtectHandle1 (pi.hProcess, childhProc);
 
-  bool synced;
   pid_t pid;
   if (mode == _P_OVERLAY)
     {
@@ -768,25 +775,6 @@ loop:
       myself.hProcess = hExeced = pi.hProcess;
       real_path.get_wide_win32_path (myself->progname); // FIXME: race?
       sigproc_printf ("new process name %W", myself->progname);
-      /* If wr_proc_pipe doesn't exist then this process was not started by a cygwin
-	 process.  So, we need to wait around until the process we've just "execed"
-	 dies.  Use our own wait facility to wait for our own pid to exit (there
-	 is some minor special case code in proc_waiter and friends to accommodate
-	 this).
-
-	 If wr_proc_pipe exists, then it should be duplicated to the child.
-	 If the child has exited already, that's ok.  The parent will pick up
-	 on this fact when we exit.  dup_proc_pipe will close our end of the pipe.
-	 Note that wr_proc_pipe may also be == INVALID_HANDLE_VALUE.  That will make
-	 dup_proc_pipe essentially a no-op.  */
-      if (!newargv.win16_exe && myself->wr_proc_pipe)
-	{
-	  if (!looped)
-	    myself->sync_proc_pipe ();	/* Make sure that we own wr_proc_pipe
-					   just in case we've been previously
-					   execed. */
-	  orig_wr_proc_pipe = myself->dup_proc_pipe (pi.hProcess);
-	}
       pid = myself->pid;
       if (!iscygwin ())
 	close_all_files ();
@@ -818,6 +806,7 @@ loop:
 		       pi.hProcess, NULL, 0, 0, DUPLICATE_SAME_ACCESS);
       child->start_time = time (NULL); /* Register child's starting time. */
       child->nice = myself->nice;
+      postfork (child);
       if (!child.remember (mode == _P_DETACH))
 	{
 	  /* FIXME: Child in strange state now */
@@ -840,6 +829,7 @@ loop:
 
   sigproc_printf ("spawned windows pid %d", pi.dwProcessId);
 
+  bool synced;
   if ((mode == _P_DETACH || mode == _P_NOWAIT) && !iscygwin ())
     synced = false;
   else
@@ -851,11 +841,6 @@ loop:
       myself.hProcess = pi.hProcess;
       if (!synced)
 	{
-	  if (orig_wr_proc_pipe)
-	    {
-	      myself->wr_proc_pipe_owner = GetCurrentProcessId ();
-	      myself->wr_proc_pipe = orig_wr_proc_pipe;
-	    }
 	  if (!proc_retry (pi.hProcess))
 	    {
 	      looped++;
@@ -866,16 +851,10 @@ loop:
       else
 	{
 	  close_all_files (true);
-	  if (!myself->wr_proc_pipe
+	  if (!my_wr_proc_pipe
 	      && WaitForSingleObject (pi.hProcess, 0) == WAIT_TIMEOUT)
-	    {
-	      extern bool is_toplevel_proc;
-	      is_toplevel_proc = true;
-	      myself.remember (false);
-	      wait_for_myself ();
-	    }
+	    wait_for_myself ();
 	}
-      this->cleanup ();
       myself.exit (EXITCODE_NOSET);
       break;
     case _P_WAIT:

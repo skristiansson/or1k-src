@@ -26,7 +26,6 @@
 /mntent.h/1.6/Tue Feb  2 11:17:54 2010/-ko/
 /monetary.h/1.1/Fri Jan 22 22:31:31 2010//
 /mqueue.h/1.2/Thu Feb 15 17:49:25 2007//
-/netdb.h/1.12/Sun Jul 10 13:22:48 2011/-ko/
 /paths.h/1.7/Sun Aug 21 03:22:30 2011/-ko/
 /poll.h/1.2/Mon Mar  5 21:29:20 2001//
 /process.h/1.1/Tue Feb  7 17:15:07 2012//
@@ -43,4 +42,13 @@
 /tzfile.h/1.5/Mon Dec  1 10:39:17 2003/-ko/
 /utmpx.h/1.4/Thu Feb  2 22:46:37 2006//
 /wait.h/1.1/Thu Apr 24 08:46:41 2008//
-D
+D/arpa////
+D/asm////
+D/attr////
+D/bits////
+D/cygwin////
+D/machine////
+D/net////
+D/netinet////
+D/sys////
+/netdb.h/1.13/Thu Apr 12 16:04:36 2012/-ko/

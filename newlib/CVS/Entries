@@ -1,4 +1,3 @@
-/ChangeLog/1.1669/Fri Mar  2 16:02:03 2012/-ko/
 /HOWTO/1.1/Wed Mar 25 21:16:04 2009//
 /MAINTAINERS/1.13/Tue Nov 29 06:33:48 2011//
 /Makefile.am/1.50/Thu May 19 06:04:59 2011/-ko/
@@ -10,9 +9,14 @@
 /acinclude.m4/1.34/Mon Dec 19 22:03:17 2011/-ko/
 /aclocal.m4/1.35/Mon Dec 19 22:03:17 2011/-ko/
 /configure/1.70/Mon Dec 19 22:03:17 2011/-ko/
-/configure.host/1.125/Thu Feb 23 09:30:19 2012/-ko/
 /configure.in/1.45/Tue Jun  8 18:44:12 2010/-ko/
 /confsubdir.m4/1.1/Mon Apr 23 22:52:29 2007//
 /newlib.hin/1.21/Tue Jun  8 18:44:12 2010//
 /stamp-h.in/1.2/Fri Jan 20 22:42:45 2006//
-D
+D/doc////
+D/iconvdata////
+D/libc////
+D/libm////
+D/testsuite////
+/ChangeLog/1.1672/Thu Apr 12 16:02:22 2012/-ko/
+/configure.host/1.125/Thu Apr 12 15:59:05 2012/-ko/

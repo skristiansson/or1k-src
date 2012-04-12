@@ -5,8 +5,6 @@
 /go32.mh/1.11/Thu May 14 09:37:00 2009/-ko/
 /i386gnu.mh/1.14/Tue Jan 10 16:30:44 2012/-ko/
 /i386sol2.mh/1.13/Mon Apr 26 13:53:56 2010/-ko/
-/linux.mh/1.26/Wed Aug 24 12:07:26 2011/-ko/
-/linux64.mh/1.12/Wed Aug 24 12:07:26 2011//
 /mingw.mh/1.4/Sun May 24 12:27:35 2009//
 /mingw64.mh/1.3/Sun May 24 12:27:35 2009//
 /nbsd64.mh/1.8/Sun Mar 16 08:50:43 2008//
@@ -19,4 +17,6 @@
 /obsd64.mh/1.8/Fri Oct  1 17:26:13 2004//
 /obsdaout.mh/1.9/Mon Jan  9 15:21:12 2012//
 /sol2-64.mh/1.3/Mon Apr 26 13:53:57 2010//
+/linux.mh/1.27/Thu Apr 12 16:00:58 2012/-ko/
+/linux64.mh/1.13/Thu Apr 12 16:00:58 2012//
 D

@@ -1,13 +1,8 @@
-/ChangeLog/1.50/Sat Dec  3 18:23:47 2011/-ko/
 /Makefile.in/1.21/Wed Jan  4 08:28:12 2012/-ko/
 /README/1.1.1.1/Fri Apr 16 01:35:05 1999/-ko/
 /TODO/1.1.1.1/Fri Apr 16 01:35:05 1999/-ko/
-/aclocal.m4/1.1/Sat Dec  3 18:23:47 2011//
 /arch.c/1.9/Wed Jan  4 08:28:12 2012/-ko/
 /arch.h/1.9/Wed Jan  4 08:28:12 2012/-ko/
-/config.in/1.4/Sat Aug 22 16:56:54 2009/-ko/
-/configure/1.22/Sat Dec  3 18:23:47 2011/-ko/
-/configure.ac/1.5/Tue Oct 18 00:30:58 2011//
 /cpu.c/1.9/Wed Jan  4 08:28:12 2012/-ko/
 /cpu.h/1.13/Wed Jan  4 08:28:12 2012/-ko/
 /cpu2.c/1.5/Wed Jan  4 08:28:12 2012//
@@ -40,6 +35,11 @@
 /sim-main.h/1.6/Fri Dec 19 11:43:57 2003/-ko/
 /syscall.h/1.2/Thu Dec  9 00:47:45 2004//
 /tconfig.in/1.1.1.1/Fri Apr 16 01:35:06 1999/-ko/
-/traps-linux.c/1.10/Wed Jan  4 08:28:13 2012//
 /traps.c/1.12/Wed Jan  4 08:28:13 2012/-ko/
+/ChangeLog/1.52/Thu Apr 12 16:03:26 2012/-ko/
+/aclocal.m4/1.2/Thu Apr 12 16:03:26 2012//
+/config.in/1.5/Thu Apr 12 16:03:26 2012/-ko/
+/configure/1.23/Thu Apr 12 16:03:27 2012/-ko/
+/configure.ac/1.5/Mon Mar  5 23:58:22 2012//
+/traps-linux.c/1.11/Thu Apr 12 16:03:27 2012//
 D

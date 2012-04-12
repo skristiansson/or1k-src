@@ -1,3 +1,188 @@
+2012-04-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gdb/13969
+	* linux-low.c (linux_pid_exe_is_elf_64_file): Also return the
+	e_machine field.
+	(linux_qxfer_libraries_svr4): Update call to elf_64_file_p.
+	* linux-low.h (linux_pid_exe_is_elf_64_file): Updated.
+	* linux-x86-low.c (x86_arch_setup): Check if GDBserver is
+	compatible with process.
+
+2012-04-12  Yao Qi  <yao@codesourcery.com>
+
+	* Makefile.in: Define abs_top_srcdir and abs_srcdir.
+	(INCLUDE_CFLAGS): Append GNULIB_INCLUDE_DIR.
+	(install-only, install-info, clean): Handle sub dir gnulib.
+	(all-lib, am--refresh): New targets.
+	(memmem.o): Remove target.
+	* configure.ac: Remove AC_CONFIG_LIBOBJ_DIR.
+	Invoke gl_EARLY.  Invoke AC_CHECK_PROGS for make.
+	(AC_REPLACE_FUNCS): Remove memmem.
+	Invoke gl_INIT and AM_INIT_AUTOMAKE.
+	(AC_OUTPUT): Generate Makefile in gnulib/.
+	* aclocal.m4, config.in, configure: Regenerated.
+
+2012-04-10  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* linux-low.c (get_r_debug): Handle DT_MIPS_RLD_MAP.
+
+2012-04-05  Pedro Alves  <palves@redhat.com>
+
+	-Werror=strict-aliasing
+
+	* spu-low.c (parse_spufs_run): Avoid dereferencing type-punned
+	pointer.
+
+2012-04-04  Pedro Alves  <palves@redhat.com>
+
+	* linux-sparc-low.c (sparc_fill_gregset_to_stack)
+	(sparc_store_gregset_from_stack, sparc_store_gregset)
+	(sparc_breakpoint_at): Fix formatting.
+
+2012-03-30  Thiago Jung Bauermann  <thiago.bauermann@linaro.org>
+
+	* configure.ac: Check whether Elf32_auxv_t and Elf64_auxv_t
+	are available.
+	* linux-low.c [HAVE_ELF32_AUXV_T] (Elf32_auxv_t): Add typedef.
+	[HAVE_ELF64_AUXV_T] (Elf64_auxv_t): Likewise.
+	* config.in: Regenerate.
+	* configure: Likewise.
+
+2012-03-29  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (regsets_store_inferior_registers) [__sparc__]:
+	Correct ptrace arguments.
+
+2012-03-28  Pedro Alves  <palves@redhat.com>
+
+	* linux-ia64-low.c (ia64_regmap): Map IA64_EC_REGNUM to PT_AR_EC.
+	(IA64_GR0_REGNUM, IA64_FR0_REGNUM)
+	(IA64_FR1_REGNUM): New defines.
+	(ia64_fetch_register): New.
+	(the_low_target): Install it.
+	* linux-low.h (struct linux_target_ops) <fetch_register>: New
+	field.
+	* linux-low.c (linux_fetch_registers): Try the
+	the_low_target.fetch_register hook first.
+
+	* linux-arm-low.c (the_low_target): Adjust.
+	* linux-bfin-low.c (the_low_target): Adjust.
+	* linux-cris-low.c (the_low_target): Adjust.
+	* linux-crisv32-low.c (the_low_target): Adjust.
+	* linux-m32r-low.c (the_low_target): Adjust.
+	* linux-m68k-low.c (the_low_target): Adjust.
+	* linux-mips-low.c (the_low_target): Adjust.
+	* linux-ppc-low.c (the_low_target): Adjust.
+	* linux-s390-low.c (the_low_target): Adjust.
+	* linux-sh-low.c (the_low_target): Adjust.
+	* linux-sparc-low.c (the_low_target): Adjust.
+	* linux-tic6x-low.c (the_low_target): Adjust.
+	* linux-x86-low.c (the_low_target): Adjust.
+	* linux-xtensa-low.c (the_low_target): Adjust.
+
+2012-03-26  Pedro Alves  <palves@redhat.com>
+
+	* server.c (handle_qxfer_libraries): Don't bail early if
+	the_target->qxfer_libraries_svr4 is not NULL.
+
+2012-03-26  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (linux_qxfer_libraries_svr4): Fix pasto in comment.
+
+2012-03-23  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (linux_qxfer_libraries_svr4): Terminate the
+	"library-list-svr4" element's start tag when the the DSO list is
+	empty.
+
+2012-03-23  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (read_one_ptr): Read the inferior's pointer through
+	a variable whose type size is the same as the inferior's pointer
+	size.
+
+2012-03-21  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* linux-arm-low.c (arm_stopped_by_watchpoint): Use siginfo_t instead of
+	struct siginfo.
+	* linux-low.c (siginfo_fixup, linux_xfer_siginfo): Likewise.
+	* linux-x86-low.c (x86_siginfo_fixup): Likewise.
+	* linux-low.h: Include <signal.h>.
+	(struct siginfo): Remove forward declaration.
+	(struct linux_target_ops) <siginfo_fixup>: Use siginfo_t instead of
+	struct siginfo.
+
+2012-03-21  Mike Frysinger  <vapier@gentoo.org>
+
+	* .gitignore: Ignore more files.
+
+2012-03-19  Pedro Alves  <palves@redhat.com>
+	    Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* server.c (cont_thread, general_thread): Add describing comments.
+	(start_inferior): Clear `cont_thread'.
+	(handle_v_cont): Don't set `cont_thread' if resuming all threads
+	of a process.
+
+2012-03-15  Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c (install_tracepoint): Move duplicated tracepoint
+	handling to ...
+	(cmd_qtdp): ... here.
+
+2012-03-15  Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c (struct tracepoint_action_ops): New.
+	(struct tracepoint_action) [!IN_PROCESS_AGENT] <ops>: New field.
+	(m_tracepoint_action_download): New.
+	(r_tracepoint_action_download): New.
+	(x_tracepoint_action_download): New.
+	(l_tracepoint_action_download): New.
+	(add_tracepoint_action): Install `action->ops' according type.
+	(download_tracepoint_1): Move code `download' function pointer
+	of various tracepoint_action_ops.
+
+2012-03-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* linux-low.c (linux_attach_lwp_1): New variable buffer.  Call
+	linux_ptrace_attach_warnings.
+
+2012-03-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* Makefile.in (linux-ptrace.o): New.
+	* configure.srv (arm*-*-linux*, bfin-*-*linux*, crisv32-*-linux*)
+	(cris-*-linux*, i[34567]86-*-linux*, ia64-*-linux*, m32r*-*-linux*)
+	(m68*-*-linux*, m68*-*-uclinux*, mips*-*-linux*, powerpc*-*-linux*)
+	(s390*-*-linux*, sh*-*-linux*, sparc*-*-linux*, tic6x-*-uclinux)
+	(x86_64-*-linux*, xtensa*-*-linux*): Add linux-ptrace.o to SRV_TGTOBJ
+	of these targets.
+	* linux-low.c (linux_attach_lwp_1): Remove redundent else clause.
+
+2012-03-08  Yao Qi  <yao@codesourcery.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	Fix PR server/13392.
+	* linux-x86-low.c (amd64_install_fast_tracepoint_jump_pad): Check
+	offset of JMP insn.
+	* tracepoint.c (remove_tracepoint): New.
+	(cmd_qtdp): Call remove_tracepoint when failed to install.
+
+2012-03-07  Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (get_detach_signal): New.
+	(linux_detach_one_lwp): Get rid of a pending SIGSTOP with SIGCONT.
+	Pass on pending signals to PTRACE_DETACH.  Check the result of the
+	ptrace call.
+	* server.c (program_signals, program_signals_p): New.
+	(handle_general_set): Handle QProgramSignals.
+	* server.h (program_signals, program_signals_p): Declare.
+
+2012-03-05  Pedro Alves  <palves@redhat.com>
+	    Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* linux-low.c (get_dynamic): Don't warn when PT_PHDR isn't found.
+	New comment why.
+
 2012-03-03  Yao Qi  <yao@codesourcery.com>
 
 	* tracepoint.c (tracepoint_look_up_symbols): Update call to

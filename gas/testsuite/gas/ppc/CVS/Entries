@@ -43,7 +43,6 @@
 /power6.s/1.6/Thu Oct  6 09:22:58 2011//
 /power7.d/1.4/Tue Sep 29 13:19:10 2009//
 /power7.s/1.4/Tue Sep 29 13:19:10 2009//
-/ppc.exp/1.27/Mon Feb  8 01:59:38 2010//
 /ppc750ps.d/1.1/Fri Aug 24 00:56:29 2007//
 /ppc750ps.s/1.1/Fri Aug 24 00:56:29 2007//
 /range.l/1.1/Fri Apr 20 13:42:48 2007//
@@ -79,4 +78,13 @@
 /xcoff-dwsect-1.s/1.1/Wed May 18 07:58:36 2011//
 /xcoff-ref-1.l/1.1/Sat Jan 23 12:05:33 2010//
 /xcoff-ref-1.s/1.1/Sat Jan 23 12:05:33 2010//
+/e500mc64_nop.d/1.1/Fri Mar  9 23:39:06 2012//
+/e500mc64_nop.s/1.1/Fri Mar  9 23:39:06 2012//
+/e5500_nop.d/1.1/Fri Mar  9 23:39:06 2012//
+/e5500_nop.s/1.1/Fri Mar  9 23:39:06 2012//
+/e6500.d/1.1/Fri Mar  9 23:39:06 2012//
+/e6500.s/1.1/Fri Mar  9 23:39:06 2012//
+/e6500_nop.d/1.1/Fri Mar  9 23:39:06 2012//
+/e6500_nop.s/1.1/Fri Mar  9 23:39:06 2012//
+/ppc.exp/1.28/Thu Apr 12 16:00:43 2012//
 D

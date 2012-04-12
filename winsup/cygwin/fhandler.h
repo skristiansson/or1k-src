@@ -241,12 +241,19 @@ class fhandler_base
 
   IMPLEMENT_STATUS_FLAG (bool, wbinset)
   IMPLEMENT_STATUS_FLAG (bool, rbinset)
-  IMPLEMENT_STATUS_FLAG (bool, nohandle)
   IMPLEMENT_STATUS_FLAG (bool, did_lseek)
   IMPLEMENT_STATUS_FLAG (query_state, query_open)
   IMPLEMENT_STATUS_FLAG (bool, close_on_exec)
   IMPLEMENT_STATUS_FLAG (bool, need_fork_fixup)
   IMPLEMENT_STATUS_FLAG (bool, isclosed)
+
+  bool nohandle () const {return !!status.nohandle;}
+  bool nohandle (bool val)
+  {
+    if ((status.nohandle = val))
+      io_handle = INVALID_HANDLE_VALUE;
+    return val;
+  }
 
   int get_default_fmode (int flags);
 
@@ -328,6 +335,7 @@ class fhandler_base
 # define archetype_usecount(n) _archetype_usecount (__PRETTY_FUNCTION__, __LINE__, (n))
   int close_fs () { return fhandler_base::close (); }
   virtual int __stdcall fstat (struct __stat64 *buf) __attribute__ ((regparm (2)));
+  void stat_fixup (struct __stat64 *buf) __attribute__ ((regparm (2)));
   int __stdcall fstat_fs (struct __stat64 *buf) __attribute__ ((regparm (2)));
 private:
   int __stdcall fstat_helper (struct __stat64 *buf,
@@ -629,6 +637,7 @@ protected:
     overlapped_unknown = 0,
     overlapped_success,
     overlapped_nonblocking_no_data,
+    overlapped_nullread,
     overlapped_error
   };
   bool io_pending;
@@ -1015,6 +1024,38 @@ class fhandler_disk_file: public fhandler_base
   }
 };
 
+class fhandler_dev: public fhandler_disk_file
+{
+  const struct device *devidx;
+  bool dir_exists;
+public:
+  fhandler_dev ();
+  int open (int flags, mode_t mode);
+  int close ();
+  int __stdcall fstat (struct __stat64 *buf) __attribute__ ((regparm (2)));
+  int __stdcall fstatvfs (struct statvfs *buf) __attribute__ ((regparm (2)));
+  DIR *opendir (int fd) __attribute__ ((regparm (2)));
+  int readdir (DIR *, dirent *) __attribute__ ((regparm (3)));
+  void rewinddir (DIR *);
+
+  fhandler_dev (void *) {}
+
+  void copyto (fhandler_base *x)
+  {
+    x->pc.free_strings ();
+    *reinterpret_cast<fhandler_dev *> (x) = *this;
+    x->reset (this);
+  }
+
+  fhandler_dev *clone (cygheap_types malloc_type = HEAP_FHANDLER)
+  {
+    void *ptr = (void *) ccalloc (malloc_type, 1, sizeof (fhandler_dev));
+    fhandler_dev *fh = new (ptr) fhandler_dev (ptr);
+    copyto (fh);
+    return fh;
+  }
+};
+
 class fhandler_cygdrive: public fhandler_disk_file
 {
   enum
@@ -1034,6 +1075,7 @@ class fhandler_cygdrive: public fhandler_disk_file
   void rewinddir (DIR *);
   int closedir (DIR *);
   int __stdcall fstat (struct __stat64 *buf) __attribute__ ((regparm (2)));
+  int __stdcall fstatvfs (struct statvfs *buf) __attribute__ ((regparm (2)));
 
   fhandler_cygdrive (void *) {}
 
@@ -1398,6 +1440,7 @@ class fhandler_pty_common: public fhandler_termios
 
   int close ();
   _off64_t lseek (_off64_t, int);
+  bool bytes_available (DWORD& n);
   void set_close_on_exec (bool val);
   select_record *select_read (select_stuff *);
   select_record *select_write (select_stuff *);
@@ -1514,6 +1557,7 @@ public:
   void fixup_after_fork (HANDLE parent);
   void fixup_after_exec ();
   int tcgetpgrp ();
+  void flush_to_slave ();
 
   fhandler_pty_master (void *) {}
   ~fhandler_pty_master ();
@@ -1684,6 +1728,7 @@ class fhandler_dev_clipboard: public fhandler_base
   fhandler_dev_clipboard ();
   int is_windows () { return 1; }
   int open (int flags, mode_t mode = 0);
+  int __stdcall fstat (struct __stat64 *buf) __attribute__ ((regparm (2)));
   ssize_t __stdcall write (const void *ptr, size_t len);
   void __stdcall read (void *ptr, size_t& len) __attribute__ ((regparm (3)));
   _off64_t lseek (_off64_t offset, int whence);
@@ -2091,6 +2136,7 @@ typedef union
 {
   char __base[sizeof (fhandler_base)];
   char __console[sizeof (fhandler_console)];
+  char __dev[sizeof (fhandler_dev)];
   char __cygdrive[sizeof (fhandler_cygdrive)];
   char __dev_clipboard[sizeof (fhandler_dev_clipboard)];
   char __dev_dsp[sizeof (fhandler_dev_dsp)];

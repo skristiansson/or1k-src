@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include <signal.h>
 #include <limits.h>
+#include <inttypes.h>
 #include "server.h"
 #include "linux-low.h"
 #include "i387-fp.h"
@@ -917,13 +918,13 @@ siginfo_from_compat_siginfo (siginfo_t *to, compat_siginfo_t *from)
    INF.  */
 
 static int
-x86_siginfo_fixup (struct siginfo *native, void *inf, int direction)
+x86_siginfo_fixup (siginfo_t *native, void *inf, int direction)
 {
 #ifdef __x86_64__
   /* Is the inferior 32-bit?  If so, then fixup the siginfo object.  */
   if (register_size (0) == 4)
     {
-      if (sizeof (struct siginfo) != sizeof (compat_siginfo_t))
+      if (sizeof (siginfo_t) != sizeof (compat_siginfo_t))
 	fatal ("unexpected difference in siginfo");
 
       if (direction == 0)
@@ -1105,17 +1106,28 @@ x86_linux_process_qsupported (const char *query)
 static void
 x86_arch_setup (void)
 {
-#ifdef __x86_64__
   int pid = pid_of (get_thread_lwp (current_inferior));
-  int use_64bit = linux_pid_exe_is_elf_64_file (pid);
+  unsigned int machine;
+  int is_elf64 = linux_pid_exe_is_elf_64_file (pid, &machine);
 
-  if (use_64bit < 0)
+  if (sizeof (void *) == 4)
+    {
+      if (is_elf64 > 0)
+	error (_("Can't debug 64-bit process with 32-bit GDBserver"));
+#ifndef __x86_64__
+      else if (machine == EM_X86_64)
+	error (_("Can't debug x86-64 process with 32-bit GDBserver"));
+#endif
+    }
+
+#ifdef __x86_64__
+  if (is_elf64 < 0)
     {
       /* This can only happen if /proc/<pid>/exe is unreadable,
 	 but "that can't happen" if we've gotten this far.
 	 Fall through and assume this is a 32-bit program.  */
     }
-  else if (use_64bit)
+  else if (machine == EM_X86_64)
     {
       /* Amd64 doesn't have HAVE_LINUX_USRREGS.  */
       the_low_target.num_regs = -1;
@@ -1200,6 +1212,8 @@ amd64_install_fast_tracepoint_jump_pad (CORE_ADDR tpoint, CORE_ADDR tpaddr,
 {
   unsigned char buf[40];
   int i, offset;
+  int64_t loffset;
+
   CORE_ADDR buildaddr = *jump_entry;
 
   /* Build the jump pad.  */
@@ -1323,7 +1337,17 @@ amd64_install_fast_tracepoint_jump_pad (CORE_ADDR tpoint, CORE_ADDR tpaddr,
   *adjusted_insn_addr_end = buildaddr;
 
   /* Finally, write a jump back to the program.  */
-  offset = (tpaddr + orig_size) - (buildaddr + sizeof (jump_insn));
+
+  loffset = (tpaddr + orig_size) - (buildaddr + sizeof (jump_insn));
+  if (loffset > INT_MAX || loffset < INT_MIN)
+    {
+      sprintf (err,
+	       "E.Jump back from jump pad too far from tracepoint "
+	       "(offset 0x%" PRIx64 " > int32).", loffset);
+      return 1;
+    }
+
+  offset = (int) loffset;
   memcpy (buf, jump_insn, sizeof (jump_insn));
   memcpy (buf + 1, &offset, 4);
   append_insns (&buildaddr, sizeof (jump_insn), buf);
@@ -1332,7 +1356,17 @@ amd64_install_fast_tracepoint_jump_pad (CORE_ADDR tpoint, CORE_ADDR tpaddr,
      is always done last (by our caller actually), so that we can
      install fast tracepoints with threads running.  This relies on
      the agent's atomic write support.  */
-  offset = *jump_entry - (tpaddr + sizeof (jump_insn));
+  loffset = *jump_entry - (tpaddr + sizeof (jump_insn));
+  if (loffset > INT_MAX || loffset < INT_MIN)
+    {
+      sprintf (err,
+	       "E.Jump pad too far from tracepoint "
+	       "(offset 0x%" PRIx64 " > int32).", loffset);
+      return 1;
+    }
+
+  offset = (int) loffset;
+
   memcpy (buf, jump_insn, sizeof (jump_insn));
   memcpy (buf + 1, &offset, 4);
   memcpy (jjump_pad_insn, buf, sizeof (jump_insn));
@@ -2946,6 +2980,7 @@ struct linux_target_ops the_low_target =
   NULL,
   NULL,
   NULL,
+  NULL, /* fetch_register */
   x86_get_pc,
   x86_set_pc,
   x86_breakpoint,

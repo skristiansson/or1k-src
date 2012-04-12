@@ -5,4 +5,9 @@
 /configure/1.40/Mon Dec 19 22:03:50 2011/-ko/
 /configure.in/1.11/Fri Oct  8 10:35:14 2010/-ko/
 /libm.texinfo/1.16/Mon Dec 19 22:03:50 2011/-ko/
-D
+D/common////
+D/complex////
+D/machine////
+D/math////
+D/mathfp////
+D/test////

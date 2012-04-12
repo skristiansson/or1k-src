@@ -5,4 +5,7 @@
 /configure/1.2/Wed May 24 16:59:03 2006//
 /configure.in/1.2/Wed May 24 16:59:03 2006//
 /cygrun.c/1.2/Mon Jan 10 04:13:39 2005//
-D
+D/config////
+D/cygload////
+D/libltp////
+D/winsup.api////

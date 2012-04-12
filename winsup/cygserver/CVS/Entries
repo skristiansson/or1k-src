@@ -1,4 +1,3 @@
-/ChangeLog/1.81/Tue Feb 14 14:12:11 2012//
 /Makefile.in/1.24/Mon Nov 16 08:50:07 2009//
 /README/1.5/Fri Mar 27 10:17:48 2009//
 /aclocal.m4/1.1/Wed May 24 16:59:02 2006//
@@ -8,7 +7,6 @@
 /bsd_log.h/1.1/Wed Nov 19 18:49:40 2003//
 /bsd_mutex.cc/1.16/Wed Feb  6 22:30:38 2008//
 /bsd_mutex.h/1.2/Wed Apr  6 11:11:07 2005//
-/client.cc/1.12/Wed Jan 21 17:14:36 2009//
 /configure/1.5/Mon Feb  7 16:22:02 2011//
 /configure.in/1.5/Mon Feb  7 16:22:02 2011//
 /cygserver-config/1.3/Fri Mar 20 11:54:16 2009//
@@ -30,4 +28,6 @@
 /transport_pipes.cc/1.14/Tue Feb 14 14:12:11 2012//
 /transport_pipes.h/1.2/Sat Oct 31 13:24:43 2009//
 /woutsup.h/1.5/Fri Feb 23 11:43:48 2007//
-D
+D/include////
+/ChangeLog/1.84/Thu Apr 12 16:04:22 2012//
+/client.cc/1.15/Thu Apr 12 16:04:22 2012//

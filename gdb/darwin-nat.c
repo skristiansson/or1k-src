@@ -39,6 +39,7 @@
 #include "value.h"
 #include "arch-utils.h"
 #include "bfd.h"
+#include "bfd/mach-o.h"
 
 #include <sys/ptrace.h>
 #include <sys/signal.h>
@@ -704,11 +705,14 @@ darwin_resume_thread (struct inferior *inf, darwin_thread_t *thread,
 	  thread->signaled = 1;
 	}
 
-      /* Set single step.  */
-      inferior_debug (4, _("darwin_set_sstep (thread=%x, enable=%d)\n"),
-                      thread->gdb_port, step);
-      darwin_set_sstep (thread->gdb_port, step);
-      thread->single_step = step;
+      /* Set or reset single step.  */
+      if (step != thread->single_step)
+	{
+	  inferior_debug (4, _("darwin_set_sstep (thread=%x, enable=%d)\n"),
+			  thread->gdb_port, step);
+	  darwin_set_sstep (thread->gdb_port, step);
+	  thread->single_step = step;
+	}
 
       darwin_send_reply (inf, thread);
       thread->msg_state = DARWIN_RUNNING;
@@ -1312,35 +1316,22 @@ darwin_kill_inferior (struct target_ops *ops)
 
   gdb_assert (inf != NULL);
 
-  if (!inf->private->no_ptrace)
+  kret = darwin_restore_exception_ports (inf->private);
+  MACH_CHECK_ERROR (kret);
+
+  darwin_reply_to_all_pending_messages (inf);
+
+  res = kill (inf->pid, 9);
+
+  if (res == 0)
     {
-      darwin_stop_inferior (inf);
-
-      res = PTRACE (PT_KILL, inf->pid, 0, 0);
-      if (res != 0)
-        warning (_("Failed to kill inferior: ptrace returned %d "
-	           "[%s] (pid=%d)"),
-		 res, safe_strerror (errno), inf->pid);
-
-      darwin_reply_to_all_pending_messages (inf);
-
       darwin_resume_inferior (inf);
-
+	  
       ptid = darwin_wait (inferior_ptid, &wstatus);
     }
-  else
-    {
-      kret = darwin_restore_exception_ports (inf->private);
-      MACH_CHECK_ERROR (kret);
-
-      darwin_reply_to_all_pending_messages (inf);
-
-      darwin_resume_inferior (inf);
-
-      res = kill (inf->pid, 9);
-
-      ptid = darwin_wait (inferior_ptid, &wstatus);
-    }
+  else if (errno != ESRCH)
+    warning (_("Failed to kill inferior: kill (%d, 9) returned [%s]"),
+	     inf->pid, safe_strerror (errno));
 
   target_mourn_inferior ();
 }
@@ -2014,6 +2005,9 @@ darwin_supports_multi_process (void)
 {
   return 1;
 }
+
+/* -Wmissing-prototypes */
+extern initialize_file_ftype _initialize_darwin_inferior;
 
 void
 _initialize_darwin_inferior (void)

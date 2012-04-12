@@ -588,7 +588,7 @@ add_path (char *dirname, char **which_path, int parse_separators)
 		  p--;		/* Back over leading separator.  */
 		if (prefix > p - *which_path)
 		  goto skip_dup;	/* Same dir twice in one cmd.  */
-		strcpy (p, &p[len + 1]);	/* Copy from next \0 or  : */
+		memmove (p, &p[len + 1], strlen (&p[len + 1]) + 1);	/* Copy from next \0 or  : */
 	      }
 	    p = strchr (p, DIRNAME_SEPARATOR);
 	    if (p != 0)
@@ -997,7 +997,16 @@ find_and_open_source (const char *filename,
 
       result = open (*fullname, OPEN_MODE);
       if (result >= 0)
-	return result;
+	{
+	  /* Call xfullpath here to be consistent with openp
+	     which we use below.  */
+	  char *lpath = xfullpath (*fullname);
+
+	  xfree (*fullname);
+	  *fullname = lpath;
+	  return result;
+	}
+
       /* Didn't work -- free old one, try again.  */
       xfree (*fullname);
       *fullname = NULL;

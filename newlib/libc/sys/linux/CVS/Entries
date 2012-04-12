@@ -142,4 +142,15 @@
 /versionsort.c/1.1/Fri Jul 26 21:44:34 2002//
 /versionsort64.c/1.1/Fri Jul 26 21:44:34 2002//
 /wait.c/1.4/Mon Aug 26 18:56:08 2002//
-D
+D/argp////
+D/bits////
+D/cmath////
+D/dl////
+D/iconv////
+D/include////
+D/intl////
+D/linuxthreads////
+D/machine////
+D/net////
+D/stdlib////
+D/sys////

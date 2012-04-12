@@ -70,4 +70,8 @@
 /xfree.c/1.2/Wed Jun 29 20:51:10 2011//
 /xmalloc.c/1.6/Wed May 11 23:38:39 2011/-ko/
 /xmalloc.h/1.6/Wed Jun 29 20:51:10 2011/-ko/
-D
+D/cross-build////
+D/doc////
+D/examples////
+D/shlib////
+D/support////

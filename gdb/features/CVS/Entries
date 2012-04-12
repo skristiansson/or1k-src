@@ -1,4 +1,3 @@
-/Makefile/1.25/Thu Mar  1 22:19:47 2012//
 /arm-core.xml/1.8/Wed Jan  4 08:17:21 2012//
 /arm-fpa.xml/1.6/Wed Jan  4 08:17:21 2012//
 /arm-m-profile.xml/1.3/Wed Jan  4 08:17:21 2012//
@@ -81,4 +80,8 @@
 /traceframe-info.dtd/1.2/Wed Jan  4 08:17:22 2012//
 /xinclude.dtd/1.7/Wed Jan  4 08:17:22 2012//
 /xscale-iwmmxt.xml/1.7/Wed Jan  4 08:17:22 2012//
-D
+D/i386////
+D/rs6000////
+/Makefile/1.26/Thu Apr 12 16:01:06 2012//
+/arm-with-m-fpa-layout.c/1.1/Thu Mar 15 18:53:43 2012//
+/arm-with-m-fpa-layout.xml/1.1/Thu Mar 15 18:53:43 2012//

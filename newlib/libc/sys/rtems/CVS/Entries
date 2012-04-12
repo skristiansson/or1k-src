@@ -5,4 +5,6 @@
 /configure.in/1.2/Thu Apr 13 19:56:31 2006/-ko/
 /crt0.c/1.13/Sat Aug 20 05:34:22 2011/-ko/
 /dummysys.c/1.1.1.1/Thu Feb 17 19:39:50 2000/-ko/
-D
+D/include////
+D/machine////
+D/sys////

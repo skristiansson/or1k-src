@@ -14,6 +14,7 @@ details. */
 #include <stdlib.h>
 #include <sys/uio.h>
 #include <sys/acl.h>
+#include <sys/param.h>
 #include "cygerrno.h"
 #include "perprocess.h"
 #include "security.h"
@@ -949,7 +950,7 @@ fhandler_base::readv (const struct iovec *const iov, const int iovcnt,
   char *p = buf;
   while (nbytes > 0)
     {
-      const int frag = min (nbytes, (ssize_t) iovptr->iov_len);
+      const int frag = MIN (nbytes, (ssize_t) iovptr->iov_len);
       memcpy (iovptr->iov_base, p, frag);
       p += frag;
       iovptr += 1;
@@ -1001,7 +1002,7 @@ fhandler_base::writev (const struct iovec *const iov, const int iovcnt,
 
   while (nbytes != 0)
     {
-      const int frag = min (nbytes, (ssize_t) iovptr->iov_len);
+      const int frag = MIN (nbytes, (ssize_t) iovptr->iov_len);
       memcpy (bufptr, iovptr->iov_base, frag);
       bufptr += frag;
       iovptr += 1;
@@ -1981,7 +1982,11 @@ fhandler_base_overlapped::wait_overlapped (bool inres, bool writing, DWORD *byte
     }
 
   if (res == overlapped_success)
-    debug_printf ("normal %s, %u bytes", writing ? "write" : "read", *bytes);
+    {
+      debug_printf ("normal %s, %u bytes ispipe() %d", writing ? "write" : "read", *bytes, ispipe ());
+      if (*bytes == 0 && !writing && ispipe ())
+	res = overlapped_nullread;
+    }
   else if (res == overlapped_nonblocking_no_data)
     {
       *bytes = (DWORD) -1;
@@ -2019,6 +2024,9 @@ fhandler_base_overlapped::raw_read (void *ptr, size_t& len)
 			   get_overlapped ());
       switch (wait_overlapped (res, false, &nbytes, is_nonblocking ()))
 	{
+	case overlapped_nullread:
+	  keep_looping = true;
+	  break;
 	default:	/* Added to quiet gcc */
 	case overlapped_success:
 	case overlapped_error:
@@ -2075,6 +2083,7 @@ fhandler_base_overlapped::raw_write (const void *ptr, size_t len)
 	    case overlapped_error:
 	      len = 0;		/* terminate loop */
 	    case overlapped_unknown:
+	    case overlapped_nullread:
 	    case overlapped_nonblocking_no_data:
 	      break;
 	    }

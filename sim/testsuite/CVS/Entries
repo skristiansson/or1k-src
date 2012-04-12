@@ -1,5 +1,15 @@
-/ChangeLog/1.71/Tue Oct 18 00:16:11 2011/-ko/
 /Makefile.in/1.9/Wed Jan  4 08:28:26 2012/-ko/
-/configure/1.8/Tue Oct 18 00:16:14 2011/-ko/
 /configure.ac/1.2/Mon Apr 26 16:23:23 2010//
-D
+D/common////
+D/config////
+D/d10v-elf////
+D/d30v-elf////
+D/fr30-elf////
+D/frv-elf////
+D/lib////
+D/m32r-elf////
+D/mips64el-elf////
+D/sim////
+/.gitignore/1.1/Mon Mar 19 03:51:09 2012//
+/ChangeLog/1.74/Thu Apr 12 16:03:32 2012/-ko/
+/configure/1.9/Thu Apr 12 16:03:32 2012/-ko/

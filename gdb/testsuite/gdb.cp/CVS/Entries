@@ -25,7 +25,6 @@
 /call-c.cc/1.11/Wed Jan  4 08:17:46 2012//
 /call-c.exp/1.13/Mon Jan 16 16:21:45 2012//
 /casts.cc/1.3/Mon Jan 18 20:54:35 2010//
-/casts.exp/1.14/Mon Jan 16 16:21:45 2012//
 /class2.cc/1.11/Wed Jan  4 08:17:46 2012//
 /class2.exp/1.15/Mon Jan 16 16:21:45 2012//
 /classes.cc/1.12/Wed Jan  4 08:17:46 2012//
@@ -81,7 +80,6 @@
 /infcall-dlopen-lib.cc/1.3/Wed Jan  4 08:17:47 2012//
 /infcall-dlopen.cc/1.4/Wed Jan  4 08:17:47 2012//
 /infcall-dlopen.exp/1.4/Wed Jan  4 08:17:47 2012//
-/inherit.exp/1.23/Mon Jan 16 16:21:45 2012//
 /koenig.cc/1.5/Sun Oct  9 19:41:17 2011//
 /koenig.exp/1.8/Wed Jan  4 08:17:47 2012//
 /local.cc/1.1/Sat Aug 23 03:55:59 2003//
@@ -100,9 +98,7 @@
 /mb-inline1.cc/1.6/Wed Jan  4 08:17:47 2012//
 /mb-inline2.cc/1.6/Wed Jan  4 08:17:47 2012//
 /mb-templates.cc/1.2/Wed Apr 29 22:45:11 2009//
-/mb-templates.exp/1.17/Sat Mar  3 14:21:04 2012//
 /member-ptr.cc/1.12/Wed Jan  4 08:17:47 2012//
-/member-ptr.exp/1.17/Mon Jan 16 16:21:45 2012//
 /meth-typedefs.cc/1.2/Wed Jan  4 08:17:47 2012//
 /meth-typedefs.exp/1.2/Wed Jan  4 08:17:47 2012//
 /method.cc/1.1/Sat Aug 23 03:55:59 2003//
@@ -121,7 +117,6 @@
 /namespace-nested-import.cc/1.1/Mon Jun 29 15:18:07 2009//
 /namespace-nested-import.exp/1.6/Mon Jan 16 16:21:45 2012//
 /namespace.cc/1.6/Tue Jan 19 18:11:19 2010//
-/namespace.exp/1.28/Mon Jan 16 16:21:45 2012//
 /namespace1.cc/1.15/Wed Jan  4 08:17:47 2012//
 /nextoverthrow.cc/1.4/Wed Jan  4 08:17:47 2012//
 /nextoverthrow.exp/1.6/Mon Jan 16 16:21:45 2012//
@@ -152,7 +147,6 @@
 /overload.cc/1.9/Tue Dec 13 17:22:08 2011//
 /overload.exp/1.27/Mon Jan 16 16:21:45 2012//
 /ovldbreak.cc/1.4/Thu Mar  1 20:34:13 2012//
-/ovldbreak.exp/1.22/Thu Mar  1 20:34:13 2012//
 /ovsrch.exp/1.4/Wed Jan  4 08:17:47 2012//
 /ovsrch.h/1.3/Wed Jan  4 08:17:47 2012//
 /ovsrch1.cc/1.2/Wed Jan  4 08:17:47 2012//
@@ -183,7 +177,6 @@
 /pr9167.exp/1.5/Wed Jan  4 08:17:47 2012//
 /pr9594.cc/1.2/Tue Feb 10 00:59:27 2009//
 /pr9631.cc/1.3/Wed Jan  4 08:17:47 2012//
-/pr9631.exp/1.4/Wed Jan  4 08:17:47 2012//
 /printmethod.cc/1.10/Wed Jan  4 08:17:47 2012//
 /printmethod.exp/1.14/Mon Jan 16 16:21:45 2012//
 /psmang.exp/1.12/Mon Jan 16 16:21:45 2012//
@@ -223,11 +216,20 @@
 /typedef-operator.cc/1.2/Wed Jan  4 08:17:47 2012//
 /typedef-operator.exp/1.2/Wed Jan  4 08:17:47 2012//
 /userdef.cc/1.13/Wed Jan  4 08:17:47 2012//
-/userdef.exp/1.20/Mon Jan 16 16:21:45 2012//
 /virtbase.cc/1.4/Wed Feb  2 17:41:54 2011//
-/virtbase.exp/1.8/Wed Jan  4 08:17:47 2012//
-/virtfunc.cc/1.6/Wed Jan  4 08:17:47 2012//
-/virtfunc.exp/1.25/Mon Jan 16 16:21:45 2012//
 /virtfunc2.cc/1.4/Wed Jan  4 08:17:47 2012//
-/virtfunc2.exp/1.4/Wed Jan  4 08:17:47 2012//
+/casts.exp/1.15/Thu Apr 12 16:01:23 2012//
+/cplabel.cc/1.1/Thu Apr  5 18:50:28 2012//
+/cplabel.exp/1.1/Thu Apr  5 18:50:28 2012//
+/inherit.exp/1.24/Thu Apr 12 16:01:23 2012//
+/mb-templates.exp/1.18/Thu Apr 12 16:01:23 2012//
+/member-ptr.exp/1.18/Thu Apr 12 16:01:23 2012//
+/namespace.exp/1.29/Thu Apr 12 16:01:23 2012//
+/ovldbreak.exp/1.23/Thu Apr 12 16:01:23 2012//
+/pr9631.exp/1.5/Thu Apr 12 16:01:23 2012//
+/userdef.exp/1.21/Thu Apr 12 16:01:24 2012//
+/virtbase.exp/1.9/Thu Apr 12 16:01:24 2012//
+/virtfunc.cc/1.7/Thu Apr 12 16:01:24 2012//
+/virtfunc.exp/1.26/Thu Apr 12 16:01:24 2012//
+/virtfunc2.exp/1.5/Thu Apr 12 16:01:24 2012//
 D

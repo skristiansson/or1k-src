@@ -82,6 +82,36 @@
 #endif
 #endif
 
+#ifndef HAVE_ELF32_AUXV_T
+/* Copied from glibc's elf.h.  */
+typedef struct
+{
+  uint32_t a_type;		/* Entry type */
+  union
+    {
+      uint32_t a_val;		/* Integer value */
+      /* We use to have pointer elements added here.  We cannot do that,
+	 though, since it does not work when using 32-bit definitions
+	 on 64-bit platforms and vice versa.  */
+    } a_un;
+} Elf32_auxv_t;
+#endif
+
+#ifndef HAVE_ELF64_AUXV_T
+/* Copied from glibc's elf.h.  */
+typedef struct
+{
+  uint64_t a_type;		/* Entry type */
+  union
+    {
+      uint64_t a_val;		/* Integer value */
+      /* We use to have pointer elements added here.  We cannot do that,
+	 though, since it does not work when using 32-bit definitions
+	 on 64-bit platforms and vice versa.  */
+    } a_un;
+} Elf64_auxv_t;
+#endif
+
 /* ``all_threads'' is keyed by the LWP ID, which we use as the GDB protocol
    representation of the thread ID.
 
@@ -233,13 +263,19 @@ static void wait_for_sigstop (struct inferior_list_entry *entry);
 /* Return non-zero if HEADER is a 64-bit ELF file.  */
 
 static int
-elf_64_header_p (const Elf64_Ehdr *header)
+elf_64_header_p (const Elf64_Ehdr *header, unsigned int *machine)
 {
-  return (header->e_ident[EI_MAG0] == ELFMAG0
-          && header->e_ident[EI_MAG1] == ELFMAG1
-          && header->e_ident[EI_MAG2] == ELFMAG2
-          && header->e_ident[EI_MAG3] == ELFMAG3
-          && header->e_ident[EI_CLASS] == ELFCLASS64);
+  if (header->e_ident[EI_MAG0] == ELFMAG0
+      && header->e_ident[EI_MAG1] == ELFMAG1
+      && header->e_ident[EI_MAG2] == ELFMAG2
+      && header->e_ident[EI_MAG3] == ELFMAG3)
+    {
+      *machine = header->e_machine;
+      return header->e_ident[EI_CLASS] == ELFCLASS64;
+
+    }
+  *machine = EM_NONE;
+  return -1;
 }
 
 /* Return non-zero if FILE is a 64-bit ELF file,
@@ -247,7 +283,7 @@ elf_64_header_p (const Elf64_Ehdr *header)
    and -1 if the file is not accessible or doesn't exist.  */
 
 static int
-elf_64_file_p (const char *file)
+elf_64_file_p (const char *file, unsigned int *machine)
 {
   Elf64_Ehdr header;
   int fd;
@@ -263,19 +299,19 @@ elf_64_file_p (const char *file)
     }
   close (fd);
 
-  return elf_64_header_p (&header);
+  return elf_64_header_p (&header, machine);
 }
 
 /* Accepts an integer PID; Returns true if the executable PID is
    running is a 64-bit ELF file..  */
 
 int
-linux_pid_exe_is_elf_64_file (int pid)
+linux_pid_exe_is_elf_64_file (int pid, unsigned int *machine)
 {
   char file[MAXPATHLEN];
 
   sprintf (file, "/proc/%d/exe", pid);
-  return elf_64_file_p (file);
+  return elf_64_file_p (file, machine);
 }
 
 static void
@@ -652,6 +688,8 @@ linux_attach_lwp_1 (unsigned long lwpid, int initial)
 
   if (ptrace (PTRACE_ATTACH, lwpid, 0, 0) != 0)
     {
+      struct buffer buffer;
+
       if (!initial)
 	{
 	  /* If we fail to attach to an LWP, just warn.  */
@@ -660,10 +698,13 @@ linux_attach_lwp_1 (unsigned long lwpid, int initial)
 	  fflush (stderr);
 	  return;
 	}
-      else
-	/* If we fail to attach to a process, report an error.  */
-	error ("Cannot attach to lwp %ld: %s (%d)\n", lwpid,
-	       strerror (errno), errno);
+
+      /* If we fail to attach to a process, report an error.  */
+      buffer_init (&buffer);
+      linux_ptrace_attach_warnings (lwpid, &buffer);
+      buffer_grow_str0 (&buffer, "");
+      error ("%sCannot attach to lwp %ld: %s (%d)", buffer_finish (&buffer),
+	     lwpid, strerror (errno), errno);
     }
 
   if (initial)
@@ -999,36 +1040,127 @@ linux_kill (int pid)
   return 0;
 }
 
+/* Get pending signal of THREAD, for detaching purposes.  This is the
+   signal the thread last stopped for, which we need to deliver to the
+   thread when detaching, otherwise, it'd be suppressed/lost.  */
+
+static int
+get_detach_signal (struct thread_info *thread)
+{
+  enum target_signal signo = TARGET_SIGNAL_0;
+  int status;
+  struct lwp_info *lp = get_thread_lwp (thread);
+
+  if (lp->status_pending_p)
+    status = lp->status_pending;
+  else
+    {
+      /* If the thread had been suspended by gdbserver, and it stopped
+	 cleanly, then it'll have stopped with SIGSTOP.  But we don't
+	 want to deliver that SIGSTOP.  */
+      if (thread->last_status.kind != TARGET_WAITKIND_STOPPED
+	  || thread->last_status.value.sig == TARGET_SIGNAL_0)
+	return 0;
+
+      /* Otherwise, we may need to deliver the signal we
+	 intercepted.  */
+      status = lp->last_status;
+    }
+
+  if (!WIFSTOPPED (status))
+    {
+      if (debug_threads)
+	fprintf (stderr,
+		 "GPS: lwp %s hasn't stopped: no pending signal\n",
+		 target_pid_to_str (ptid_of (lp)));
+      return 0;
+    }
+
+  /* Extended wait statuses aren't real SIGTRAPs.  */
+  if (WSTOPSIG (status) == SIGTRAP && status >> 16 != 0)
+    {
+      if (debug_threads)
+	fprintf (stderr,
+		 "GPS: lwp %s had stopped with extended "
+		 "status: no pending signal\n",
+		 target_pid_to_str (ptid_of (lp)));
+      return 0;
+    }
+
+  signo = target_signal_from_host (WSTOPSIG (status));
+
+  if (program_signals_p && !program_signals[signo])
+    {
+      if (debug_threads)
+	fprintf (stderr,
+		 "GPS: lwp %s had signal %s, but it is in nopass state\n",
+		 target_pid_to_str (ptid_of (lp)),
+		 target_signal_to_string (signo));
+      return 0;
+    }
+  else if (!program_signals_p
+	   /* If we have no way to know which signals GDB does not
+	      want to have passed to the program, assume
+	      SIGTRAP/SIGINT, which is GDB's default.  */
+	   && (signo == TARGET_SIGNAL_TRAP || signo == TARGET_SIGNAL_INT))
+    {
+      if (debug_threads)
+	fprintf (stderr,
+		 "GPS: lwp %s had signal %s, "
+		 "but we don't know if we should pass it.  Default to not.\n",
+		 target_pid_to_str (ptid_of (lp)),
+		 target_signal_to_string (signo));
+      return 0;
+    }
+  else
+    {
+      if (debug_threads)
+	fprintf (stderr,
+		 "GPS: lwp %s has pending signal %s: delivering it.\n",
+		 target_pid_to_str (ptid_of (lp)),
+		 target_signal_to_string (signo));
+
+      return WSTOPSIG (status);
+    }
+}
+
 static int
 linux_detach_one_lwp (struct inferior_list_entry *entry, void *args)
 {
   struct thread_info *thread = (struct thread_info *) entry;
   struct lwp_info *lwp = get_thread_lwp (thread);
   int pid = * (int *) args;
+  int sig;
 
   if (ptid_get_pid (entry->id) != pid)
     return 0;
 
-  /* If this process is stopped but is expecting a SIGSTOP, then make
-     sure we take care of that now.  This isn't absolutely guaranteed
-     to collect the SIGSTOP, but is fairly likely to.  */
+  /* If there is a pending SIGSTOP, get rid of it.  */
   if (lwp->stop_expected)
     {
-      int wstat;
-      /* Clear stop_expected, so that the SIGSTOP will be reported.  */
+      if (debug_threads)
+	fprintf (stderr,
+		 "Sending SIGCONT to %s\n",
+		 target_pid_to_str (ptid_of (lwp)));
+
+      kill_lwp (lwpid_of (lwp), SIGCONT);
       lwp->stop_expected = 0;
-      linux_resume_one_lwp (lwp, 0, 0, NULL);
-      linux_wait_for_event (lwp->head.id, &wstat, __WALL);
     }
 
   /* Flush any pending changes to the process's registers.  */
   regcache_invalidate_one ((struct inferior_list_entry *)
 			   get_lwp_thread (lwp));
 
+  /* Pass on any pending signal for this thread.  */
+  sig = get_detach_signal (thread);
+
   /* Finally, let it resume.  */
   if (the_low_target.prepare_to_resume != NULL)
     the_low_target.prepare_to_resume (lwp);
-  ptrace (PTRACE_DETACH, lwpid_of (lwp), 0, 0);
+  if (ptrace (PTRACE_DETACH, lwpid_of (lwp), 0, sig) < 0)
+    error (_("Can't detach %s: %s"),
+	   target_pid_to_str (ptid_of (lwp)),
+	   strerror (errno));
 
   delete_lwp (lwp);
   return 0;
@@ -3940,7 +4072,7 @@ regsets_store_inferior_registers (struct regcache *regcache)
 #ifndef __sparc__
       res = ptrace (regset->get_request, pid, nt_type, data);
 #else
-      res = ptrace (regset->get_request, pid, &iov, data);
+      res = ptrace (regset->get_request, pid, data, nt_type);
 #endif
 
       if (res == 0)
@@ -4175,11 +4307,19 @@ linux_fetch_registers (struct regcache *regcache, int regno)
 
   if (regno == -1)
     {
+      if (the_low_target.fetch_register != NULL)
+	for (regno = 0; regno < the_low_target.num_regs; regno++)
+	  (*the_low_target.fetch_register) (regcache, regno);
+
       all = regsets_fetch_inferior_registers (regcache);
-      usr_fetch_inferior_registers (regcache, regno, all);
+      usr_fetch_inferior_registers (regcache, -1, all);
     }
   else
     {
+      if (the_low_target.fetch_register != NULL
+	  && (*the_low_target.fetch_register) (regcache, regno))
+	return;
+
       use_regsets = linux_register_in_regsets (regno);
       if (use_regsets)
 	all = regsets_fetch_inferior_registers (regcache);
@@ -4683,7 +4823,7 @@ linux_qxfer_osdata (const char *annex,
    layout of the inferiors' architecture.  */
 
 static void
-siginfo_fixup (struct siginfo *siginfo, void *inf_siginfo, int direction)
+siginfo_fixup (siginfo_t *siginfo, void *inf_siginfo, int direction)
 {
   int done = 0;
 
@@ -4695,9 +4835,9 @@ siginfo_fixup (struct siginfo *siginfo, void *inf_siginfo, int direction)
   if (!done)
     {
       if (direction == 1)
-	memcpy (siginfo, inf_siginfo, sizeof (struct siginfo));
+	memcpy (siginfo, inf_siginfo, sizeof (siginfo_t));
       else
-	memcpy (inf_siginfo, siginfo, sizeof (struct siginfo));
+	memcpy (inf_siginfo, siginfo, sizeof (siginfo_t));
     }
 }
 
@@ -4706,8 +4846,8 @@ linux_xfer_siginfo (const char *annex, unsigned char *readbuf,
 		    unsigned const char *writebuf, CORE_ADDR offset, int len)
 {
   int pid;
-  struct siginfo siginfo;
-  char inf_siginfo[sizeof (struct siginfo)];
+  siginfo_t siginfo;
+  char inf_siginfo[sizeof (siginfo_t)];
 
   if (current_inferior == NULL)
     return -1;
@@ -5250,7 +5390,16 @@ get_dynamic (const int pid, const int is_elf64)
 
   if (relocation == -1)
     {
-      warning ("Unexpected missing PT_PHDR");
+      /* PT_PHDR is optional, but necessary for PIE in general.  Fortunately
+	 any real world executables, including PIE executables, have always
+	 PT_PHDR present.  PT_PHDR is not present in some shared libraries or
+	 in fpc (Free Pascal 2.4) binaries but neither of those have a need for
+	 or present DT_DEBUG anyway (fpc binaries are statically linked).
+
+	 Therefore if there exists DT_DEBUG there is always also PT_PHDR.
+
+	 GDB could find RELOCATION also from AT_ENTRY - e_entry.  */
+
       return 0;
     }
 
@@ -5276,7 +5425,9 @@ get_dynamic (const int pid, const int is_elf64)
 }
 
 /* Return &_r_debug in the inferior, or -1 if not present.  Return value
-   can be 0 if the inferior does not yet have the library list initialized.  */
+   can be 0 if the inferior does not yet have the library list initialized.
+   We look for DT_MIPS_RLD_MAP first.  MIPS executables use this instead of
+   DT_DEBUG, although they sometimes contain an unused DT_DEBUG entry too.  */
 
 static CORE_ADDR
 get_r_debug (const int pid, const int is_elf64)
@@ -5284,19 +5435,35 @@ get_r_debug (const int pid, const int is_elf64)
   CORE_ADDR dynamic_memaddr;
   const int dyn_size = is_elf64 ? sizeof (Elf64_Dyn) : sizeof (Elf32_Dyn);
   unsigned char buf[sizeof (Elf64_Dyn)];  /* The larger of the two.  */
+  CORE_ADDR map = -1;
 
   dynamic_memaddr = get_dynamic (pid, is_elf64);
   if (dynamic_memaddr == 0)
-    return (CORE_ADDR) -1;
+    return map;
 
   while (linux_read_memory (dynamic_memaddr, buf, dyn_size) == 0)
     {
       if (is_elf64)
 	{
 	  Elf64_Dyn *const dyn = (Elf64_Dyn *) buf;
+	  union
+	    {
+	      Elf64_Xword map;
+	      unsigned char buf[sizeof (Elf64_Xword)];
+	    }
+	  rld_map;
 
-	  if (dyn->d_tag == DT_DEBUG)
-	    return dyn->d_un.d_val;
+	  if (dyn->d_tag == DT_MIPS_RLD_MAP)
+	    {
+	      if (linux_read_memory (dyn->d_un.d_val,
+				     rld_map.buf, sizeof (rld_map.buf)) == 0)
+		return rld_map.map;
+	      else
+		break;
+	    }
+
+	  if (dyn->d_tag == DT_DEBUG && map == -1)
+	    map = dyn->d_un.d_val;
 
 	  if (dyn->d_tag == DT_NULL)
 	    break;
@@ -5304,9 +5471,24 @@ get_r_debug (const int pid, const int is_elf64)
       else
 	{
 	  Elf32_Dyn *const dyn = (Elf32_Dyn *) buf;
+	  union
+	    {
+	      Elf32_Word map;
+	      unsigned char buf[sizeof (Elf32_Word)];
+	    }
+	  rld_map;
 
-	  if (dyn->d_tag == DT_DEBUG)
-	    return dyn->d_un.d_val;
+	  if (dyn->d_tag == DT_MIPS_RLD_MAP)
+	    {
+	      if (linux_read_memory (dyn->d_un.d_val,
+				     rld_map.buf, sizeof (rld_map.buf)) == 0)
+		return rld_map.map;
+	      else
+		break;
+	    }
+
+	  if (dyn->d_tag == DT_DEBUG && map == -1)
+	    map = dyn->d_un.d_val;
 
 	  if (dyn->d_tag == DT_NULL)
 	    break;
@@ -5315,7 +5497,7 @@ get_r_debug (const int pid, const int is_elf64)
       dynamic_memaddr += dyn_size;
     }
 
-  return (CORE_ADDR) -1;
+  return map;
 }
 
 /* Read one pointer from MEMADDR in the inferior.  */
@@ -5323,8 +5505,30 @@ get_r_debug (const int pid, const int is_elf64)
 static int
 read_one_ptr (CORE_ADDR memaddr, CORE_ADDR *ptr, int ptr_size)
 {
-  *ptr = 0;
-  return linux_read_memory (memaddr, (unsigned char *) ptr, ptr_size);
+  int ret;
+
+  /* Go through a union so this works on either big or little endian
+     hosts, when the inferior's pointer size is smaller than the size
+     of CORE_ADDR.  It is assumed the inferior's endianness is the
+     same of the superior's.  */
+  union
+  {
+    CORE_ADDR core_addr;
+    unsigned int ui;
+    unsigned char uc;
+  } addr;
+
+  ret = linux_read_memory (memaddr, &addr.uc, ptr_size);
+  if (ret == 0)
+    {
+      if (ptr_size == sizeof (CORE_ADDR))
+	*ptr = addr.core_addr;
+      else if (ptr_size == sizeof (unsigned int))
+	*ptr = addr.ui;
+      else
+	gdb_assert_not_reached ("unhandled pointer size");
+    }
+  return ret;
 }
 
 struct link_map_offsets
@@ -5351,7 +5555,7 @@ struct link_map_offsets
     int l_prev_offset;
   };
 
-/* Construct qXfer:libraries:read reply.  */
+/* Construct qXfer:libraries-svr4:read reply.  */
 
 static int
 linux_qxfer_libraries_svr4 (const char *annex, unsigned char *readbuf,
@@ -5386,6 +5590,7 @@ linux_qxfer_libraries_svr4 (const char *annex, unsigned char *readbuf,
       32     /* l_prev offset in link_map.  */
     };
   const struct link_map_offsets *lmo;
+  unsigned int machine;
 
   if (writebuf != NULL)
     return -2;
@@ -5394,7 +5599,7 @@ linux_qxfer_libraries_svr4 (const char *annex, unsigned char *readbuf,
 
   pid = lwpid_of (get_thread_lwp (current_inferior));
   xsnprintf (filename, sizeof filename, "/proc/%d/exe", pid);
-  is_elf64 = elf_64_file_p (filename);
+  is_elf64 = elf_64_file_p (filename, &machine);
   lmo = is_elf64 ? &lmo_64bit_offsets : &lmo_32bit_offsets;
 
   if (priv->r_debug == 0)
@@ -5503,7 +5708,13 @@ linux_qxfer_libraries_svr4 (const char *annex, unsigned char *readbuf,
 	  lm_addr = l_next;
 	}
     done:
-      strcpy (p, "</library-list-svr4>");
+      if (!header_done)
+	{
+	  /* Empty list; terminate `<library-list-svr4'.  */
+	  strcpy (p, "/>");
+	}
+      else
+	strcpy (p, "</library-list-svr4>");
     }
 
   document_len = strlen (document);

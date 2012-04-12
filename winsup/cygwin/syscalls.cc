@@ -1344,7 +1344,10 @@ lseek64 (int fd, _off64_t pos, int dir)
       else
 	res = -1;
     }
-  syscall_printf ("%R = lseek(%d, %D, %d)", res, fd, pos, dir);
+  /* Can't use %R here since res is 8 bytes */
+  syscall_printf (res == -1 ? "%D = lseek(%d, %D, %d), errno %d"
+			    : "%D = lseek(%d, %D, %d)",
+		  res, fd, pos, dir, get_errno ());
 
   return res;
 }
@@ -1582,6 +1585,49 @@ stat64_to_stat32 (struct __stat64 *src, struct __stat32 *dst)
   dst->st_blocks = src->st_blocks;
 }
 
+static struct __stat64 dev_st;
+static bool dev_st_inited;
+
+void
+fhandler_base::stat_fixup (struct __stat64 *buf)
+{
+  /* For devices, set inode number to device number.  This gives us a valid,
+     unique inode number without having to call hash_path_name. */
+  if (!buf->st_ino)
+    buf->st_ino = (get_major () == DEV_VIRTFS_MAJOR) ? get_ino ()
+						     : get_device ();
+  /* For /dev-based devices, st_dev must be set to the device number of /dev,
+     not it's own device major/minor numbers.  What we do here to speed up
+     the process is to fetch the device number of /dev only once, liberally
+     assuming that /dev doesn't change over the lifetime of a process. */
+  if (!buf->st_dev)
+    {
+      if (dev ().is_dev_resident ())
+	{
+	  if (!dev_st_inited)
+	    {
+	      stat64 ("/dev", &dev_st);
+	      dev_st_inited = true;
+	    }
+	  buf->st_dev = dev_st.st_dev;
+	}
+      else
+	buf->st_dev = get_device ();
+    }
+  /* Only set st_rdev if it's a device. */
+  if (!buf->st_rdev && get_major () != DEV_VIRTFS_MAJOR)
+    {
+      buf->st_rdev = get_device ();
+      /* consX, console, conin, and conout point to the same device.
+	 Make sure the link count is correct. */
+      if (buf->st_rdev == (dev_t) myself->ctty && iscons_dev (myself->ctty))
+	buf->st_nlink = 4;
+      /* CD-ROM drives have two links, /dev/srX and /dev/scdX. */
+      else if (gnu_dev_major (buf->st_rdev) == DEV_CDROM_MAJOR)
+	buf->st_nlink = 2;
+    }
+}
+
 extern "C" int
 fstat64 (int fd, struct __stat64 *buf)
 {
@@ -1595,14 +1641,7 @@ fstat64 (int fd, struct __stat64 *buf)
       memset (buf, 0, sizeof (struct __stat64));
       res = cfd->fstat (buf);
       if (!res)
-	{
-	  if (!buf->st_ino)
-	    buf->st_ino = cfd->get_ino ();
-	  if (!buf->st_dev)
-	    buf->st_dev = cfd->get_device ();
-	  if (!buf->st_rdev)
-	    buf->st_rdev = buf->st_dev;
-	}
+	cfd->stat_fixup (buf);
     }
 
   syscall_printf ("%R = fstat(%d, %p)", res, fd, buf);
@@ -1741,14 +1780,7 @@ stat_worker (path_conv &pc, struct __stat64 *buf)
       memset (buf, 0, sizeof (*buf));
       res = fh->fstat (buf);
       if (!res)
-	{
-	  if (!buf->st_ino)
-	    buf->st_ino = fh->get_ino ();
-	  if (!buf->st_dev)
-	    buf->st_dev = fh->get_device ();
-	  if (!buf->st_rdev)
-	    buf->st_rdev = buf->st_dev;
-	}
+	fh->stat_fixup (buf);
       delete fh;
     }
   else

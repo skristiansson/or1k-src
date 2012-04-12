@@ -27,7 +27,6 @@
 /sigall-precsave.exp/1.9/Mon Jan 16 16:21:52 2012//
 /sigall-reverse.c/1.7/Tue Feb 28 10:24:15 2012//
 /sigall-reverse.exp/1.11/Mon Jan 16 16:21:52 2012//
-/solib-precsave.exp/1.7/Fri Feb 24 00:05:56 2012//
 /solib-reverse.c/1.5/Wed Jan  4 08:27:54 2012//
 /solib-reverse.exp/1.7/Fri Feb 24 00:05:56 2012//
 /step-precsave.exp/1.6/Wed Jan  4 08:27:54 2012//
@@ -40,4 +39,5 @@
 /watch-precsave.exp/1.9/Wed Jan  4 08:27:54 2012//
 /watch-reverse.c/1.6/Wed Jan  4 08:27:54 2012//
 /watch-reverse.exp/1.9/Wed Jan  4 08:27:54 2012//
+/solib-precsave.exp/1.8/Thu Apr 12 16:01:30 2012//
 D

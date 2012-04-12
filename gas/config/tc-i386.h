@@ -63,6 +63,8 @@ extern unsigned long i386_mach (void);
 #define ELF_TARGET_FORMAT	"elf32-i386-vxworks"
 #elif defined (TE_NACL)
 #define ELF_TARGET_FORMAT	"elf32-i386-nacl"
+#define ELF_TARGET_FORMAT32	"elf32-x86-64-nacl"
+#define ELF_TARGET_FORMAT64	"elf64-x86-64-nacl"
 #endif
 
 #ifdef TE_SOLARIS
@@ -214,6 +216,9 @@ if (fragP->fr_type == rs_align_code) 					\
 
 void i386_print_statistics (FILE *);
 #define tc_print_statistics i386_print_statistics
+
+extern unsigned int i386_frag_max_var (fragS *);
+#define md_frag_max_var i386_frag_max_var
 
 #define md_number_to_chars number_to_chars_littleendian
 

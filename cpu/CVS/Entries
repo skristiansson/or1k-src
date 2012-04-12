@@ -33,8 +33,6 @@
 /mep.opc/1.1/Mon Aug 22 15:25:07 2011//
 /mt.cpu/1.4/Wed Sep  2 07:21:03 2009//
 /mt.opc/1.6/Mon Feb 27 06:57:57 2012//
-/openrisc.cpu/1.1/Mon Aug 22 15:25:07 2011//
-/openrisc.opc/1.1/Mon Aug 22 15:25:07 2011//
 /sh.cpu/1.4/Wed Sep  2 07:21:03 2009//
 /sh.opc/1.5/Wed Sep  2 07:21:03 2009//
 /sh64-compact.cpu/1.4/Wed Sep  2 07:21:03 2009//
@@ -44,4 +42,6 @@
 /xc16x.opc/1.5/Fri Feb 12 04:38:21 2010//
 /xstormy16.cpu/1.1/Mon Aug 22 15:25:07 2011//
 /xstormy16.opc/1.1/Mon Aug 22 15:25:07 2011//
+/openrisc.cpu/1.1/Thu Apr 12 15:59:05 2012//
+/openrisc.opc/1.1/Thu Apr 12 15:59:05 2012//
 D

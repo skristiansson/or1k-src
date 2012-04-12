@@ -18,6 +18,7 @@ details. */
 #include <winuser.h>
 #include <winnls.h>
 #include <ctype.h>
+#include <sys/param.h>
 #include <sys/cygwin.h>
 #include <cygwin/kd.h>
 #include "cygerrno.h"
@@ -133,34 +134,41 @@ fhandler_console::set_unit ()
 {
   bool created;
   fh_devices devset;
+  lock_ttys here;
+  HWND me;
   if (shared_console_info)
     {
       fh_devices this_unit = dev ();
       fh_devices shared_unit =
 	(fh_devices) shared_console_info->tty_min_state.getntty ();
-      created = false;
       devset = (shared_unit == this_unit || this_unit == FH_CONSOLE
 		|| this_unit == FH_CONIN || this_unit == FH_CONOUT
 		|| this_unit == FH_TTY) ?
 		shared_unit : FH_ERROR;
+      created = false;
     }
+  else if ((myself->ctty != -1 && !iscons_dev (myself->ctty))
+	   || !(me = GetConsoleWindow ()))
+    devset = FH_ERROR;
   else
     {
-      HWND me = GetConsoleWindow ();
       created = true;
       shared_console_info = open_shared_console (me, cygheap->console_h, created);
       ProtectHandleINH (cygheap->console_h);
       if (created)
-	{
-	  lock_ttys here;
-	  shared_console_info->tty_min_state.setntty (DEV_CONS_MAJOR, console_unit (me));
-	}
+	shared_console_info->tty_min_state.setntty (DEV_CONS_MAJOR, console_unit (me));
       devset = (fh_devices) shared_console_info->tty_min_state.getntty ();
     }
 
   dev ().parse (devset);
   if (devset != FH_ERROR)
     pc.file_attributes (FILE_ATTRIBUTE_NORMAL);
+  else
+    {
+      set_io_handle (NULL);
+      set_output_handle (NULL);
+      created = false;
+    }
   return created;
 }
 
@@ -1740,7 +1748,7 @@ fhandler_console::write_normal (const unsigned char *src,
   if (trunc_buf.len)
     {
       const unsigned char *nfound;
-      int cp_len = min (end - src, 4 - trunc_buf.len);
+      int cp_len = MIN (end - src, 4 - trunc_buf.len);
       memcpy (trunc_buf.buf + trunc_buf.len, src, cp_len);
       memset (&ps, 0, sizeof ps);
       switch (ret = f_mbtowc (_REENT, NULL, (const char *) trunc_buf.buf,

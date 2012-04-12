@@ -35,7 +35,7 @@ enum child_status
 #define EXEC_MAGIC_SIZE sizeof(child_info)
 
 /* Change this value if you get a message indicating that it is out-of-sync. */
-#define CURR_CHILD_INFO_MAGIC 0x76041b78U
+#define CURR_CHILD_INFO_MAGIC 0xca644850U
 
 #define NPROCS	256
 
@@ -61,6 +61,8 @@ public:
   void *cygheap_max;
   unsigned char flag;
   int retry;		// number of times we've tried to start child process
+  HANDLE rd_proc_pipe;
+  HANDLE wr_proc_pipe;
   HANDLE subproc_ready;	// used for synchronization with parent
   HANDLE user_h;
   HANDLE parent;
@@ -78,10 +80,18 @@ public:
   bool isstraced () const {return !!(flag & _CI_STRACED);}
   bool iscygwin () const {return !!(flag & _CI_ISCYGWIN);}
   bool saw_ctrl_c () const {return !!(flag & _CI_SAW_CTRL_C);}
+  void prefork (bool = false);
+  void cleanup ();
+  void postfork (pinfo& child)
+  {
+    ForceCloseHandle (wr_proc_pipe);
+    wr_proc_pipe = NULL;
+    child.set_rd_proc_pipe (rd_proc_pipe);
+    rd_proc_pipe = NULL;
+  }
 };
 
 class mount_info;
-class _pinfo;
 
 class child_info_fork: public child_info
 {
@@ -154,7 +164,7 @@ public:
 	return true;
       }
   }
-  void wait_for_myself () { WaitForSingleObject (ev, INFINITE); }
+  void wait_for_myself ();
   bool has_execed () const
   {
     if (hExeced)

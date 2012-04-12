@@ -65,10 +65,11 @@ dtable_init ()
 void __stdcall
 set_std_handle (int fd)
 {
+  fhandler_base *fh = cygheap->fdtab[fd];
   if (fd == 0)
-    SetStdHandle (std_consts[fd], cygheap->fdtab[fd]->get_handle ());
+    SetStdHandle (std_consts[fd], fh ? fh->get_handle () : NULL);
   else if (fd <= 2)
-    SetStdHandle (std_consts[fd], cygheap->fdtab[fd]->get_output_handle ());
+    SetStdHandle (std_consts[fd], fh ? fh->get_output_handle () : NULL);
 }
 
 int
@@ -244,6 +245,8 @@ dtable::release (int fd)
     dec_need_fixup_before ();
   fds[fd]->refcnt (-1);
   fds[fd] = NULL;
+  if (fd <= 2)
+    set_std_handle (fd);
 }
 
 extern "C" int
@@ -253,6 +256,8 @@ cygwin_attach_handle_to_fd (char *name, int fd, HANDLE handle, mode_t bin,
   if (fd == -1)
     fd = cygheap->fdtab.find_unused_handle ();
   fhandler_base *fh = build_fh_name (name);
+  if (!fh)
+    return -1;
   cygheap->fdtab[fd] = fh;
   cygheap->fdtab[fd]->refcnt (1);
   fh->init (handle, myaccess, bin ?: fh->pc_binmode ());
@@ -333,6 +338,9 @@ dtable::init_std_file_from_handle (int fd, HANDLE handle)
 	fh = build_fh_dev (dev);
       else
 	fh = build_fh_name (name);
+
+      if (!fh)
+	return;
 
       if (name[0])
 	{
@@ -453,9 +461,6 @@ fh_alloc (path_conv& pc)
     case DEV_PTYM_MAJOR:
       fh = cnew (fhandler_pty_master, pc.dev.get_minor ());
       break;
-    case DEV_CYGDRIVE_MAJOR:
-      fh = cnew (fhandler_cygdrive);
-      break;
     case DEV_FLOPPY_MAJOR:
     case DEV_CDROM_MAJOR:
     case DEV_SD_MAJOR:
@@ -478,7 +483,7 @@ fh_alloc (path_conv& pc)
       fh = cnew (fhandler_console, pc.dev);
       break;
     default:
-      switch ((int) pc.dev)
+      switch ((DWORD) pc.dev)
 	{
 	case FH_CONSOLE:
 	case FH_CONIN:
@@ -555,6 +560,12 @@ fh_alloc (path_conv& pc)
 	  break;
 	case FH_NETDRIVE:
 	  fh = cnew (fhandler_netdrive);
+	  break;
+	case FH_DEV:
+	  fh = cnew (fhandler_dev);
+	  break;
+	case FH_CYGDRIVE:
+	  fh = cnew (fhandler_cygdrive);
 	  break;
 	case FH_TTY:
 	  if (!pc.isopen ())
@@ -829,6 +840,17 @@ dtable::set_file_pointers_for_exec ()
 }
 
 void
+dtable::fixup_close (size_t i, fhandler_base *fh)
+{
+  if (fh->archetype)
+    {
+      debug_printf ("closing fd %d since it is an archetype", i);
+      fh->close_with_arch ();
+    }
+  release (i);
+}
+
+void
 dtable::fixup_after_exec ()
 {
   first_fd_for_open = 0;
@@ -838,15 +860,11 @@ dtable::fixup_after_exec ()
       {
 	fh->clear_readahead ();
 	fh->fixup_after_exec ();
-	if (fh->close_on_exec ())
-	  {
-	    if (fh->archetype)
-	      {
-		debug_printf ("closing fd %d since it is an archetype", i);
-		fh->close_with_arch ();
-	      }
-	    release (i);
-	  }
+	/* Close the handle if it's close-on-exec or if an error was detected
+	   (typically with opening a console in a gui app) by fixup_after_exec.
+	 */
+	if (fh->close_on_exec () || !fh->get_io_handle ())
+	  fixup_close (i, fh);
 	else if (fh->get_popen_pid ())
 	  close (i);
 	else if (i == 0)
@@ -867,6 +885,13 @@ dtable::fixup_after_fork (HANDLE parent)
 	  {
 	    debug_printf ("fd %d (%s)", i, fh->get_name ());
 	    fh->fixup_after_fork (parent);
+	    if (!fh->get_io_handle ())
+	      {
+		/* This should actually never happen but it's here to make sure
+		   we don't crash due to access of an unopened file handle.  */
+		fixup_close (i, fh);
+		continue;
+	      }
 	  }
 	if (i == 0)
 	  SetStdHandle (std_consts[i], fh->get_io_handle ());

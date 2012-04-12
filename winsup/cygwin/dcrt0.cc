@@ -1,7 +1,7 @@
 /* dcrt0.cc -- essentially the main() for the Cygwin dll
 
    Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
-   2007, 2008, 2009, 2010, 2011 Red Hat, Inc.
+   2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -598,6 +598,17 @@ child_info_fork::handle_fork ()
 	      "user heap", cygheap->user_heap.base, cygheap->user_heap.ptr,
 	      NULL);
 
+  /* If my_wr_proc_pipe != NULL then it's a leftover handle from a previously
+     forked process.  Close it now or suffer confusion with the parent of our
+     parent.  */
+  if (my_wr_proc_pipe)
+    ForceCloseHandle1 (my_wr_proc_pipe, wr_proc_pipe);
+
+  /* Setup our write end of the process pipe.  Clear the one in the structure.
+     The destructor should never be called for this but, it can't hurt to be
+     safe. */
+  my_wr_proc_pipe = wr_proc_pipe;
+  rd_proc_pipe = wr_proc_pipe = NULL;
   /* Do the relocations here.  These will actually likely be overwritten by the
      below child_copy but we do them here in case there is a read-only section
      which does not get copied by fork. */
@@ -626,6 +637,13 @@ child_info_spawn::handle_spawn ()
 			GetCurrentProcess (), &h, 0,
 			FALSE, DUPLICATE_SAME_ACCESS | DUPLICATE_CLOSE_SOURCE))
     h = NULL;
+
+  /* Setup our write end of the process pipe.  Clear the one in the structure.
+     The destructor should never be called for this but, it can't hurt to be
+     safe. */
+  my_wr_proc_pipe = wr_proc_pipe;
+  rd_proc_pipe = wr_proc_pipe = NULL;
+
   myself.thisproc (h);
   __argc = moreinfo->argc;
   __argv = moreinfo->argv;
@@ -683,6 +701,7 @@ init_windows_system_directory ()
 void
 dll_crt0_0 ()
 {
+  wincap.init ();
   child_proc_info = get_cygwin_startup_info ();
   init_windows_system_directory ();
   init_global_security ();
@@ -725,13 +744,13 @@ dll_crt0_0 ()
       cygwin_user_h = child_proc_info->user_h;
       switch (child_proc_info->type)
 	{
-	  case _CH_FORK:
-	    fork_info->handle_fork ();
-	    break;
-	  case _CH_SPAWN:
-	  case _CH_EXEC:
-	    spawn_info->handle_spawn ();
-	    break;
+	case _CH_FORK:
+	  fork_info->handle_fork ();
+	  break;
+	case _CH_SPAWN:
+	case _CH_EXEC:
+	  spawn_info->handle_spawn ();
+	  break;
 	}
     }
 

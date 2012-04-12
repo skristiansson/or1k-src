@@ -779,6 +779,7 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
   const gdb_byte *regs = xsave;
   int i;
   unsigned int clear_bv;
+  static const gdb_byte zero[MAX_REGISTER_SIZE] = { 0 };
   const gdb_byte *p;
   enum
     {
@@ -789,6 +790,7 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
       all = x87 | sse | avxh
     } regclass;
 
+  gdb_assert (regs != NULL);
   gdb_assert (tdep->st0_regnum >= I386_ST0_REGNUM);
   gdb_assert (tdep->num_xmm_regs > 0);
 
@@ -806,7 +808,7 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
   else
     regclass = none;
 
-  if (regs != NULL && regclass != none)
+  if (regclass != none)
     {
       /* Get `xstat_bv'.  */
       const gdb_byte *xstate_bv_p = XSAVE_XSTATE_BV_ADDR (regs);
@@ -818,6 +820,15 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
   else
     clear_bv = I386_XSTATE_AVX_MASK;
 
+  /* With the delayed xsave mechanism, in between the program
+     starting, and the program accessing the vector registers for the
+     first time, the register's values are invalid.  The kernel
+     initializes register states to zero when they are set the first
+     time in a program.  This means that from the user-space programs'
+     perspective, it's the same as if the registers have always been
+     zero from the start of the program.  Therefore, the debugger
+     should provide the same illusion to the user.  */
+
   switch (regclass)
     {
     case none:
@@ -825,26 +836,26 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
 
     case avxh:
       if ((clear_bv & I386_XSTATE_AVX))
-	p = NULL;
+	regcache_raw_supply (regcache, regnum, zero);
       else
-	p = XSAVE_AVXH_ADDR (tdep, regs, regnum);
-      regcache_raw_supply (regcache, regnum, p);
+	regcache_raw_supply (regcache, regnum,
+			     XSAVE_AVXH_ADDR (tdep, regs, regnum));
       return;
 
     case sse:
       if ((clear_bv & I386_XSTATE_SSE))
-	p = NULL;
+	regcache_raw_supply (regcache, regnum, zero);
       else
-	p = FXSAVE_ADDR (tdep, regs, regnum);
-      regcache_raw_supply (regcache, regnum, p);
+	regcache_raw_supply (regcache, regnum,
+			     FXSAVE_ADDR (tdep, regs, regnum));
       return;
 
     case x87:
       if ((clear_bv & I386_XSTATE_X87))
-	p = NULL;
+	regcache_raw_supply (regcache, regnum, zero);
       else
-	p = FXSAVE_ADDR (tdep, regs, regnum);
-      regcache_raw_supply (regcache, regnum, p);
+	regcache_raw_supply (regcache, regnum,
+			     FXSAVE_ADDR (tdep, regs, regnum));
       return;
 
     case all:
@@ -852,16 +863,19 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
       if ((tdep->xcr0 & I386_XSTATE_AVX))
 	{
 	  if ((clear_bv & I386_XSTATE_AVX))
-	    p = NULL;
-	  else
-	    p = regs;
-
-	  for (i = I387_YMM0H_REGNUM (tdep);
-	       i < I387_YMMENDH_REGNUM (tdep); i++)
 	    {
-	      if (p != NULL)
-		p = XSAVE_AVXH_ADDR (tdep, regs, i);
-	      regcache_raw_supply (regcache, i, p);
+	      for (i = I387_YMM0H_REGNUM (tdep);
+		   i < I387_YMMENDH_REGNUM (tdep);
+		   i++)
+		regcache_raw_supply (regcache, i, zero);
+	    }
+	  else
+	    {
+	      for (i = I387_YMM0H_REGNUM (tdep);
+		   i < I387_YMMENDH_REGNUM (tdep);
+		   i++)
+		regcache_raw_supply (regcache, i,
+				     XSAVE_AVXH_ADDR (tdep, regs, i));
 	    }
 	}
 
@@ -869,16 +883,18 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
       if ((tdep->xcr0 & I386_XSTATE_SSE))
 	{
 	  if ((clear_bv & I386_XSTATE_SSE))
-	    p = NULL;
-	  else
-	    p = regs;
-
-	  for (i = I387_XMM0_REGNUM (tdep);
-	       i < I387_MXCSR_REGNUM (tdep); i++)
 	    {
-	      if (p != NULL)
-		p = FXSAVE_ADDR (tdep, regs, i);
-	      regcache_raw_supply (regcache, i, p);
+	      for (i = I387_XMM0_REGNUM (tdep);
+		   i < I387_MXCSR_REGNUM (tdep);
+		   i++)
+		regcache_raw_supply (regcache, i, zero);
+	    }
+	  else
+	    {
+	      for (i = I387_XMM0_REGNUM (tdep);
+		   i < I387_MXCSR_REGNUM (tdep); i++)
+		regcache_raw_supply (regcache, i,
+				     FXSAVE_ADDR (tdep, regs, i));
 	    }
 	}
 
@@ -886,16 +902,18 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
       if ((tdep->xcr0 & I386_XSTATE_X87))
 	{
 	  if ((clear_bv & I386_XSTATE_X87))
-	    p = NULL;
-	  else
-	    p = regs;
-
-	  for (i = I387_ST0_REGNUM (tdep);
-	       i < I387_FCTRL_REGNUM (tdep); i++)
 	    {
-	      if (p != NULL)
-		p = FXSAVE_ADDR (tdep, regs, i);
-	      regcache_raw_supply (regcache, i, p);
+	      for (i = I387_ST0_REGNUM (tdep);
+		   i < I387_FCTRL_REGNUM (tdep);
+		   i++)
+		regcache_raw_supply (regcache, i, zero);
+	    }
+	  else
+	    {
+	      for (i = I387_ST0_REGNUM (tdep);
+		   i < I387_FCTRL_REGNUM (tdep);
+		   i++)
+		regcache_raw_supply (regcache, i, FXSAVE_ADDR (tdep, regs, i));
 	    }
 	}
       break;
@@ -905,12 +923,6 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
   for (i = I387_FCTRL_REGNUM (tdep); i < I387_XMM0_REGNUM (tdep); i++)
     if (regnum == -1 || regnum == i)
       {
-	if (regs == NULL)
-	  {
-	    regcache_raw_supply (regcache, i, NULL);
-	    continue;
-	  }
-
 	/* Most of the FPU control registers occupy only 16 bits in
 	   the xsave extended state.  Give those a special treatment.  */
 	if (i != I387_FIOFF_REGNUM (tdep)
@@ -961,10 +973,8 @@ i387_supply_xsave (struct regcache *regcache, int regnum,
       }
 
   if (regnum == I387_MXCSR_REGNUM (tdep) || regnum == -1)
-    {
-      p = regs == NULL ? NULL : FXSAVE_MXCSR_ADDR (regs);
-      regcache_raw_supply (regcache, I387_MXCSR_REGNUM (tdep), p);
-    }
+    regcache_raw_supply (regcache, I387_MXCSR_REGNUM (tdep),
+			 FXSAVE_MXCSR_ADDR (regs));
 }
 
 /* Similar to i387_collect_fxsave, but use XSAVE extended state.  */

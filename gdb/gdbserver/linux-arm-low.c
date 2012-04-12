@@ -631,7 +631,7 @@ static int
 arm_stopped_by_watchpoint (void)
 {
   struct lwp_info *lwp = get_thread_lwp (current_inferior);
-  struct siginfo siginfo;
+  siginfo_t siginfo;
 
   /* We must be able to set hardware watchpoints.  */
   if (arm_linux_get_hw_watchpoint_count () == 0)
@@ -837,6 +837,7 @@ struct linux_target_ops the_low_target = {
   NULL,
   arm_cannot_fetch_register,
   arm_cannot_store_register,
+  NULL, /* fetch_register */
   arm_get_pc,
   arm_set_pc,
 
