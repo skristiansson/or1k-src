@@ -1,3 +1,7 @@
+2012-04-12  Peter Gavin  <pgavin@gmail.com>
+
+	* sim-arch.scm: define WI, UWI, AI, & IAI using mode:c-type
+
 2012-03-14  Peter Gavin  <pgavin@gmail.com>
 
 	* add mul-o1flag (1's complement unsigned multiply overflow flag)
