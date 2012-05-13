@@ -702,6 +702,7 @@ arm
 spu
 tic6x
 iq2000
+or1k
 libnosys'
 
 # Initialize some variables set by options.
@@ -2541,6 +2542,10 @@ case "${target}" in
 	;;
   iq2000-*-*)
 	subdirs="$subdirs iq2000"
+
+	;;
+  or1k-*-* | or1knd-*-*)
+	subdirs="$subdirs or1k"
 
 	;;
 esac

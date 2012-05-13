@@ -1,3 +1,17 @@
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
+	* configure.in: add or1knd target
+	* configure: regenerate
+	* or1k/crt0.s: include or1k-asm.h from newlib, use OR1K_DELAYED*
+	to make delay slot agnostic
+	* or1k/ml501.S: also include or1k-asm.h from newlib, even though
+	we don't use OR1K_DELAYED* here, because it conditionally emits
+	the ".nodelay" directive
+	* or1k/or1ksim.S: ditto
+	* or1k/ordb1a3pe1500.S: ditto
+	* or1k/ordb2a.S: ditto
+	* or1k/orpsocrefdesign.S: ditto
+
 2012-04-12  Peter Gavin  <pgavin@gmail.com>
 
 	* README, configure.in, libnosys/configure.in: add or1k target
