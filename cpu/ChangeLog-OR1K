@@ -1,3 +1,22 @@
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
+	* or1k.cpu, or1kcommon.cpu, or1korbis.cpu, or1kfpx.cpu: more
+	changes:
+	- set default alignment to "aligned"
+	- add nodelay (or1knd) support
+	- fix delay slot handling: since the simulator caches instructions
+	by basic blocks, when not using the delay slot, if a branch is
+	taken, we have to 1) skip the instruction in the delay slot, and
+	2) actually set the PC to the delay slot when the branch isn't taken
+	- use GPR entries in SPR array instead of their own array
+	- fix SPR enumerations, add the entries for the ones we care about
+	- fix nop handling for simulator
+	- call special C functions for mtspr/mfspr
+	- add address calculation taking LEE into account
+	- use correct opcodes for .d insns
+	- add custom insns
+	- other small things
+
 2012-04-12  Peter Gavin  <pgavin@gmail.com>
 
 	* or1k.opc: do not include cgen/basic-{modes,ops}.h

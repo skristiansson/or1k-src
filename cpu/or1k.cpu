@@ -30,8 +30,9 @@
 (define-arch
   (name or1k)
   (comment "OpenRISC 1000")
+  (default-alignment aligned)
   (insn-lsb0? #t)
-  (machs or32 or64)
+  (machs or32 or32nd or64 or64nd)
   (isas openrisc)
 )
 
@@ -41,16 +42,14 @@
   (name openrisc)
   ; Base insturction length.  The insns are always 32 bits wide.
   (base-insn-bitsize 32)
-  ; Address of insn in delay slot
-  (setup-semantics (set-quiet (reg h-delay-pc) (add pc 4)))
-)
+  )
 
-(define-pmacro OR32-MACHS    or32)
-(define-pmacro OR64-MACHS    or64)
-(define-pmacro ORBIS-MACHS   or32,or64)
-(define-pmacro ORFPX-MACHS   or32,or64)
-(define-pmacro ORFPX32-MACHS or32,or64)
-(define-pmacro ORFPX64-MACHS or64)
+(define-pmacro OR32-MACHS    or32,or32nd)
+(define-pmacro OR64-MACHS    or64,or64nd)
+(define-pmacro ORBIS-MACHS   or32,or32nd,or64,or64nd)
+(define-pmacro ORFPX-MACHS   or32,or32nd,or64,or64nd)
+(define-pmacro ORFPX32-MACHS or32,or32nd,or64,or64nd)
+(define-pmacro ORFPX64-MACHS or64,or64nd)
 
 ; An attribute to describe if an insn can be in the delay slot or not.
 (define-attr
@@ -59,14 +58,21 @@
   (name NOT-IN-DELAY-SLOT)
   (comment "insn can't go in delay slot")
 )
+
+(define-attr
+  (for model)
+  (type boolean)
+  (name NO-DELAY-SLOT)
+  (comment "does not have delay slots")
+  )
 
-(if (keep-mach? (OR32-MACHS))
+(if (keep-mach? (or32 or32nd))
     (begin
       (define-cpu
         (name or1k32bf)
         (comment "OpenRISC 1000 32-bit CPU family")
         (insn-endian big)
-        (data-endian either)
+        (data-endian big)
         (word-bitsize 32)
         (file-transform "")
         )
@@ -78,6 +84,13 @@
         (bfd-name "or1k")
         )
 
+      (define-mach
+        (name or32nd)
+        (comment "Generic OpenRISC 1000 32-bit CPU")
+        (cpu or1k32bf)
+        (bfd-name "or1knd")
+        )
+
       ; OpenRISC 1200 - 32-bit or1k CPU implementation
       (define-model
         (name or1200) (comment "OpenRISC 1200 model") 
@@ -85,16 +98,24 @@
         (mach or32)
         (unit u-exec "Execution Unit" () 1 1 () () () ())
         )
+
+      ; OpenRISC 1200 - 32-bit or1k CPU implementation
+      (define-model
+        (name or1200nd) (comment "OpenRISC 1200 model") 
+        (attrs NO-DELAY-SLOT)
+        (mach or32nd)
+        (unit u-exec "Execution Unit" () 1 1 () () () ())
+        )
       )
     )
 
-(if (keep-mach? (OR64-MACHS))
+(if (keep-mach? (or64 or64nd))
     (begin
       (define-cpu
         (name or1k64bf)
         (comment "OpenRISC 1000 64-bit CPU family")
         (insn-endian big)
-        (data-endian either)
+        (data-endian big)
         (word-bitsize 64)
         (file-transform "64")
         )
@@ -104,6 +125,13 @@
         (comment "Generic OpenRISC 1000 64-bit CPU")
         (cpu or1k64bf)
         (bfd-name "or1k64")
+        )
+
+      (define-mach
+        (name or64nd)
+        (comment "Generic OpenRISC 1000 ND 64-bit CPU")
+        (cpu or1k64bf)
+        (bfd-name "or1k64nd")
         )
       )
     )
