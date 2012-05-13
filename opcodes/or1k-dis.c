@@ -94,7 +94,7 @@ or1k_cgen_print_operand (CGEN_CPU_DESC cd,
       print_address (cd, info, fields->f_disp26, 0|(1<<CGEN_OPERAND_PCREL_ADDR), pc, length);
       break;
     case OR1K_OPERAND_RA :
-      print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r2, 0);
+      print_keyword (cd, info, & or1k_cgen_opval_h_gpr, fields->f_r2, 0);
       break;
     case OR1K_OPERAND_RADF :
       print_keyword (cd, info, & or1k_cgen_opval_h_fdr, fields->f_r1, 0);
@@ -103,7 +103,7 @@ or1k_cgen_print_operand (CGEN_CPU_DESC cd,
       print_keyword (cd, info, & or1k_cgen_opval_h_fsr, fields->f_r2, 0);
       break;
     case OR1K_OPERAND_RB :
-      print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r3, 0);
+      print_keyword (cd, info, & or1k_cgen_opval_h_gpr, fields->f_r3, 0);
       break;
     case OR1K_OPERAND_RBDF :
       print_keyword (cd, info, & or1k_cgen_opval_h_fdr, fields->f_r1, 0);
@@ -112,7 +112,7 @@ or1k_cgen_print_operand (CGEN_CPU_DESC cd,
       print_keyword (cd, info, & or1k_cgen_opval_h_fsr, fields->f_r3, 0);
       break;
     case OR1K_OPERAND_RD :
-      print_keyword (cd, info, & or1k_cgen_opval_h_gr, fields->f_r1, 0);
+      print_keyword (cd, info, & or1k_cgen_opval_h_gpr, fields->f_r1, 0);
       break;
     case OR1K_OPERAND_RDDF :
       print_keyword (cd, info, & or1k_cgen_opval_h_fdr, fields->f_r1, 0);
