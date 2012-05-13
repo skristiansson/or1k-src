@@ -1,3 +1,7 @@
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
+	* binutils-all/objdump.exp: (cpus_expected) add or1k
+
 2012-02-13  Peter Gavin  <pgavin@gmail.com>
 
 	* binutils-all/dw2-decodedline-1.S: new file, copied from
