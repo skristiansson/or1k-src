@@ -55,6 +55,8 @@
    ("SFGE_D" #x1b)
    ("SFLT_D" #x1c)
    ("SFLE_D" #x1d)
+   ("CUST1_S" #xd0)
+   ("CUST1_D" #xe0)
    )
   )
 
@@ -62,9 +64,9 @@
 (dnop rASF "source register A (single floating point mode)"    () h-fsr f-r2)
 (dnop rBSF "source register B (single floating point mode)"    () h-fsr f-r3)
 
-(dnop rDDF "destination register (double floating point mode)" () h-fdr f-r1)
-(dnop rADF "source register A (double floating point mode)"    () h-fdr f-r1)
-(dnop rBDF "source register B (double floating point mode)"    () h-fdr f-r1)
+(dnop rDDF "destination register (double floating point mode)" ((MACH ORFPX64-MACHS)) h-fdr f-r1)
+(dnop rADF "source register A (double floating point mode)"    ((MACH ORFPX64-MACHS)) h-fdr f-r1)
+(dnop rBDF "source register B (double floating point mode)"    ((MACH ORFPX64-MACHS)) h-fdr f-r1)
 
 (define-pmacro (float-regreg-insn mnemonic)
   (begin
@@ -79,8 +81,8 @@
     (dni (.sym lf- mnemonic -d)
          (.str "lf." mnemonic ".d reg/reg/reg")
          ((MACH ORFPX64-MACHS))
-         (.str "lf." mnemonic ".d $rDSF,$rASF,$rBSF")
-         (+ OPC_FLOAT rDDF rADF rBDF (f-resv-10-3 0) (.sym OPC_FLOAT_REGREG_ (.upcase mnemonic) _S))
+         (.str "lf." mnemonic ".d $rDDF,$rADF,$rBDF")
+         (+ OPC_FLOAT rDDF rADF rBDF (f-resv-10-3 0) (.sym OPC_FLOAT_REGREG_ (.upcase mnemonic) _D))
          (set DF rDDF (mnemonic DF rADF rBDF))
          ()
          )
@@ -104,7 +106,7 @@
      "lf.rem.d reg/reg/reg"
      ((MACH ORFPX64-MACHS))
      "lf.rem.d $rDDF,$rADF,$rBDF"
-     (+ OPC_FLOAT rDDF rADF rBDF (f-resv-10-3 0) OPC_FLOAT_REGREG_REM_S)
+     (+ OPC_FLOAT rDDF rADF rBDF (f-resv-10-3 0) OPC_FLOAT_REGREG_REM_D)
      (set DF rDDF (mod DF rADF rBDF))
      ()
      )
@@ -130,7 +132,7 @@
      "lf.itof.d reg/reg"
      ((MACH ORFPX64-MACHS))
      "lf.itof.d $rDSF,$rA"
-     (+ OPC_FLOAT rDSF rA (f-r3 0) (f-resv-10-3 0) OPC_FLOAT_REGREG_ITOF_S)
+     (+ OPC_FLOAT rDSF rA (f-r3 0) (f-resv-10-3 0) OPC_FLOAT_REGREG_ITOF_D)
      (set DF rDDF (float DF (get-rounding-mode) rA))
      ()
      )
@@ -148,7 +150,7 @@
      "lf.ftoi.d reg/reg"
      ((MACH ORFPX64-MACHS))
      "lf.ftoi.d $rD,$rADF"
-     (+ OPC_FLOAT rD rADF (f-r3 0) (f-resv-10-3 0) OPC_FLOAT_REGREG_FTOI_S)
+     (+ OPC_FLOAT rD rADF (f-r3 0) (f-resv-10-3 0) OPC_FLOAT_REGREG_FTOI_D)
      (set DI rD (fix DI (get-rounding-mode) rADF))
      ()
      )
@@ -167,7 +169,7 @@
          (.str "lf.sf" mnemonic ".d reg/reg")
          ((MACH ORFPX64-MACHS))
          (.str "lf.sf" mnemonic ".d $rASF,$rBSF")
-         (+ OPC_FLOAT (f-r1 0) rASF rBSF (f-resv-10-3 0) (.sym OPC_FLOAT_REGREG_SF (.upcase mnemonic) _S))
+         (+ OPC_FLOAT (f-r1 0) rASF rBSF (f-resv-10-3 0) (.sym OPC_FLOAT_REGREG_SF (.upcase mnemonic) _D))
          (set BI sys-sr-f (mnemonic DF rADF rBDF))
          ()
          )
@@ -193,7 +195,30 @@
      "lf.madd.d reg/reg/reg"
      ((MACH ORFPX64-MACHS))
      "lf.madd.d $rDDF,$rADF,$rBDF"
-     (+ OPC_FLOAT rDDF rADF rBDF (f-resv-10-3 0) OPC_FLOAT_REGREG_MADD_S)
+     (+ OPC_FLOAT rDDF rADF rBDF (f-resv-10-3 0) OPC_FLOAT_REGREG_MADD_D)
      (set DF rDDF (add DF (mul DF rADF rBDF) rDDF))
      ()
      )
+
+(define-pmacro (float-cust-insn cust-num)
+  (begin
+    (dni (.sym "lf-cust" cust-num "-s")
+         (.str "lf.cust" cust-num ".s")
+         ((MACH ORFPX-MACHS))
+         (.str "lf.cust" cust-num ".s $rASF,$rBSF")
+         (+ OPC_FLOAT (f-resv-25-5 0) rASF rBSF (f-resv-10-3 0) (.sym "OPC_FLOAT_REGREG_CUST" cust-num "_S"))
+         (nop)
+         ()
+         )
+    (dni (.sym "lf-cust" cust-num "-d")
+         (.str "lf.cust" cust-num ".d")
+         ((MACH ORFPX64-MACHS))
+         (.str "lf.cust" cust-num ".d")
+         (+ OPC_FLOAT (f-resv-25-5 0) rADF rBDF (f-resv-10-3 0) (.sym "OPC_FLOAT_REGREG_CUST" cust-num "_D"))
+         (nop)
+         ()
+         )
+    )
+  )
+
+(float-cust-insn "1")
