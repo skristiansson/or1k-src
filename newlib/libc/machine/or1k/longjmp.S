@@ -23,6 +23,7 @@
    with Doxygen.                                                              */
 /* -------------------------------------------------------------------------- */
 
+#include "or1k-asm.h"
 	
 /* -------------------------------------------------------------------------- */
 /*!_longjmp
@@ -52,11 +53,12 @@
 longjmp:
 	/* Sort out the return value */
 	l.sfne	r4,r0
-	l.bf	1f
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.bf	1f))
 
-	l.j	2f
-	l.addi	r11,r0,1		/* 1 as result */
+	OR1K_DELAYED(
+	OR1K_INST(l.addi	r11,r0,1),		/* 1 as result */
+	OR1K_INST(l.j	2f)
+	)
 
 1:	l.addi	r11,r4,0		/* val as result */
 
@@ -95,7 +97,6 @@ longjmp:
 	/* Result is already in r11. Having restored r9, it will appear as
 	   though we have returned from the earlier call to setjmp. The
 	   non-zero result gives it away though. */
-	l.jr	r9
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jr	r9))
 
 	.size	longjmp, .-longjmp

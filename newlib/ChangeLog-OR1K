@@ -1,3 +1,13 @@
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
+	* configure.host: add or1knd target
+	* libc/machine/or1k/include/or1k-asm.h: new file
+	- contains CPP macros (OR1K_DELAYED, OR1K_DELAYED_NOP) that allow
+	compilation both with and without delay slot
+	* libc/machine/or1k/longjmp.S: include or1k-asm.h, use OR1K_DELAYED*
+	* libc/machine/or1k/setjmp.S: ditto
+	* libc/machine/or1k/or1k-support-asm.S: ditto, also remove l.nop after l.rfe
+
 2012-04-12  Peter Gavin  <pgavin@gmail.com>
 
 	* configure.host: replace or16, or32 with or1k, enable or1k syscalls
