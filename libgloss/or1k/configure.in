@@ -53,35 +53,6 @@ AC_CANONICAL_TARGET
 AC_ARG_PROGRAM
 AC_PROG_INSTALL
 
-AC_DEFINE(HAVE_GNU_LD, 1, [Using GNU ld])
-
-# We always use ELF, define various useful associated things.
-AC_DEFINE(HAVE_ELF, 1, [Using ELF format])
-
-# Sort out what the symbol prefix is (we could just fix it as '_', but let the
-# script work it out.
-AC_CACHE_CHECK([for symbol prefix], libc_cv_symbol_prefix, [dnl
-cat > conftest.c <<\EOF
-foo () { }
-EOF
-dnl
-libc_cv_symbol_prefix=none
-if AC_TRY_COMMAND([${CC-cc} -S conftest.c -o - | fgrep "\$foo" > /dev/null]);
-then
-  libc_cv_symbol_prefix='$'
-else
-  if AC_TRY_COMMAND([${CC-cc} -S conftest.c -o - | fgrep "_foo" > /dev/null]);
-  then
-    libc_cv_symbol_prefix=_
-  fi
-fi
-rm -f conftest* ])
-if test $libc_cv_symbol_prefix != none; then
-  AC_DEFINE_UNQUOTED(__SYMBOL_PREFIX, "$libc_cv_symbol_prefix", [symbol prefix])
-else
-  AC_DEFINE(__SYMBOL_PREFIX, "", [symbol prefix])
-fi
-
 # Standard stuff copied from libnosys. For this we'll need an aclocal.m4
 LIB_AC_PROG_CC
 AS=${AS-as}
