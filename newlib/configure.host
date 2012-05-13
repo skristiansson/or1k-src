@@ -222,7 +222,7 @@ case "${host_cpu}" in
   mt*)
 	machine_dir=mt
 	;;
-  or1k)
+  or1k | or1knd)
         machine_dir=or1k
 	;;
   powerpc*)
@@ -693,7 +693,7 @@ case "${host}" in
         syscall_dir=syscalls
 	default_newlib_io_long_long="yes"
         ;;
-  or1k-*-*)
+  or1k-*-* | or1knd-*-*)
 	syscall_dir=syscalls
         ;;
   powerpc*-*-eabialtivec*)

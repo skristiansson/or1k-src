@@ -19,6 +19,7 @@
    You should have received a copy of the GNU General Public License along
    with this program.  If not, see <http://www.gnu.org/licenses/>.            */
 
+#include "or1k-asm.h"
 #include "spr-defs.h"
 
 /* -------------------------------------------------------------------------- */
@@ -37,7 +38,6 @@ or1k_dmmu_enable:
         l.mtspr r0,r3,SPR_ESR_BASE
         l.mtspr r0,r9,SPR_EPCR_BASE
         l.rfe
-        l.nop
 
 
 	.global or1k_dmmu_disable
@@ -49,7 +49,6 @@ or1k_dmmu_disable:
         l.mtspr r0,r3,SPR_ESR_BASE
         l.mtspr r0,r9,SPR_EPCR_BASE
         l.rfe
-        l.nop
 
 
 	.global or1k_immu_enable
@@ -59,7 +58,6 @@ or1k_immu_enable:
         l.mtspr r0,r3,SPR_ESR_BASE
         l.mtspr r0,r9,SPR_EPCR_BASE
         l.rfe
-        l.nop
 
 	.global or1k_immu_disable
 or1k_immu_disable:
@@ -70,7 +68,6 @@ or1k_immu_disable:
         l.mtspr r0,r3,SPR_ESR_BASE
         l.mtspr r0,r9,SPR_EPCR_BASE
         l.rfe
-        l.nop
 
 
 
@@ -88,8 +85,7 @@ or1k_cache_init:
 .L6:	l.mfspr r3,r0,SPR_UPR
 	l.andi  r4,r3,SPR_UPR_ICP
 	l.sfeq  r4,r0
-	l.bf    .L8
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.bf    .L8))
 	
 	/* Disable IC */
 	l.mfspr r6,r0,SPR_SR
@@ -124,8 +120,10 @@ or1k_cache_init:
 	
 .L7:	l.mtspr r0,r6,SPR_ICBIR
 	l.sfne  r6,r5
-	l.bf    .L7
-	l.add   r6,r6,r14
+        OR1K_DELAYED(
+	OR1K_INST(l.add   r6,r6,r14),
+	OR1K_INST(l.bf    .L7)
+        )
 	
 	/* Enable IC */
 	l.mfspr r6,r0,SPR_SR
@@ -145,8 +143,7 @@ or1k_cache_init:
 .L8:    l.mfspr r3,r0,SPR_UPR
         l.andi  r4,r3,SPR_UPR_DCP
         l.sfeq  r4,r0
-        l.bf    .L10
-        l.nop
+        OR1K_DELAYED_NOP(OR1K_INST(l.bf    .L10))
         /* Disable DC */
         l.mfspr r6,r0,SPR_SR
         l.addi  r5,r0,-1
@@ -177,8 +174,10 @@ or1k_cache_init:
 
 .L9:    l.mtspr r0,r6,SPR_DCBIR
         l.sfne  r6,r5
-        l.bf    .L9
-	l.add   r6,r6,r14
+	OR1K_DELAYED(
+	OR1K_INST(l.add   r6,r6,r14),
+        OR1K_INST(l.bf    .L9)
+        )
         /* Enable DC */
         l.mfspr r6,r0,SPR_SR
         l.ori   r6,r6,SPR_SR_DCE
@@ -186,8 +185,7 @@ or1k_cache_init:
 
 .L10:	
 	/* Return */
-	l.jr	r9
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jr	r9))
 
 /* -------------------------------------------------------------------------- */
 /*!Function to enable instruction cache
@@ -207,8 +205,7 @@ or1k_icache_enable:
 	l.nop
 	l.nop
 	l.nop
-	l.jr	r9
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jr	r9))
 
 /* -------------------------------------------------------------------------- */
 /*!Function to disable instruction cache
@@ -224,8 +221,7 @@ or1k_icache_disable:
 	l.xori  r12,r12,SPR_SR_ICE
 	l.and   r12,r13,r12
 	l.mtspr r0,r12,SPR_SR
-	l.jr	r9
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jr	r9))
 
 /* -------------------------------------------------------------------------- */
 /*!Function to flush address of instruction cache
@@ -234,10 +230,12 @@ or1k_icache_disable:
 	.global	or1k_icache_flush
         .type	or1k_icache_flush,@function
 
-or1k_icache_flush:	
+or1k_icache_flush:
+        OR1K_DELAYED(
+	OR1K_INST(l.mtspr r0,r3,SPR_ICBIR),
 	/* Push r3 into IC invalidate reg */
-	l.jr	r9
-	l.mtspr r0,r3,SPR_ICBIR
+	OR1K_INST(l.jr	r9)
+        )
 	
 
 /* -------------------------------------------------------------------------- */
@@ -257,8 +255,7 @@ or1k_dcache_enable:
 	l.nop
 	l.nop
 	l.nop
-	l.jr	r9
-	l.nop
+        OR1K_DELAYED_NOP(OR1K_INST(l.jr	r9))
 
 /* -------------------------------------------------------------------------- */
 /*!Function to disable data cache
@@ -274,8 +271,7 @@ or1k_dcache_disable:
 	l.xori  r12,r12,SPR_SR_DCE
 	l.and   r12,r13,r12
 	l.mtspr r0,r12,SPR_SR
-	l.jr	r9
-	l.nop
+        OR1K_DELAYED_NOP(OR1K_INST(l.jr	r9))
 
 /* -------------------------------------------------------------------------- */
 /*!Function to flush address of data cache
@@ -284,10 +280,12 @@ or1k_dcache_disable:
 	.global	or1k_dcache_flush
         .type	or1k_dcache_flush,@function
 
-or1k_dcache_flush:	
+or1k_dcache_flush:
+        OR1K_DELAYED(
+	OR1K_INST(l.mtspr r0,r3,SPR_DCBIR),
 	/* Push r3 into DC invalidate reg */
-	l.jr	r9
-	l.mtspr r0,r3,SPR_DCBIR
+	OR1K_INST(l.jr	r9)
+        )
 	
 
 
@@ -405,8 +403,7 @@ or1k_interrupt_handler:
 	/* Any bits set? */
 	l.sfne	r4,r0
 	/* If none, finish */
-	l.bnf	.L2
-	l.nop 
+	OR1K_DELAYED_NOP(OR1K_INST(l.bnf	.L2))
 	/* What is IRQ function table offset? */
 	l.addi	r5,r4,-1
 	l.slli	r6,r5,2
@@ -420,15 +417,16 @@ or1k_interrupt_handler:
 	/* Double check it's valid, compare against INTERRUPT_HANDLER_NOT_SET */
 	l.sfne	r6,r8
 	/* Skip if no handler: TODO: Indicate interrupt fired but no handler*/
-	l.bnf .L1
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.bnf .L1))
 	
 	/* Pull out data pointer from table, save r3, we'll write over it */
 	l.sw	4(r1),r3
 	l.lwz	r3,0(r13)
 	/* Call handler, save r5 in delay slot */
-	l.jalr	r5
-	l.sw	8(r1),r5
+        OR1K_DELAYED(
+	OR1K_INST(l.sw	8(r1),r5),
+	OR1K_INST(l.jalr	r5)
+        )
 
 	/* Reload r3,r5 */
 	l.lwz	r3,4(r1)
@@ -437,15 +435,19 @@ or1k_interrupt_handler:
 	/* Clear bit from PICSR, return to start of checking loop */
 	l.ori	r6,r0,1
 	l.sll	r6,r6,r5
-	l.j	.L0
-	l.xor	r3,r3,r6
+        OR1K_DELAYED(
+	OR1K_INST(l.xor	r3,r3,r6),
+	OR1K_INST(l.j	.L0)
+        )
 
 .L2:
 	/* Finish up - write PICSR back, restore r9*/
 	l.lwz	r9,0(r1)
 	l.mtspr	r0,r3,SPR_PICSR
-	l.jr	r9
-	l.addi	r1,r1,12
+        OR1K_DELAYED(
+	OR1K_INST(l.jr	r9),
+	OR1K_INST(l.addi	r1,r1,12)
+        )
 
 
 	
@@ -480,10 +482,12 @@ or1k_interrupt_handler_add:
 	l.sw 	0(r6),r5
 	/* Restore r6 */
 	l.lwz	r6,0(r1)
-	/* Return via link register */
-	l.jr	r9
+        OR1K_DELAYED(
 	/* Restore stack value */
-	l.addi	r1,r1,4
+	OR1K_INST(l.addi	r1,r1,4),
+	/* Return via link register */
+	OR1K_INST(l.jr	r9)
+        )
 
 
 /* -------------------------------------------------------------------------- */
@@ -503,8 +507,10 @@ or1k_interrupt_enable:
 	l.or	r3,r3,r4
 	l.mtspr	r0,r3,SPR_PICMR
 	l.lwz	r4,0(r1)
-	l.jr	r9
-	l.addi	r1,r1,4
+        OR1K_DELAYED(
+	OR1K_INST(l.addi	r1,r1,4),
+	OR1K_INST(l.jr	r9)
+        )
 
 /* -------------------------------------------------------------------------- */
 /*!Function to disable an interrupt handler in the PICMR
@@ -524,8 +530,10 @@ or1k_interrupt_disable:
 	l.and	r3,r3,r4
 	l.mtspr	r0,r3,SPR_PICMR
 	l.lwz	r4,0(r1)
-	l.jr	r9
-	l.addi	r1,r1,4
+        OR1K_DELAYED(
+	OR1K_INST(l.addi	r1,r1,4),
+	OR1K_INST(l.jr	r9)
+        )
 
 
 /* -------------------------------------------------------------------------- */
@@ -637,12 +645,13 @@ or1k_exception_handler:
 	l.movhi r15,hi(EXCEPTION_HANDLER_NOT_SET)
 	l.ori 	r15,r15,lo(EXCEPTION_HANDLER_NOT_SET)
 	l.sfne	r13,r15
-	l.bnf	exception_exit
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.bnf	exception_exit))
 	
 	/* Call exception handler, copy EPCR to r3 */
-	l.jalr	r13
-	l.or	r3,r4,r4
+        OR1K_DELAYED(
+	OR1K_INST(l.or	r3,r4,r4),
+	OR1K_INST(l.jalr	r13)
+        )
 
 	/* Restore state */
 	l.lwz    r2, 0x00(r1)
@@ -683,8 +692,10 @@ or1k_exception_handler:
 
 exception_exit:	
 	/* Exception handler not set, exit */
-	l.jal	exit
-	l.or	r3,r4,r4
+        OR1K_DELAYED(
+	OR1K_INST(l.or	r3,r4,r4),
+	OR1K_INST(l.jal	exit)
+        )
 
 
 	
@@ -714,8 +725,9 @@ or1k_exception_handler_add:
 	l.sw 	0(r5),r4
 	/* Restore r5 */
 	l.lwz	r5,0(r1)
-	/* Return via link register */
-	l.jr	r9
+        OR1K_DELAYED(
 	/* Restore stack value */
-	l.addi	r1,r1,4
-	
+	OR1K_INST(l.addi	r1,r1,4),
+	/* Return via link register */
+	OR1K_INST(l.jr	r9)
+        )

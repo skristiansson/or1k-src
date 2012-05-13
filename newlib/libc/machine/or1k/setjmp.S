@@ -23,6 +23,7 @@
    with Doxygen.                                                              */
 /* -------------------------------------------------------------------------- */
 
+#include "or1k-asm.h"
 	
 /* -------------------------------------------------------------------------- */
 /*!setjmp
@@ -75,7 +76,9 @@ setjmp:
 	l.sw	116(r3),r30
 	l.sw	120(r3),r31
 
-	l.jr	r9
-	l.addi	r11,r0,0		/* Zero result */
+        OR1K_DELAYED(
+	OR1K_INST(l.addi	r11,r0,0),		/* Zero result */
+	OR1K_INST(l.jr	r9)
+        )
 
 	.size	setjmp, .-setjmp
