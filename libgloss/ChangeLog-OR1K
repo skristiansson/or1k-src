@@ -1,5 +1,11 @@
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
+	* or1k/Makefile.in: use libboard-${board}.a instead of
+	${board}/libboard.a.  GCC has a problem finding them when
+	multilibs are used if they're in a subdirectory.
+
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
 	* configure.in: add or1knd target
 	* configure: regenerate
 	* or1k/crt0.s: include or1k-asm.h from newlib, use OR1K_DELAYED*

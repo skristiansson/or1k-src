@@ -78,9 +78,6 @@ BOARDS   = or1ksim or1ksim-uart orpsocrefdesign ordb1a3pe1500 ml501 ordb2a
 BOARD_OBJS = $(addsuffix .o,$(BOARDS))
 BOARD_LIBS = $(addsuffix .a,$(BOARDS))
 
-# Generic name, used after install for each of these libraries
-LIBBOARD = libboard.a
-
 # Our own C runtime startup and BSPs
 CRT0     	= crt0.o
 LIBOR1K      	= libor1k.a
@@ -134,9 +131,9 @@ distclean maintainer-clean realclean: clean
 	rm -f Makefile config.status *~
 
 # Standard install rules for libor1k and crt0
-# Boards installed into lib/board/$${board} and named board.a. GCC links against with
+# Boards installed into lib/libboard-$${board} and named board.a. GCC links against with
 # board specified by -mboard=whichboard and adds 
-#   -lboard -L<path_to_or1k_newlib_sysroot>/lib/board/whichboard
+#   -lboard-$${board}
 #
 .PHONY: install info install-info clean-info
 install:
@@ -146,9 +143,9 @@ install:
 				$(DESTDIR)$(tooldir)/lib${MULTISUBDIR}; \
 	done; \
 	for board in ${BOARDS}; do\
-	     mkdir -p $(DESTDIR)$(tooldir)/lib${MULTISUBDIR}/boards/$${board}; \
+	     mkdir -p $(DESTDIR)$(tooldir)/lib${MULTISUBDIR}; \
 	     $(INSTALL_PROGRAM) $${board}.a \
-			$(DESTDIR)$(tooldir)/lib${MULTISUBDIR}/boards/$${board}/$(LIBBOARD); \
+			$(DESTDIR)$(tooldir)/lib${MULTISUBDIR}/libboard-$${board}.a; \
 	done
 
 # Deal with info if we had any.
