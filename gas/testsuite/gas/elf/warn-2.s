@@ -1,7 +1,7 @@
 ;# { dg-do assemble }
 ;# { dg-options "--gdwarf2 --defsym nop_type=0" }
 ;# { dg-options "--gdwarf2 --defsym nop_type=1" { target ia64-*-* } }
-;# { dg-options "--gdwarf2 --defsym nop_type=2" { target or1k-*-* } }
+;# { dg-options "--gdwarf2 --defsym nop_type=2" { target or1k*-*-* } }
 ;# { dg-options "--gdwarf2 --defsym nop_type=3" { target i370-*-* } }
 
 	.offset 40
