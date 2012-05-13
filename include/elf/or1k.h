@@ -38,4 +38,6 @@ START_RELOC_NUMBERS (elf_or1k_reloc_type)
   RELOC_NUMBER (R_OR1K_8_PCREL,       11)
 END_RELOC_NUMBERS (R_OR1K_max)
 
+#define EF_OR1K_NODELAY (1UL << 0)
+
 #endif /* _ELF_OR1K_H */
