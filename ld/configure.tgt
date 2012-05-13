@@ -473,9 +473,9 @@ msp430-*-*)             targ_emul=msp430x110
 ns32k-pc532-mach* | ns32k-pc532-ux*)  targ_emul=pc532macha ;;
 ns32k-*-netbsd* | ns32k-pc532-lites*) targ_emul=ns32knbsd
 			;;
-or1k-*-elf)		targ_emul=elf32or1k ;;
-or1k-*-linux*)		targ_emul=elf32or1k ;;
-or1k-*-rtems*)          targ_emul=elf32or1k
+or1k-*-elf | or1knd-*-elf)		targ_emul=elf32or1k ;;
+or1k-*-linux* | or1knd-*-linux*)	targ_emul=elf32or1k ;;
+or1k-*-rtems* | or1knd-*-rtems*)	targ_emul=elf32or1k
 			;;
 pdp11-*-*)		targ_emul=pdp11
 			;;
