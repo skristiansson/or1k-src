@@ -1,3 +1,7 @@
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
+	* elf/or1k.h: add EF_OR1K_NODELAY flag
+
 2012-02-18  Peter Gavin  <pgavin@gmail.com>
 
 	* elf/or1k.h: reorder relocs to maintain binary compatibility; add

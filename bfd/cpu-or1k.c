@@ -23,20 +23,39 @@
 #include "bfd.h"
 #include "libbfd.h"
 
+const bfd_arch_info_type bfd_or1k_arch;
+const bfd_arch_info_type bfd_or1knd_arch;
+
 const bfd_arch_info_type bfd_or1k_arch =
   {
     32,           /* 32 bits in a word.  */
     32,	          /* 32 bits in an address.  */
     8,	          /* 8 bits in a byte.  */
     bfd_arch_or1k,
-    0,	          /* Only 1 machine.  */
+    bfd_mach_or1k,
     "or1k",
     "or1k",
     4,
-    TRUE,         /* The one and only.  */
+    TRUE,
     bfd_default_compatible,
     bfd_default_scan,
     bfd_arch_default_fill,
-    0,
+    &bfd_or1knd_arch,
   };
 
+const bfd_arch_info_type bfd_or1knd_arch =
+  {
+    32,           /* 32 bits in a word.  */
+    32,	          /* 32 bits in an address.  */
+    8,	          /* 8 bits in a byte.  */
+    bfd_arch_or1k,
+    bfd_mach_or1knd,
+    "or1knd",
+    "or1knd",
+    4,
+    FALSE,
+    bfd_default_compatible,
+    bfd_default_scan,
+    bfd_arch_default_fill,
+    NULL,
+  };

@@ -514,8 +514,13 @@ or1k_elf_check_relocs (bfd *abfd,
 static bfd_boolean
 or1k_elf_object_p (bfd *abfd)
 {
-  bfd_default_set_arch_mach (abfd, bfd_arch_or1k, 0);
-  return TRUE;
+  unsigned long mach = bfd_mach_or1k;
+
+  if (elf_elfheader (abfd)->e_flags & EF_OR1K_NODELAY) {
+    mach = bfd_mach_or1knd;
+  }
+  
+  return bfd_default_set_arch_mach (abfd, bfd_arch_or1k, mach);
 }
 
 /* Store the machine number in the flags field.  */
@@ -524,19 +529,70 @@ static void
 or1k_elf_final_write_processing (bfd *abfd,
 				     bfd_boolean linker ATTRIBUTE_UNUSED)
 {
-  unsigned long val;
-
+  
   switch (bfd_get_mach (abfd))
     {
     default:
-      val = 0;
+    case bfd_mach_or1k:
+      break;
+    case bfd_mach_or1knd:
+      elf_elfheader (abfd)->e_flags |= EF_OR1K_NODELAY;
       break;
     }
-
-  elf_elfheader (abfd)->e_flags &= ~0xf;
-  elf_elfheader (abfd)->e_flags |= val;
+  
 }
 
+static bfd_boolean
+or1k_elf_set_private_flags (bfd *abfd, flagword flags)
+{
+  BFD_ASSERT (!elf_flags_init (abfd)
+              || elf_elfheader (abfd)->e_flags == flags);
+  
+  elf_elfheader (abfd)->e_flags = flags;
+  elf_flags_init (abfd) = TRUE;
+  return TRUE;
+}
+
+/* make sure all input files are consistent with respect to
+   EF_OR1K_NODELAY flag setting */
+
+static bfd_boolean
+elf32_or1k_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
+{
+  flagword out_flags;
+  flagword in_flags;
+
+  in_flags  = elf_elfheader (ibfd)->e_flags;
+  out_flags = elf_elfheader (obfd)->e_flags;
+
+  if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour ||
+      bfd_get_flavour (obfd) != bfd_target_elf_flavour)
+    return TRUE;
+  
+  if (!elf_flags_init (obfd))
+    {
+      elf_flags_init (obfd) = TRUE;
+      elf_elfheader (obfd)->e_flags = in_flags;
+      
+      return TRUE;
+    }
+  
+  if (in_flags == out_flags)
+    return TRUE;
+  
+  if ((in_flags & EF_OR1K_NODELAY) != (out_flags & EF_OR1K_NODELAY)) {
+    
+    (*_bfd_error_handler)
+      (_("%B: EF_OR1K_NODELAY flag mismatch with previous modules"), ibfd);
+    
+    bfd_set_error (bfd_error_bad_value);
+    return FALSE;
+
+  }
+  
+  return TRUE;
+  
+}
 
 #define ELF_ARCH			bfd_arch_or1k
 #define ELF_MACHINE_CODE		EM_OR1K
@@ -554,6 +610,8 @@ or1k_elf_final_write_processing (bfd *abfd,
 #define elf_backend_can_gc_sections	1
 #define elf_backend_rela_normal		1
 
+#define bfd_elf32_bfd_merge_private_bfd_data elf32_or1k_merge_private_bfd_data
+#define bfd_elf32_bfd_set_private_flags or1k_elf_set_private_flags
 #define bfd_elf32_bfd_reloc_type_lookup or1k_reloc_type_lookup
 #define bfd_elf32_bfd_reloc_name_lookup or1k_reloc_name_lookup
 

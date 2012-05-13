@@ -124,6 +124,8 @@ DESCRIPTION
 .#define bfd_mach_i960_hx        8
 .
 .  bfd_arch_or1k,      {* OpenRISC 1000 *}
+.#define bfd_mach_or1k           1
+.#define bfd_mach_or1knd         2
 .
 .  bfd_arch_sparc,     {* SPARC *}
 .#define bfd_mach_sparc			1

@@ -91,7 +91,7 @@ m68*)		 targ_archs=bfd_m68k_arch ;;
 m88*)		 targ_archs=bfd_m88k_arch ;;
 microblaze*)	 targ_archs=bfd_microblaze_arch ;;
 mips*)		 targ_archs=bfd_mips_arch ;;
-or1k*)		 targ_archs=bfd_or1k_arch ;;
+or1k*|or1knd*)	 targ_archs=bfd_or1k_arch ;;
 pdp11*)		 targ_archs=bfd_pdp11_arch ;;
 pj*)		 targ_archs="bfd_pj_arch bfd_i386_arch";;
 powerpc*)	 targ_archs="bfd_rs6000_arch bfd_powerpc_arch" ;;
@@ -1083,6 +1083,10 @@ case "${targ}" in
     ;;
 
   or1k-*-elf | or1k-*-linux*)
+    targ_defvec=bfd_elf32_or1k_vec
+    ;;
+
+  or1knd-*-elf | or1knd-*-linux*)
     targ_defvec=bfd_elf32_or1k_vec
     ;;
 
