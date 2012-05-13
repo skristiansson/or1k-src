@@ -1,3 +1,5 @@
+#include "or1k-asm.h"
+
 /*
  * Define symbols to be used during startup - file is linked at compile time
  * Olof Kindgren olof at opencores.org

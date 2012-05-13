@@ -31,6 +31,7 @@
    with Doxygen.                                                              */
 /* -------------------------------------------------------------------------- */
 
+#include "or1k-asm.h"
 #include "spr-defs.h"
 
 /* -------------------------------------------------------------------------- */
@@ -60,8 +61,10 @@
 	l.sw    4(r1), r3;             			\
 	l.sw    8(r1), r4;             			\
 	l.mfspr r3,r0,SPR_NPC;          		\
-	l.j 	or1k_exception_handler;			\
-	l.mfspr r4,r0,SPR_EPCR_BASE
+        OR1K_DELAYED(					\
+	OR1K_INST(l.mfspr r4,r0,SPR_EPCR_BASE),		\
+	OR1K_INST(l.j 	or1k_exception_handler)		\
+        )
 
 /* -------------------------------------------------------------------------- */
 /*!Exception vectors                                                          */
@@ -111,8 +114,7 @@ __reset:
 	l.mtspr r0, r0, SPR_TTMR
 	/* Jump to program initialisation code */
 	LOAD_SYMBOL_2_GPR(r4, _start)
-	l.jr    r4
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jr    r4))
 
 	.org	0x200
 	CALL_EXCEPTION_HANDLER
@@ -271,8 +273,7 @@ _start:
 	/* Initialise cache */
 	/* TODO - potentially make this optional for simulation targets to save
 	time during startup */
-	l.jal 	or1k_cache_init
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jal 	or1k_cache_init))
 	
 	/* Clear BSS */
 .L10:	l.movhi r3,hi(__bss_start)
@@ -282,21 +283,23 @@ _start:
 
 .L1:    l.sw    (0)(r3),r0
         l.sfltu r3,r4
-        l.bf    .L1
-        l.addi  r3,r3,4		/* Delay slot */
+        OR1K_DELAYED(
+        OR1K_INST(l.addi  r3,r3,4),
+        OR1K_INST(l.bf    .L1)
+        )
 
 	/* Reinitialize the reentrancy structure */
-	l.jal	__impure_init
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jal	__impure_init))
 
 	/* Call global and static constructors */
-	l.jal	__init
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jal	__init))
 	
 	/* Set up destructors to be called from exit if main ever returns */
 	l.movhi	r3,hi(__fini)
-	l.jal	atexit
-	l.ori	r3,r3,lo(__fini)	/* Delay slot */
+        OR1K_DELAYED(
+	OR1K_INST(l.ori	r3,r3,lo(__fini)),
+	OR1K_INST(l.jal	atexit)
+        )
 
 	/* Check if UART is to be initialised */
 	l.movhi	r4,hi(_board_uart_base)
@@ -305,22 +308,24 @@ _start:
 	l.sfne	r4,r0		/* Is base set? If not, no UART */
 	l.bnf	.L2
 	l.or	r3,r0,r0
-	l.jal	__uart_init
-	l.nop
+	OR1K_DELAYED_NOP(OR1K_INST(l.jal	__uart_init))
 
 .L2:	
 	/* Jump to main program entry point (argc = argv = envp = 0) */
 	l.or	r3,r0,r0
 	l.or	r4,r0,r0
-	l.jal   main
-	l.or	r5,r0,r0		/* Delay slot */
+        OR1K_DELAYED(
+	OR1K_INST(l.or	r5,r0,r0),
+	OR1K_INST(l.jal   main)
+        )
 
 	/* If program exits, call exit routine */
-	l.jal   exit
-	l.addi  r3,r11,0		/* Delay slot */
+        OR1K_DELAYED(
+	OR1K_INST(l.addi  r3,r11,0),
+	OR1K_INST(l.jal   exit)
+        )
 
 	/* Loop forever */
-.L3:	l.j	.L3
-	l.nop
+.L3:	OR1K_DELAYED_NOP(OR1K_INST(l.j	.L3))
 	
 	.size	_start, .-_start
