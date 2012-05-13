@@ -1,3 +1,16 @@
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
+	* config/tc-or1k.h:
+	(or1k_elf_final_processing) add prototype
+	(elf_tc_final_processing) define
+	* config/tc-or1k.c: add nodelay
+	(s_nodelay) new function, handle ".nodelay" directive
+	(or1k_elf_final_processing) new function, set EF_OR1K_NODELAY flag
+	in binaries when assembly file uses ".nodelay" directive
+	* configure.tgt: add or1knd target
+	* configure.ac: use or1k as cgen cpu type when target is or1knd
+	* configure: regenerate
+
 2012-02-23  Peter Gavin  <pgavin@gmail.com>
 
 	* config/tc-or1k.c: handle .align pseudo with s_align_bytes

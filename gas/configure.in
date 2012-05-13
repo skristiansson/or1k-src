@@ -504,6 +504,8 @@ esac
 cgen_cpu_prefix=""
 if test $using_cgen = yes ; then
   case ${target_cpu} in
+    or1knd)
+       cgen_cpu_prefix=or1k ;;
     *) cgen_cpu_prefix=${target_cpu} ;;
   esac
   AC_SUBST(cgen_cpu_prefix)

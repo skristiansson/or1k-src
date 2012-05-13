@@ -87,6 +87,13 @@ ignore_pseudo (int val ATTRIBUTE_UNUSED)
   discard_rest_of_line ();
 }
 
+static bfd_boolean nodelay = FALSE;
+static void
+s_nodelay (int val ATTRIBUTE_UNUSED)
+{
+  nodelay = TRUE;
+}
+
 const char or1k_comment_chars [] = ";#";
 
 /* The target specific pseudo-ops which we support.  */
@@ -96,6 +103,7 @@ const pseudo_typeS md_pseudo_table[] =
   { "word",     cons,           4 },
   { "proc",     ignore_pseudo,  0 },
   { "endproc",  ignore_pseudo,  0 },
+  { "nodelay",  s_nodelay,      0 },
   { NULL, 	NULL, 		0 }
 };
 
@@ -292,4 +300,11 @@ or1k_fix_adjustable (fixS * fixP)
     return 0;
 
   return 1;
+}
+
+void
+or1k_elf_final_processing (void)
+{
+  if (nodelay)
+    elf_elfheader (stdoutput)->e_flags |= EF_OR1K_NODELAY;
 }
