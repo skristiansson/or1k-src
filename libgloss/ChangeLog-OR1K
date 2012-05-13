@@ -1,5 +1,11 @@
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
+	* or1k/configure.in: remove unneeded cruft
+	* or1k/configure: regenerate
+	* or1k/config.h.in: ditto
+
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
 	* or1k/Makefile.in: use libboard-${board}.a instead of
 	${board}/libboard.a.  GCC has a problem finding them when
 	multilibs are used if they're in a subdirectory.

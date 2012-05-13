@@ -1,11 +1,5 @@
 /* config.h.in.  Generated from configure.in by autoheader.  */
 
-/* Using ELF format */
-#undef HAVE_ELF
-
-/* Using GNU ld */
-#undef HAVE_GNU_LD
-
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 
@@ -23,6 +17,3 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* symbol prefix */
-#undef __SYMBOL_PREFIX
