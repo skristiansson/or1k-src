@@ -1,3 +1,8 @@
+2012-05-13  Peter Gavin  <pgavin@gmail.com>
+
+	* ld-elf/sec64k.exp, ld-lib.exp: match against or1k* instead of
+	just or1k to catch or1knd target
+
 2012-02-13  Peter Gavin  <pgavin@gmail.com>
 
 	* testsuite/ld-discard/extern.d: remove or32 from xfail, or1k now

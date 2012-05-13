@@ -34,7 +34,7 @@ if { [istarget "arc-*-*"]
      || [istarget "d30v-*-*"]
      || [istarget "dlx-*-*"]
      || [istarget "i960-*-*"]
-     || [istarget "or1k-*-*"]
+     || [istarget "or1k*-*-*"]
      || [istarget "pj*-*-*"]
      || [istarget "m32r-*-*"] } {
     return
