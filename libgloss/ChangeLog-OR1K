@@ -1,3 +1,8 @@
+2012-05-21  Peter Gavin  <pgavin@gmail.com>
+
+	* or1k/_exit.c: use NOP_EXIT_SILENT as l.nop code instead of
+	NOP_EXIT
+
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
 	* or1k/configure.in: remove unneeded cruft
