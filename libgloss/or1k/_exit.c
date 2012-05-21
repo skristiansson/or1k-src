@@ -47,7 +47,7 @@ _exit (int  rc)
 {
   register int  t1 asm ("r3") = rc;
 
-  asm volatile ("\tl.nop\t%0" : : "K" (NOP_EXIT), "r" (t1));
+  asm volatile ("\tl.nop\t%0" : : "K" (NOP_EXIT_SILENT), "r" (t1));
 
   while (1)
     {
