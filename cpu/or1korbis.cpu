@@ -502,7 +502,7 @@
      ((MACH ORBIS-MACHS))
      "l.macrc $rD"
      (+ OPC_MOVHIMACRC rD (f-resv-20-4 0) OPC_MOVHIMACRC_MACRC (f-uimm16 0))
-     (parallel ()
+     (sequence ()
                (set UWI rD mac-maclo)
                (set UWI mac-maclo 0)
                (set UWI mac-machi 0)
@@ -686,8 +686,8 @@
           (sequence ()
                     (sequence ((BI tmp-sys-sr-cy))
                               (set BI tmp-sys-sr-cy sys-sr-cy)
-                              (set BI sys-sr-cy (addc-cflag WI rA rB sys-sr-cy))
-                              (set BI sys-sr-ov (addc-oflag WI rA rB sys-sr-cy))
+                              (set BI sys-sr-cy (addc-cflag WI rA rB tmp-sys-sr-cy))
+                              (set BI sys-sr-ov (addc-oflag WI rA rB tmp-sys-sr-cy))
                               (set rD (addc WI rA rB tmp-sys-sr-cy))
                               )
                    (if (andif sys-sr-ov sys-sr-ove)
@@ -759,7 +759,7 @@
                     (if (ne rB 0)
                         (sequence ()
                                   (set BI sys-sr-cy 0)
-                                  (set rD (div UWI rA rB))
+                                  (set rD (udiv UWI rA rB))
                                   )
                         (set BI sys-sr-cy 1)
                         )
@@ -848,8 +848,8 @@
      (sequence ()
                (sequence ((BI tmp-sys-sr-cy))
                          (set BI tmp-sys-sr-cy sys-sr-cy)
-                         (set BI sys-sr-cy (addc-cflag WI rA (ext WI simm16) sys-sr-cy))
-                         (set BI sys-sr-ov (addc-oflag WI rA (ext WI simm16) sys-sr-cy))
+                         (set BI sys-sr-cy (addc-cflag WI rA (ext WI simm16) tmp-sys-sr-cy))
+                         (set BI sys-sr-ov (addc-oflag WI rA (ext WI simm16) tmp-sys-sr-cy))
                          (set WI rD (addc WI rA (ext WI simm16) tmp-sys-sr-cy))
                          )
                (if (andif sys-sr-ov sys-sr-ove)
@@ -1025,10 +1025,10 @@
 (dni l-maci
      "l.maci reg/simm16"
      ((MACH ORBIS-MACHS))
-     "l.maci $rA,${simm16-split}"
-     (+ OPC_MACI (f-resv-20-5 0) rA simm16-split)
+     "l.maci $rA,${simm16}"
+     (+ OPC_MACI (f-resv-25-5 0) rA simm16)
      (sequence ((WI prod) (DI result))
-               (set WI prod (mul WI (ext WI simm16-split) rA))
+               (set WI prod (mul WI (ext WI simm16) rA))
                (set DI result (add (join DI SI mac-machi mac-maclo) (ext DI prod)))
                (set SI mac-machi (subword SI result 0))
                (set SI mac-maclo (subword SI result 1))

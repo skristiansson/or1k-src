@@ -1,5 +1,9 @@
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
+	* gas/or1k/allinsn.d, gas/or1k/allinsn.s: add tests for l.mac and l.maci
+
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
 	* gas/or1k/allinsn.d: fix immediates in l.sf* instructions
 
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
