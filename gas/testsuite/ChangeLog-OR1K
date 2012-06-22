@@ -1,3 +1,7 @@
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
+	* gas/or1k/allinsn.d: fix immediates in l.sf* instructions
+
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
 	* gas/elf/warn-2.s: use or1k* instead of or1k to catch or1knd target

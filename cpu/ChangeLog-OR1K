@@ -1,5 +1,13 @@
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
+	fix l.sf* instructions
+	* or1korbis.cpu:
+	(insn-opcode-setflag) NEQ -> NE
+	(l-sf*) rewrite generator pmacros, make sure sign extension
+	etc. are handled correctly
+
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
 	bug fixes for branching & exceptions
 	* or1kcommon.cpu:
 	(FORCED-CTI) new attribute, for instructions like rfe that

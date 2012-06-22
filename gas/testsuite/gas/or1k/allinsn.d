@@ -554,44 +554,44 @@ Disassembly of section \.text:
  69c:	e5 a0 60 00 	l\.sfles r0,r12
 
 000006a0 <l_sfgtui>:
- 6a0:	bc 40 00 00 	l\.sfgtui r0,0x0
- 6a4:	bc 5f ff ff 	l\.sfgtui r31,0xffff
- 6a8:	bc 50 80 00 	l\.sfgtui r16,0x8000
- 6ac:	bc 4f 7f ff 	l\.sfgtui r15,0x7fff
- 6b0:	bc 41 00 01 	l\.sfgtui r1,0x1
- 6b4:	bc 45 4b 21 	l\.sfgtui r5,0x4b21
- 6b8:	bc 57 91 22 	l\.sfgtui r23,0x9122
- 6bc:	bc 51 25 dd 	l\.sfgtui r17,0x25dd
+ 6a0:	bc 40 00 00 	l\.sfgtui r0,0
+ 6a4:	bc 5f ff ff 	l\.sfgtui r31,-1
+ 6a8:	bc 50 80 00 	l\.sfgtui r16,-32768
+ 6ac:	bc 4f 7f ff 	l\.sfgtui r15,32767
+ 6b0:	bc 41 00 01 	l\.sfgtui r1,1
+ 6b4:	bc 45 4b 21 	l\.sfgtui r5,19233
+ 6b8:	bc 57 91 22 	l\.sfgtui r23,-28382
+ 6bc:	bc 51 25 dd 	l\.sfgtui r17,9693
 
 000006c0 <l_sfgeui>:
- 6c0:	bc 60 00 00 	l\.sfgeui r0,0x0
- 6c4:	bc 7f ff ff 	l\.sfgeui r31,0xffff
- 6c8:	bc 70 80 00 	l\.sfgeui r16,0x8000
- 6cc:	bc 6f 7f ff 	l\.sfgeui r15,0x7fff
- 6d0:	bc 61 00 01 	l\.sfgeui r1,0x1
- 6d4:	bc 71 ec b6 	l\.sfgeui r17,0xecb6
- 6d8:	bc 6f 40 13 	l\.sfgeui r15,0x4013
- 6dc:	bc 66 f1 a4 	l\.sfgeui r6,0xf1a4
+ 6c0:	bc 60 00 00 	l\.sfgeui r0,0
+ 6c4:	bc 7f ff ff 	l\.sfgeui r31,-1
+ 6c8:	bc 70 80 00 	l\.sfgeui r16,-32768
+ 6cc:	bc 6f 7f ff 	l\.sfgeui r15,32767
+ 6d0:	bc 61 00 01 	l\.sfgeui r1,1
+ 6d4:	bc 71 ec b6 	l\.sfgeui r17,-4938
+ 6d8:	bc 6f 40 13 	l\.sfgeui r15,16403
+ 6dc:	bc 66 f1 a4 	l\.sfgeui r6,-3676
 
 000006e0 <l_sfltui>:
- 6e0:	bc 80 00 00 	l\.sfltui r0,0x0
- 6e4:	bc 9f ff ff 	l\.sfltui r31,0xffff
- 6e8:	bc 90 80 00 	l\.sfltui r16,0x8000
- 6ec:	bc 8f 7f ff 	l\.sfltui r15,0x7fff
- 6f0:	bc 81 00 01 	l\.sfltui r1,0x1
- 6f4:	bc 83 cc af 	l\.sfltui r3,0xccaf
- 6f8:	bc 98 4c fd 	l\.sfltui r24,0x4cfd
- 6fc:	bc 8a 03 3e 	l\.sfltui r10,0x33e
+ 6e0:	bc 80 00 00 	l\.sfltui r0,0
+ 6e4:	bc 9f ff ff 	l\.sfltui r31,-1
+ 6e8:	bc 90 80 00 	l\.sfltui r16,-32768
+ 6ec:	bc 8f 7f ff 	l\.sfltui r15,32767
+ 6f0:	bc 81 00 01 	l\.sfltui r1,1
+ 6f4:	bc 83 cc af 	l\.sfltui r3,-13137
+ 6f8:	bc 98 4c fd 	l\.sfltui r24,19709
+ 6fc:	bc 8a 03 3e 	l\.sfltui r10,830
 
 00000700 <l_sfleui>:
- 700:	bc a0 00 00 	l\.sfleui r0,0x0
- 704:	bc bf ff ff 	l\.sfleui r31,0xffff
- 708:	bc b0 80 00 	l\.sfleui r16,0x8000
- 70c:	bc af 7f ff 	l\.sfleui r15,0x7fff
- 710:	bc a1 00 01 	l\.sfleui r1,0x1
- 714:	bc b7 9b 66 	l\.sfleui r23,0x9b66
- 718:	bc b1 b6 d7 	l\.sfleui r17,0xb6d7
- 71c:	bc a9 a8 81 	l\.sfleui r9,0xa881
+ 700:	bc a0 00 00 	l\.sfleui r0,0
+ 704:	bc bf ff ff 	l\.sfleui r31,-1
+ 708:	bc b0 80 00 	l\.sfleui r16,-32768
+ 70c:	bc af 7f ff 	l\.sfleui r15,32767
+ 710:	bc a1 00 01 	l\.sfleui r1,1
+ 714:	bc b7 9b 66 	l\.sfleui r23,-25754
+ 718:	bc b1 b6 d7 	l\.sfleui r17,-18729
+ 71c:	bc a9 a8 81 	l\.sfleui r9,-22399
 
 00000720 <l_sfgtsi>:
  720:	bd 40 00 00 	l\.sfgtsi r0,0
