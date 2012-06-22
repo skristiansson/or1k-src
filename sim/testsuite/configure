@@ -1893,6 +1893,10 @@ case "${target}" in
        sim_arch=moxie
        sim_testsuite=yes
        ;;
+   or1k-*-* | or1knd-*-*)
+       sim_arch=or1k
+       sim_testsuite=yes
+       ;;
    rl78-*-*)
        sim_arch=rl78
        ;;
