@@ -1,5 +1,15 @@
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
+	fix some carry/overflow flag problems, fix mac problems
+	* or1korbis.cpu:
+	(l-macrc) don't use parallel
+	(l-addc) fix carry/overflow flag handling
+	(l-addci) ditto
+	(l-udiv) use udiv instead of just div
+	(l-maci) use simm16 instead of simm16-split
+
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
 	fix l.sf* instructions
 	* or1korbis.cpu:
 	(insn-opcode-setflag) NEQ -> NE

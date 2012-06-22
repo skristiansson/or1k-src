@@ -668,3 +668,10 @@ l_lo:
 l_hi:	
 	l.movhi	r1, hi(0xdeadbeef)
 
+l_mac:
+        l.mac r1,r2
+l_maci:
+        l.maci r1,0
+        l.maci r2,-1
+        l.maci r2,32767
+        l.maci r2,-32768

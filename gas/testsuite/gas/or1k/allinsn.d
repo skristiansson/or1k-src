@@ -678,3 +678,12 @@ Disassembly of section \.text:
 
 00000824 <l_hi>:
  824:	18 20 de ad 	l\.movhi r1,0xdead
+
+00000828 <l_mac>:
+ 828:	c4 01 10 01 	l.mac r1,r2
+
+0000082c <l_maci>:
+ 82c:	4c 01 00 00 	l\.maci r1,0
+ 830:	4c 02 ff ff 	l\.maci r2,-1
+ 834:	4c 02 7f ff 	l\.maci r2,32767
+ 838:	4c 02 80 00 	l\.maci r2,-32768
