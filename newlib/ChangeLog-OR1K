@@ -1,5 +1,9 @@
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
+	* libc/include/machine/or1k/include/or1k-asm.h: add some comments
+
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
 	* libc/include/machine/ieeefp.h: set __IEEE_BIG_ENDIAN when
 	__or1knd__ is defined
 	* libc/include/machine/setjmp.h: set _JBLEN and _JBTYPE when
