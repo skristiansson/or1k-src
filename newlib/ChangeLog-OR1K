@@ -1,3 +1,10 @@
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
+	* libc/machine/or1k/include/or1k-support-defs.h: new file, moved
+	NOP_* defines here from or1k-support.h so they can be used in
+	assembly files
+	* libc/machine/or1k/include/or1k-support.h: remove NOP_* defines
+
 2012-05-21  Peter Gavin  <pgavin@gmail.com>
 
 	* libc/machine/or1k/include/or1k-support.h: add NOP_EXIT_SILENT;

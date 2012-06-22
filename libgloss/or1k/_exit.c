@@ -46,10 +46,13 @@ void
 _exit (int  rc)
 {
   register int  t1 asm ("r3") = rc;
-
-  asm volatile ("\tl.nop\t%0" : : "K" (NOP_EXIT_SILENT), "r" (t1));
-
-  while (1)
-    {
-    }
+  
+  asm volatile ("\tl.j\t_board_exit\n"
+#ifndef __OR1K_NODELAY__
+                "\tl.nop"
+#endif
+                );
+  
+  __builtin_unreachable ();
+  
 }	/* _exit () */
