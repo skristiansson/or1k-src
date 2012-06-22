@@ -242,7 +242,7 @@
   "setflag insn opcode enums" ((MACH ORBIS-MACHS))
   OPC_SF_ f-op-25-5
     (("EQ"  #x00)
-     ("NEQ" #x01)
+     ("NE"  #x01)
      ("GTU" #x02)
      ("GEU" #x03)
      ("LTU" #x04)
@@ -925,107 +925,74 @@
 
 ; Compare instructions
 
-; Register compare signed
-(define-pmacro (sf-insn-sr opc-sf sem-op)
+; Ordering compare
+(define-pmacro (sf-insn op)
   (begin
-     (dni (.sym l- "sf" (.sym sem-op "s"))
-          (.str "l.sf" (.str sem-op) "s reg/reg")
+     (dni (.sym l- "sf" op "s")                                               ; l-sfgts
+          (.str "l.sf" op "s reg/reg")                                        ; "l.sfgts reg/reg"
           ((MACH ORBIS-MACHS))
-          (.str "l.sf" (.str sem-op) "s $rA,$rB")
-          (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
-          (set sys-sr-f (sem-op WI rA rB))
+          (.str "l.sf" op "s $rA,$rB")                                        ; "l.sfgts $rA,$rB"
+          (+ OPC_SF (.sym "OPC_SF_" (.upcase op) "S") rA rB (f-resv-10-11 0)) ; (+ OPC_SF OPC_SF_GTS rA rB (f-resv-10-11 0))
+          (set sys-sr-f (op WI rA rB))                                        ; (set sys-sr-f (gt WI rA rB))
           ()
+          )
+     (dni (.sym l- "sf" op "si")                                              ; l-sfgtsi
+          (.str "l.sf" op "si reg/simm16")                                    ; "l.sfgtsi reg/simm16"
+          ((MACH ORBIS-MACHS))
+          (.str "l.sf" op "si $rA,$simm16")                                   ; "l.sfgtsi $rA,$simm16"
+          (+ OPC_SFI (.sym "OPC_SF_" (.upcase op) "S") rA simm16)             ; (+ OPC_SFI OPC_SF_GTS rA simm16)
+          (set sys-sr-f (op WI rA (ext WI simm16)))                           ; (set sys-sr-f (gt WI rA (ext WI simm16)))
+          ()
+          )
+     (dni (.sym l- "sf" op "u")                                               ; l-sfgtu
+          (.str "l.sf" op "u reg/reg")                                        ; "l.sfgtu reg/reg"
+          ((MACH ORBIS-MACHS))
+          (.str "l.sf" op "u $rA,$rB")                                        ; "l.sfgtu $rA,$rB"
+          (+ OPC_SF (.sym "OPC_SF_" (.upcase op) "U") rA rB (f-resv-10-11 0)) ; (+ OPC_SF OPC_SF_GTU rA rB (f-resv-10-11 0))
+          (set sys-sr-f ((.sym op "u") WI rA rB))                             ; (set sys-sr-f (gtu WI rA rB))
+          ()
+          )
+     ; immediate is sign extended even for unsigned compare
+     (dni (.sym l- "sf" op "ui")                                              ; l-sfgtui
+          (.str "l.sf" op "ui reg/simm16")                                    ; "l.sfgtui reg/uimm16"
+          ((MACH ORBIS-MACHS))
+          (.str "l.sf" op "ui $rA,$simm16")                                   ; "l.sfgtui $rA,$simm16"
+          (+ OPC_SFI (.sym "OPC_SF_" (.upcase op) "U") rA simm16)             ; (+ OPC_SFI OPC_SF_GTU rA simm16)
+          (set sys-sr-f ((.sym op "u") WI rA (ext WI simm16)))                ; (set sys-sr-f (gtu WI rA (ext WI simm16)))
+          ()
+          )
      )
   )
-)
 
-; Register compare unsigned
-(define-pmacro (sf-insn-ur opc-sf sem-op)
+(sf-insn gt)
+(sf-insn ge)
+(sf-insn lt)
+(sf-insn le)
+
+; Equality compare
+(define-pmacro (sf-insn-eq op)
   (begin
-     (dni (.sym l- "sf" (.sym sem-op "u"))
-          (.str "l." (.str sem-op) "u reg/reg")
+     (dni (.sym l- "sf" op)
+          (.str "l." op " reg/reg")
           ((MACH ORBIS-MACHS))
-          (.str "l.sf" (.str sem-op) "u $rA,$rB")
-          (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
-          (set sys-sr-f (sem-op UWI rA rB))
+          (.str "l.sf" op " $rA,$rB")
+          (+ OPC_SF (.sym "OPC_SF_" (.upcase op)) rA rB (f-resv-10-11 0))
+          (set sys-sr-f (op WI rA rB))
           ()
      )
-  )
-)
-
-; Immediate compare signed
-(define-pmacro (sf-insn-si opc-sf sem-op)
-  (begin
-     (dni (.sym l- "sf" (.sym sem-op "si"))
-          (.str "l." (.str sem-op) "si reg/simm16")
+     (dni (.sym l- "sf" op "i")
+          (.str "l.sf" op "i reg/simm16")
           ((MACH ORBIS-MACHS))
-          (.str "l.sf" (.str sem-op) "si $rA,${simm16}")
-          (+ OPC_SFI opc-sf rA simm16)
-          (set sys-sr-f (sem-op WI rA (ext WI simm16)))
-          ()
-     )
-  )
-)
-
-; Immediate compare unsigned
-(define-pmacro (sf-insn-ui opc-sf sem-op)
-  (begin
-     (dni (.sym l- "sf" (.sym sem-op "ui"))
-          (.str "l." (.str sem-op) "ui reg/uimm16")
-          ((MACH ORBIS-MACHS))
-          (.str "l.sf" (.str sem-op) "ui $rA,$uimm16")
-          (+ OPC_SFI opc-sf rA uimm16)
-          (set sys-sr-f (sem-op UWI rA (zext UWI uimm16)))
-          ()
-     )
-  )
-)
-
-; Equality Compare
-(define-pmacro (sf-insn opc-sf sem-op)
-  (begin
-     (dni (.sym l- "sf" sem-op)
-          (.str "l." (.str sem-op) " reg/reg")
-          ((MACH ORBIS-MACHS))
-          (.str "l.sf" (.str sem-op) " $rA,$rB")
-          (+ OPC_SF opc-sf rA rB (f-resv-10-11 0))
-          (set sys-sr-f (sem-op WI rA rB))
-          ()
-     )
-     (dni (.sym l- "sf" (.sym sem-op "i"))
-          (.str "l.sf" (.str sem-op) "i reg/simm16")
-          ((MACH ORBIS-MACHS))
-          (.str "l.sf" (.str sem-op) "i $rA,$simm16")
-          (+ OPC_SFI opc-sf rA simm16)
-          (set sys-sr-f (sem-op WI rA (ext WI simm16)))
+          (.str "l.sf" op "i $rA,$simm16")
+          (+ OPC_SFI (.sym "OPC_SF_" (.upcase op)) rA simm16)
+          (set sys-sr-f (op WI rA (ext WI simm16)))
           ()
      )
    )
 )
 
-
-(sf-insn-ur OPC_SF_GTU gt)
-(sf-insn-ur OPC_SF_GEU ge)
-(sf-insn-ur OPC_SF_LTU lt)
-(sf-insn-ur OPC_SF_LEU le)
-
-(sf-insn-sr OPC_SF_GTS gt)
-(sf-insn-sr OPC_SF_GES ge)
-(sf-insn-sr OPC_SF_LTS lt)
-(sf-insn-sr OPC_SF_LES le)
-
-(sf-insn-ui OPC_SF_GTU gt)
-(sf-insn-ui OPC_SF_GEU ge)
-(sf-insn-ui OPC_SF_LTU lt)
-(sf-insn-ui OPC_SF_LEU le)
-
-(sf-insn-si OPC_SF_GTS gt)
-(sf-insn-si OPC_SF_GES ge)
-(sf-insn-si OPC_SF_LTS lt)
-(sf-insn-si OPC_SF_LES le)
-
-(sf-insn    OPC_SF_EQ  eq)
-(sf-insn    OPC_SF_NEQ ne)
+(sf-insn-eq eq)
+(sf-insn-eq ne)
 
 (dni l-mac
      "l.mac reg/reg"
