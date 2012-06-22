@@ -6,15 +6,6 @@
 
 ; Instruction fields.
 
-(define-attr
-  (type boolean)
-  (for insn)
-  (name DELAYED-CTI)
-  (comment "Delayed control transfer instructions")
-  (values #f #t)
-  (default #f)
-  )
-
 ; Hardware for immediate operands
 (dnh h-simm16      "16-bit signed immediate"   ((MACH ORBIS-MACHS)) (immediate (INT 16)) () () ())
 (dnh h-uimm16      "16-bit unsigned immediate" ()                   (immediate (UINT 16)) () () ())
@@ -466,11 +457,11 @@
 
 (dni l-rfe "return from exception"
      ; This function may not be in delay slot
-     ((MACH ORBIS-MACHS) NOT-IN-DELAY-SLOT)
+     ((MACH ORBIS-MACHS) NOT-IN-DELAY-SLOT FORCED-CTI)
 
      "l.rfe"
      (+ OPC_RFE (f-resv-25-26 0))
-     (c-call VOID "@cpu@_rfe" pc)
+     (c-call VOID "@cpu@_rfe")
      ()
 )
 
@@ -526,7 +517,7 @@
      ((MACH ORBIS-MACHS))
      "l.mfspr $rD,$rA,${uimm16}"
      (+ OPC_MFSPR rD rA uimm16)
-     (set UWI rD (c-call UWI "@cpu@_mfspr" pc (index-of rD) (or rA (zext UWI uimm16))))
+     (set UWI rD (c-call UWI "@cpu@_mfspr" (or rA (zext UWI uimm16))))
      ()
 )
 
@@ -534,7 +525,7 @@
      ((MACH ORBIS-MACHS))
      "l.mtspr $rA,$rB,${uimm16-split}"
      (+ OPC_MTSPR rA rB uimm16-split )
-     (c-call VOID "@cpu@_mtspr" pc (or rA (zext WI uimm16-split)) rB)
+     (c-call VOID "@cpu@_mtspr" (or rA (zext WI uimm16-split)) rB)
      ()
 )
 

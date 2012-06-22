@@ -170,6 +170,7 @@
 
    (MAC MACLO    #x001 "Multiply and accumulate result (low)")
    (MAC MACHI    #x002 "Multiply and accumulate result (high)")
+   (TICK TTMR    #x000 "Tick timer mode register")
    )
   )
 
@@ -319,3 +320,28 @@
         )
   )
 (.splice begin (.unsplice (.map (.pmacro (args) (.apply define-h-spr-field args)) (spr-field-info))))
+
+(define-attr
+  (type boolean)
+  (for insn)
+  (name DELAYED-CTI)
+  (comment "delayed control transfer instruction")
+  (values #f #t)
+  (default #f)
+  )
+
+(define-attr
+  (for insn)
+  (type boolean)
+  (name NOT-IN-DELAY-SLOT)
+  (comment "instruction cannot be in delay slot")
+  (values #f #t)
+  (default #f)
+  )
+
+(define-attr
+  (for insn)
+  (type boolean)
+  (name FORCED-CTI)
+  (comment "instruction may forcefully transfer control (e.g., rfe)")
+  )

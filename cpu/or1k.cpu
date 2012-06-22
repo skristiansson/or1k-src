@@ -51,14 +51,6 @@
 (define-pmacro ORFPX32-MACHS or32,or32nd,or64,or64nd)
 (define-pmacro ORFPX64-MACHS or64,or64nd)
 
-; An attribute to describe if an insn can be in the delay slot or not.
-(define-attr
-  (for insn)
-  (type boolean)
-  (name NOT-IN-DELAY-SLOT)
-  (comment "insn can't go in delay slot")
-)
-
 (define-attr
   (for model)
   (type boolean)
