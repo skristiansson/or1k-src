@@ -21,3 +21,7 @@ _board_clk_freq:	.long	50000000
 _board_uart_base:	.long	0x90000000
 _board_uart_baud:	.long	115200
 _board_uart_IRQ:	.long	2
+
+.global _board_exit
+_board_exit:
+        OR1K_DELAYED_NOP(l.j _board_exit)

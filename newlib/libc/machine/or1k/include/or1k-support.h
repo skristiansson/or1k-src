@@ -31,6 +31,9 @@
 #ifndef OR1K_NEWLIB_SUPPORT__H
 #define OR1K_NEWLIB_SUPPORT__H
 
+#include "or1k-support-defs.h"
+#include <_ansi.h>
+
 /*! External symbols from each board's object file */
 extern unsigned long _board_clk_freq;
 
@@ -41,18 +44,6 @@ extern unsigned long _board_uart_irq;
 /*! Check if board has UART - test base address */
 #define BOARD_HAS_UART (_board_uart_base)
 
-/*! l.nop constants */
-#define NOP_NOP          0x0000      /* Normal nop instruction */
-#define NOP_EXIT         0x0001      /* End of simulation, report exit status */
-#define NOP_REPORT       0x0002      /* Simple report */
-/*#define NOP_PRINTF       0x0003       Simprintf instruction (obsolete)*/
-#define NOP_PUTC         0x0004      /* JPB: Simputc instruction */
-#define NOP_CNT_RESET    0x0005	     /* Reset statistics counters */
-#define NOP_GET_TICKS    0x0006	     /* JPB: Get # ticks running */
-#define NOP_GET_PS       0x0007      /* JPB: Get picosecs/cycle */
-#define NOP_EXIT_SILENT  0x000c      /* End of simulation, silently exit */
-#define NOP_REPORT_FIRST 0x0400      /* Report with number */
-#define NOP_REPORT_LAST  0x03ff      /* Report with number */
 
 /*! Register access macro */
 #define REG8(add) *((volatile unsigned char *) (add))
