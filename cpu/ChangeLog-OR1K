@@ -1,3 +1,20 @@
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
+	bug fixes for branching & exceptions
+	* or1kcommon.cpu:
+	(FORCED-CTI) new attribute, for instructions like rfe that
+	forcefully transfer control without a delay slot
+	(NOT-IN-DELAY-SLOT) moved from or1k.cpu
+	(DELAYED-CTI) moved from or1korbis.cpu
+	* or1k.cpu:
+	(NOT-IN-DELAY-SLOT) moved to or1kcommon.cpu
+	* or1korbis.cpu:
+	(spr-reg-info) add TICK TTMR SPR
+	(DELAYED-CTI) moved to or1kcommon.cpu
+	(l-rfe) add FORCED-CTI attribute, don't pass pc to helper function
+	(l-mfspr, l-mtspr) don't pass pc to helper function
+
+
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
 	* or1k.cpu, or1kcommon.cpu, or1korbis.cpu, or1kfpx.cpu: more
