@@ -1,3 +1,11 @@
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
+	* or1k-desc.h: ditto
+	* or1k-desc.c: ditto
+	* or1k-opc.h: ditto
+	* or1k-opc.c: ditto
+	* or1k-opinst.c: ditto
+
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
 	* or1k-asm.c: regenerate

@@ -111,12 +111,8 @@ static const CGEN_IFMT ifmt_l_cmov ATTRIBUTE_UNUSED = {
   32, 32, 0xfc0007ff, { { F (F_OPCODE) }, { F (F_R1) }, { F (F_R2) }, { F (F_R3) }, { F (F_RESV_10_1) }, { F (F_OP_9_2) }, { F (F_RESV_7_4) }, { F (F_OP_3_4) }, { 0 } }
 };
 
-static const CGEN_IFMT ifmt_l_sfgtu ATTRIBUTE_UNUSED = {
+static const CGEN_IFMT ifmt_l_sfgts ATTRIBUTE_UNUSED = {
   32, 32, 0xffe007ff, { { F (F_OPCODE) }, { F (F_OP_25_5) }, { F (F_R2) }, { F (F_R3) }, { F (F_RESV_10_11) }, { 0 } }
-};
-
-static const CGEN_IFMT ifmt_l_sfgtui ATTRIBUTE_UNUSED = {
-  32, 32, 0xffe00000, { { F (F_OPCODE) }, { F (F_OP_25_5) }, { F (F_R2) }, { F (F_UIMM16) }, { 0 } }
 };
 
 static const CGEN_IFMT ifmt_l_sfgtsi ATTRIBUTE_UNUSED = {
@@ -128,7 +124,7 @@ static const CGEN_IFMT ifmt_l_mac ATTRIBUTE_UNUSED = {
 };
 
 static const CGEN_IFMT ifmt_l_maci ATTRIBUTE_UNUSED = {
-  32, 32, 0xfc1f0000, { { F (F_OPCODE) }, { F (F_RESV_20_5) }, { F (F_R2) }, { F (F_SIMM16_SPLIT) }, { 0 } }
+  32, 32, 0xffe00000, { { F (F_OPCODE) }, { F (F_RESV_25_5) }, { F (F_R2) }, { F (F_SIMM16) }, { 0 } }
 };
 
 static const CGEN_IFMT ifmt_lf_add_s ATTRIBUTE_UNUSED = {
@@ -520,107 +516,107 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RD), ',', OP (RA), ',', OP (RB), 0 } },
     & ifmt_l_cmov, { 0xe000000e }
   },
-/* l.sfgtu $rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe4400000 }
-  },
-/* l.sfgeu $rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe4600000 }
-  },
-/* l.sfltu $rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe4800000 }
-  },
-/* l.sfleu $rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe4a00000 }
-  },
 /* l.sfgts $rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe5400000 }
+    & ifmt_l_sfgts, { 0xe5400000 }
   },
-/* l.sfges $rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe5600000 }
-  },
-/* l.sflts $rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe5800000 }
-  },
-/* l.sfles $rA,$rB */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe5a00000 }
-  },
-/* l.sfgtui $rA,$uimm16 */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (UIMM16), 0 } },
-    & ifmt_l_sfgtui, { 0xbc400000 }
-  },
-/* l.sfgeui $rA,$uimm16 */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (UIMM16), 0 } },
-    & ifmt_l_sfgtui, { 0xbc600000 }
-  },
-/* l.sfltui $rA,$uimm16 */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (UIMM16), 0 } },
-    & ifmt_l_sfgtui, { 0xbc800000 }
-  },
-/* l.sfleui $rA,$uimm16 */
-  {
-    { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (UIMM16), 0 } },
-    & ifmt_l_sfgtui, { 0xbca00000 }
-  },
-/* l.sfgtsi $rA,${simm16} */
+/* l.sfgtsi $rA,$simm16 */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
     & ifmt_l_sfgtsi, { 0xbd400000 }
   },
-/* l.sfgesi $rA,${simm16} */
+/* l.sfgtu $rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_sfgts, { 0xe4400000 }
+  },
+/* l.sfgtui $rA,$simm16 */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
+    & ifmt_l_sfgtsi, { 0xbc400000 }
+  },
+/* l.sfges $rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_sfgts, { 0xe5600000 }
+  },
+/* l.sfgesi $rA,$simm16 */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
     & ifmt_l_sfgtsi, { 0xbd600000 }
   },
-/* l.sfltsi $rA,${simm16} */
+/* l.sfgeu $rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_sfgts, { 0xe4600000 }
+  },
+/* l.sfgeui $rA,$simm16 */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
+    & ifmt_l_sfgtsi, { 0xbc600000 }
+  },
+/* l.sflts $rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_sfgts, { 0xe5800000 }
+  },
+/* l.sfltsi $rA,$simm16 */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
     & ifmt_l_sfgtsi, { 0xbd800000 }
   },
-/* l.sflesi $rA,${simm16} */
+/* l.sfltu $rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_sfgts, { 0xe4800000 }
+  },
+/* l.sfltui $rA,$simm16 */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
+    & ifmt_l_sfgtsi, { 0xbc800000 }
+  },
+/* l.sfles $rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_sfgts, { 0xe5a00000 }
+  },
+/* l.sflesi $rA,$simm16 */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
     & ifmt_l_sfgtsi, { 0xbda00000 }
   },
+/* l.sfleu $rA,$rB */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
+    & ifmt_l_sfgts, { 0xe4a00000 }
+  },
+/* l.sfleui $rA,$simm16 */
+  {
+    { 0, 0, 0, 0 },
+    { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
+    & ifmt_l_sfgtsi, { 0xbca00000 }
+  },
 /* l.sfeq $rA,$rB */
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe4000000 }
+    & ifmt_l_sfgts, { 0xe4000000 }
   },
 /* l.sfeqi $rA,$simm16 */
   {
@@ -632,7 +628,7 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
   {
     { 0, 0, 0, 0 },
     { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
-    & ifmt_l_sfgtu, { 0xe4200000 }
+    & ifmt_l_sfgts, { 0xe4200000 }
   },
 /* l.sfnei $rA,$simm16 */
   {
@@ -652,10 +648,10 @@ static const CGEN_OPCODE or1k_cgen_insn_opcode_table[MAX_INSNS] =
     { { MNEM, ' ', OP (RA), ',', OP (RB), 0 } },
     & ifmt_l_mac, { 0xc4000002 }
   },
-/* l.maci $rA,${simm16-split} */
+/* l.maci $rA,${simm16} */
   {
     { 0, 0, 0, 0 },
-    { { MNEM, ' ', OP (RA), ',', OP (SIMM16_SPLIT), 0 } },
+    { { MNEM, ' ', OP (RA), ',', OP (SIMM16), 0 } },
     & ifmt_l_maci, { 0x4c000000 }
   },
 /* l.cust1 */
