@@ -1,5 +1,12 @@
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
+	* libc/include/machine/ieeefp.h: set __IEEE_BIG_ENDIAN when
+	__or1knd__ is defined
+	* libc/include/machine/setjmp.h: set _JBLEN and _JBTYPE when
+	__or1knd__ is defined
+
+2012-06-22  Peter Gavin  <pgavin@gmail.com>
+
 	* libc/machine/or1k/include/or1k-support-defs.h: new file, moved
 	NOP_* defines here from or1k-support.h so they can be used in
 	assembly files
