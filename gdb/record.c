@@ -100,7 +100,7 @@ struct record_reg_entry
 
 struct record_end_entry
 {
-  enum target_signal sigval;
+  enum gdb_signal sigval;
   ULONGEST insn_num;
 };
 
@@ -209,7 +209,7 @@ static struct target_ops record_core_ops;
 /* The beneath function pointers.  */
 static struct target_ops *record_beneath_to_resume_ops;
 static void (*record_beneath_to_resume) (struct target_ops *, ptid_t, int,
-                                         enum target_signal);
+                                         enum gdb_signal);
 static struct target_ops *record_beneath_to_wait_ops;
 static ptid_t (*record_beneath_to_wait) (struct target_ops *, ptid_t,
 					 struct target_waitstatus *,
@@ -531,7 +531,7 @@ record_arch_list_add_end (void)
 			"Process record: add end to arch list.\n");
 
   rec = record_end_alloc ();
-  rec->u.end.sigval = TARGET_SIGNAL_0;
+  rec->u.end.sigval = GDB_SIGNAL_0;
   rec->u.end.insn_num = ++record_insn_count;
 
   record_arch_list_add (rec);
@@ -581,7 +581,7 @@ record_arch_list_cleanups (void *ignore)
    record_arch_list, and add it to record_list.  */
 
 static int
-record_message (struct regcache *regcache, enum target_signal signal)
+record_message (struct regcache *regcache, enum gdb_signal signal)
 {
   int ret;
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
@@ -621,7 +621,7 @@ record_message (struct regcache *regcache, enum target_signal signal)
       record_list->u.end.sigval = signal;
     }
 
-  if (signal == TARGET_SIGNAL_0
+  if (signal == GDB_SIGNAL_0
       || !gdbarch_process_record_signal_p (gdbarch))
     ret = gdbarch_process_record (gdbarch,
 				  regcache,
@@ -652,7 +652,7 @@ record_message (struct regcache *regcache, enum target_signal signal)
 
 struct record_message_args {
   struct regcache *regcache;
-  enum target_signal signal;
+  enum gdb_signal signal;
 };
 
 static int
@@ -665,7 +665,7 @@ record_message_wrapper (void *args)
 
 static int
 record_message_wrapper_safe (struct regcache *regcache,
-                             enum target_signal signal)
+                             enum gdb_signal signal)
 {
   struct record_message_args args;
 
@@ -786,7 +786,7 @@ record_exec_insn (struct regcache *regcache, struct gdbarch *gdbarch,
 
 static struct target_ops *tmp_to_resume_ops;
 static void (*tmp_to_resume) (struct target_ops *, ptid_t, int,
-			      enum target_signal);
+			      enum gdb_signal);
 static struct target_ops *tmp_to_wait_ops;
 static ptid_t (*tmp_to_wait) (struct target_ops *, ptid_t,
 			      struct target_waitstatus *,
@@ -896,6 +896,8 @@ record_open_1 (char *name, int from_tty)
   push_target (&record_ops);
 }
 
+static void record_init_record_breakpoints (void);
+
 /* "to_open" target method.  Open the process record target.  */
 
 static void
@@ -993,6 +995,8 @@ record_open (char *name, int from_tty)
   record_async_inferior_event_token
     = create_async_event_handler (record_async_inferior_event_handler,
 				  NULL);
+
+  record_init_record_breakpoints ();
 }
 
 /* "to_close" target method.  Close the process record target.  */
@@ -1056,7 +1060,7 @@ static enum exec_direction_kind record_execution_dir = EXEC_FORWARD;
 
 static void
 record_resume (struct target_ops *ops, ptid_t ptid, int step,
-               enum target_signal signal)
+               enum gdb_signal signal)
 {
   record_resume_step = step;
   record_resumed = 1;
@@ -1219,7 +1223,7 @@ record_wait_1 (struct target_ops *ops,
 
 	      /* Is this a SIGTRAP?  */
 	      if (status->kind == TARGET_WAITKIND_STOPPED
-		  && status->value.sig == TARGET_SIGNAL_TRAP)
+		  && status->value.sig == GDB_SIGNAL_TRAP)
 		{
 		  struct regcache *regcache;
 		  struct address_space *aspace;
@@ -1261,10 +1265,10 @@ record_wait_1 (struct target_ops *ops,
                       int step = 1;
 
 		      if (!record_message_wrapper_safe (regcache,
-                                                        TARGET_SIGNAL_0))
+                                                        GDB_SIGNAL_0))
   			{
                            status->kind = TARGET_WAITKIND_STOPPED;
-                           status->value.sig = TARGET_SIGNAL_0;
+                           status->value.sig = GDB_SIGNAL_0;
                            break;
   			}
 
@@ -1286,7 +1290,7 @@ record_wait_1 (struct target_ops *ops,
 					    "issuing one more step in the target beneath\n");
 		      record_beneath_to_resume (record_beneath_to_resume_ops,
 						ptid, step,
-						TARGET_SIGNAL_0);
+						GDB_SIGNAL_0);
 		      continue;
 		    }
 		}
@@ -1425,7 +1429,7 @@ record_wait_1 (struct target_ops *ops,
 		      continue_flag = 0;
 		    }
 		  /* Check target signal */
-		  if (record_list->u.end.sigval != TARGET_SIGNAL_0)
+		  if (record_list->u.end.sigval != GDB_SIGNAL_0)
 		    /* FIXME: better way to check */
 		    continue_flag = 0;
 		}
@@ -1449,12 +1453,12 @@ record_wait_1 (struct target_ops *ops,
 
 replay_out:
       if (record_get_sig)
-	status->value.sig = TARGET_SIGNAL_INT;
-      else if (record_list->u.end.sigval != TARGET_SIGNAL_0)
+	status->value.sig = GDB_SIGNAL_INT;
+      else if (record_list->u.end.sigval != GDB_SIGNAL_0)
 	/* FIXME: better way to check */
 	status->value.sig = record_list->u.end.sigval;
       else
-	status->value.sig = TARGET_SIGNAL_TRAP;
+	status->value.sig = GDB_SIGNAL_TRAP;
 
       discard_cleanups (old_cleanups);
     }
@@ -1744,6 +1748,35 @@ DEF_VEC_P(record_breakpoint_p);
    active.  */
 VEC(record_breakpoint_p) *record_breakpoints = NULL;
 
+static void
+record_sync_record_breakpoints (struct bp_location *loc, void *data)
+{
+  if (loc->loc_type != bp_loc_software_breakpoint)
+      return;
+
+  if (loc->inserted)
+    {
+      struct record_breakpoint *bp = XNEW (struct record_breakpoint);
+
+      bp->addr = loc->target_info.placed_address;
+      bp->address_space = loc->target_info.placed_address_space;
+
+      bp->in_target_beneath = 1;
+
+      VEC_safe_push (record_breakpoint_p, record_breakpoints, bp);
+    }
+}
+
+/* Sync existing breakpoints to record_breakpoints.  */
+
+static void
+record_init_record_breakpoints (void)
+{
+  VEC_free (record_breakpoint_p, record_breakpoints);
+
+  iterate_over_bp_locations (record_sync_record_breakpoints);
+}
+
 /* Behavior is conditional on RECORD_IS_REPLAY.  We will not actually
    insert or remove breakpoints in the real target when replaying, nor
    when recording.  */
@@ -1948,7 +1981,7 @@ init_record_ops (void)
 
 static void
 record_core_resume (struct target_ops *ops, ptid_t ptid, int step,
-                    enum target_signal signal)
+                    enum gdb_signal signal)
 {
   record_resume_step = step;
   record_resumed = 1;

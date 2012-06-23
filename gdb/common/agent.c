@@ -208,12 +208,11 @@ gdb_connect_sync_socket (int pid)
    socket.  Return zero if success, otherwise return non-zero.  */
 
 int
-agent_run_command (int pid, const char *cmd)
+agent_run_command (int pid, const char *cmd, int len)
 {
   int fd;
   int tid = agent_get_helper_thread_id ();
   ptid_t ptid = ptid_build (pid, tid, 0);
-  int len = strlen (cmd) + 1;
 
 #ifdef GDBSERVER
   int ret = write_inferior_memory (ipa_sym_addrs.addr_cmd_buf,
@@ -237,11 +236,11 @@ agent_run_command (int pid, const char *cmd)
 
   resume_info.thread = ptid;
   resume_info.kind = resume_continue;
-  resume_info.sig = TARGET_SIGNAL_0;
+  resume_info.sig = GDB_SIGNAL_0;
   (*the_target->resume) (&resume_info, 1);
 }
 #else
- target_resume (ptid, 0, TARGET_SIGNAL_0);
+ target_resume (ptid, 0, GDB_SIGNAL_0);
 #endif
 
   fd = gdb_connect_sync_socket (pid);
@@ -284,7 +283,7 @@ agent_run_command (int pid, const char *cmd)
 
 	resume_info.thread = ptid;
 	resume_info.kind = resume_stop;
-	resume_info.sig = TARGET_SIGNAL_0;
+	resume_info.sig = GDB_SIGNAL_0;
 	(*the_target->resume) (&resume_info, 1);
       }
 

@@ -311,7 +311,7 @@ cs_section_address (struct coff_symbol *cs, bfd *abfd)
   args.resultp = &sect;
   bfd_map_over_sections (abfd, find_targ_sec, &args);
   if (sect != NULL)
-    addr = bfd_get_section_vma (objfile->obfd, sect);
+    addr = bfd_get_section_vma (abfd, sect);
   return addr;
 }
 
@@ -1306,7 +1306,6 @@ static const char *
 coff_getfilename (union internal_auxent *aux_entry)
 {
   static char buffer[BUFSIZ];
-  char *temp;
   const char *result;
 
   if (aux_entry->x_file.x_n.x_zeroes == 0)
@@ -1471,7 +1470,7 @@ static void
 patch_opaque_types (struct symtab *s)
 {
   struct block *b;
-  struct dict_iterator iter;
+  struct block_iterator iter;
   struct symbol *real_sym;
 
   /* Go through the per-file symbols only.  */
@@ -2159,7 +2158,7 @@ coff_read_enum_type (int index, int length, int lastsym,
 
 	  SYMBOL_TYPE (xsym) = type;
 	  TYPE_FIELD_NAME (type, n) = SYMBOL_LINKAGE_NAME (xsym);
-	  SET_FIELD_BITPOS (TYPE_FIELD (type, n), SYMBOL_VALUE (xsym));
+	  SET_FIELD_ENUMVAL (TYPE_FIELD (type, n), SYMBOL_VALUE (xsym));
 	  if (SYMBOL_VALUE (xsym) < 0)
 	    unsigned_enum = 0;
 	  TYPE_FIELD_BITSIZE (type, n) = 0;
@@ -2196,6 +2195,7 @@ static const struct sym_fns coff_sym_fns =
 
   default_symfile_relocate,	/* sym_relocate: Relocate a debug
 				   section.  */
+  NULL,				/* sym_probe_fns */
   &psym_functions
 };
 

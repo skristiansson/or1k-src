@@ -261,7 +261,9 @@ usage (FILE *stream, int status)
       fprintf (stream, _("\
       --dwarf-depth=N        Do not display DIEs at depth N or greater\n\
       --dwarf-start=N        Display DIEs starting with N, at the same depth\n\
-                             or deeper\n\n"));
+                             or deeper\n\
+      --dwarf-check          Make additional dwarf internal consistency checks.\
+      \n\n"));
       list_supported_targets (program_name, stream);
       list_supported_architectures (program_name, stream);
 
@@ -292,6 +294,7 @@ enum option_values
     OPTION_INSN_WIDTH,
     OPTION_ADJUST_VMA,
     OPTION_DWARF_DEPTH,
+    OPTION_DWARF_CHECK,
     OPTION_DWARF_START
   };
 
@@ -343,6 +346,7 @@ static struct option long_options[]=
   {"insn-width", required_argument, NULL, OPTION_INSN_WIDTH},
   {"dwarf-depth",      required_argument, 0, OPTION_DWARF_DEPTH},
   {"dwarf-start",      required_argument, 0, OPTION_DWARF_START},
+  {"dwarf-check",      no_argument, 0, OPTION_DWARF_CHECK},
   {0, no_argument, 0, 0}
 };
 
@@ -1836,8 +1840,15 @@ disassemble_bytes (struct disassemble_info * inf,
 
 	      if (q->addend)
 		{
-		  printf ("+0x");
-		  objdump_print_value (q->addend, inf, TRUE);
+		  bfd_signed_vma addend = q->addend;
+		  if (addend < 0)
+		    {
+		      printf ("-0x");
+		      addend = -addend;
+		    }
+		  else
+		    printf ("+0x");
+		  objdump_print_value (addend, inf, TRUE);
 		}
 
 	      printf ("\n");
@@ -3013,8 +3024,15 @@ dump_reloc_set (bfd *abfd, asection *sec, arelent **relpp, long relcount)
 
       if (q->addend)
 	{
-	  printf ("+0x");
-	  bfd_printf_vma (abfd, q->addend);
+	  bfd_signed_vma addend = q->addend;
+	  if (addend < 0)
+	    {
+	      printf ("-0x");
+	      addend = -addend;
+	    }
+	  else
+	    printf ("+0x");
+	  bfd_printf_vma (abfd, addend);
 	}
       if (addend2)
 	{
@@ -3586,6 +3604,9 @@ main (int argc, char **argv)
 	    dwarf_start_die = strtoul (optarg, & cp, 0);
 	    suppress_bfd_header = 1;
 	  }
+	  break;
+	case OPTION_DWARF_CHECK:
+	  dwarf_check = TRUE;
 	  break;
 	case 'G':
 	  dump_stab_section_info = TRUE;

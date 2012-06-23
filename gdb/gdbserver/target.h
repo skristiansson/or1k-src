@@ -53,7 +53,7 @@ struct thread_resume
      thread.  If stopping a thread, and this is 0, the target should
      stop the thread however it best decides to (e.g., SIGSTOP on
      linux; SuspendThread on win32).  This is a host signal value (not
-     enum target_signal).  */
+     enum gdb_signal).  */
   int sig;
 };
 
@@ -97,7 +97,7 @@ struct target_waitstatus
     union
       {
 	int integer;
-	enum target_signal sig;
+	enum gdb_signal sig;
 	ptid_t related_pid;
 	char *execd_pathname;
       }
@@ -539,6 +539,10 @@ ptid_t mywait (ptid_t ptid, struct target_waitstatus *ourstatus, int options,
       if (the_target->done_accessing_memory)     	\
 	(*the_target->done_accessing_memory) ();  	\
     } while (0)
+
+#define target_core_of_thread(ptid)		\
+  (the_target->core_of_thread ? (*the_target->core_of_thread) (ptid) \
+   : -1)
 
 int read_inferior_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len);
 

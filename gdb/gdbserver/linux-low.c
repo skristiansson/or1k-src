@@ -78,6 +78,8 @@
 
 #ifdef __UCLIBC__
 #if !(defined(__UCLIBC_HAS_MMU__) || defined(__ARCH_HAS_MMU__))
+/* PTRACE_TEXT_ADDR and friends.  */
+#include <asm/ptrace.h>
 #define HAS_NOMMU
 #endif
 #endif
@@ -172,8 +174,20 @@ pull_pid_from_list (struct simple_pid_list **listp, int pid, int *statusp)
   return 0;
 }
 
-/* FIXME this is a bit of a hack, and could be removed.  */
-int stopping_threads;
+enum stopping_threads_kind
+  {
+    /* Not stopping threads presently.  */
+    NOT_STOPPING_THREADS,
+
+    /* Stopping threads.  */
+    STOPPING_THREADS,
+
+    /* Stopping and suspending threads.  */
+    STOPPING_AND_SUSPENDING_THREADS
+  };
+
+/* This is set while stop_all_lwps is in effect.  */
+enum stopping_threads_kind stopping_threads = NOT_STOPPING_THREADS;
 
 /* FIXME make into a target method?  */
 int using_threads = 1;
@@ -240,10 +254,6 @@ struct pending_signals
   siginfo_t info;
   struct pending_signals *prev;
 };
-
-#define PTRACE_ARG3_TYPE void *
-#define PTRACE_ARG4_TYPE void *
-#define PTRACE_XFER_TYPE long
 
 #ifdef HAVE_LINUX_REGSETS
 static char *disabled_regsets;
@@ -465,12 +475,17 @@ handle_extended_wait (struct lwp_info *event_child, int wstat)
 	 before calling linux_resume_one_lwp.  */
       new_lwp->stopped = 1;
 
+     /* If we're suspending all threads, leave this one suspended
+	too.  */
+      if (stopping_threads == STOPPING_AND_SUSPENDING_THREADS)
+	new_lwp->suspended = 1;
+
       /* Normally we will get the pending SIGSTOP.  But in some cases
 	 we might get another signal delivered to the group first.
 	 If we do get another signal, be sure not to lose it.  */
       if (WSTOPSIG (status) == SIGSTOP)
 	{
-	  if (stopping_threads)
+	  if (stopping_threads != NOT_STOPPING_THREADS)
 	    new_lwp->stop_pc = get_stop_pc (new_lwp);
 	  else
 	    linux_resume_one_lwp (new_lwp, 0, 0, NULL);
@@ -479,7 +494,7 @@ handle_extended_wait (struct lwp_info *event_child, int wstat)
 	{
 	  new_lwp->stop_expected = 1;
 
-	  if (stopping_threads)
+	  if (stopping_threads != NOT_STOPPING_THREADS)
 	    {
 	      new_lwp->stop_pc = get_stop_pc (new_lwp);
 	      new_lwp->status_pending_p = 1;
@@ -802,7 +817,7 @@ linux_attach_lwp (unsigned long lwpid)
 /* Attach to PID.  If PID is the tgid, attach to it and all
    of its threads.  */
 
-int
+static int
 linux_attach (unsigned long pid)
 {
   /* Attach to PID.  We will check for other threads
@@ -1047,7 +1062,7 @@ linux_kill (int pid)
 static int
 get_detach_signal (struct thread_info *thread)
 {
-  enum target_signal signo = TARGET_SIGNAL_0;
+  enum gdb_signal signo = GDB_SIGNAL_0;
   int status;
   struct lwp_info *lp = get_thread_lwp (thread);
 
@@ -1059,7 +1074,7 @@ get_detach_signal (struct thread_info *thread)
 	 cleanly, then it'll have stopped with SIGSTOP.  But we don't
 	 want to deliver that SIGSTOP.  */
       if (thread->last_status.kind != TARGET_WAITKIND_STOPPED
-	  || thread->last_status.value.sig == TARGET_SIGNAL_0)
+	  || thread->last_status.value.sig == GDB_SIGNAL_0)
 	return 0;
 
       /* Otherwise, we may need to deliver the signal we
@@ -1087,7 +1102,7 @@ get_detach_signal (struct thread_info *thread)
       return 0;
     }
 
-  signo = target_signal_from_host (WSTOPSIG (status));
+  signo = gdb_signal_from_host (WSTOPSIG (status));
 
   if (program_signals_p && !program_signals[signo])
     {
@@ -1095,21 +1110,21 @@ get_detach_signal (struct thread_info *thread)
 	fprintf (stderr,
 		 "GPS: lwp %s had signal %s, but it is in nopass state\n",
 		 target_pid_to_str (ptid_of (lp)),
-		 target_signal_to_string (signo));
+		 gdb_signal_to_string (signo));
       return 0;
     }
   else if (!program_signals_p
 	   /* If we have no way to know which signals GDB does not
 	      want to have passed to the program, assume
 	      SIGTRAP/SIGINT, which is GDB's default.  */
-	   && (signo == TARGET_SIGNAL_TRAP || signo == TARGET_SIGNAL_INT))
+	   && (signo == GDB_SIGNAL_TRAP || signo == GDB_SIGNAL_INT))
     {
       if (debug_threads)
 	fprintf (stderr,
 		 "GPS: lwp %s had signal %s, "
 		 "but we don't know if we should pass it.  Default to not.\n",
 		 target_pid_to_str (ptid_of (lp)),
-		 target_signal_to_string (signo));
+		 gdb_signal_to_string (signo));
       return 0;
     }
   else
@@ -1118,7 +1133,7 @@ get_detach_signal (struct thread_info *thread)
 	fprintf (stderr,
 		 "GPS: lwp %s has pending signal %s: delivering it.\n",
 		 target_pid_to_str (ptid_of (lp)),
-		 target_signal_to_string (signo));
+		 gdb_signal_to_string (signo));
 
       return WSTOPSIG (status);
     }
@@ -1157,7 +1172,8 @@ linux_detach_one_lwp (struct inferior_list_entry *entry, void *args)
   /* Finally, let it resume.  */
   if (the_low_target.prepare_to_resume != NULL)
     the_low_target.prepare_to_resume (lwp);
-  if (ptrace (PTRACE_DETACH, lwpid_of (lwp), 0, sig) < 0)
+  if (ptrace (PTRACE_DETACH, lwpid_of (lwp), 0,
+	      (PTRACE_ARG4_TYPE) (long) sig) < 0)
     error (_("Can't detach %s: %s"),
 	   target_pid_to_str (ptid_of (lwp)),
 	   strerror (errno));
@@ -1818,7 +1834,7 @@ linux_wait_for_event (ptid_t ptid, int *wstat, int options)
     {
       requested_child = find_lwp_pid (ptid);
 
-      if (!stopping_threads
+      if (stopping_threads == NOT_STOPPING_THREADS
 	  && requested_child->status_pending_p
 	  && requested_child->collecting_fast_tracepoint)
 	{
@@ -1966,7 +1982,7 @@ linux_wait_for_event (ptid_t ptid, int *wstat, int options)
 	  event_child->stop_expected = 0;
 
 	  should_stop = (current_inferior->last_resume_kind == resume_stop
-			 || stopping_threads);
+			 || stopping_threads != NOT_STOPPING_THREADS);
 
 	  if (!should_stop)
 	    {
@@ -2246,10 +2262,10 @@ linux_stabilize_threads (void)
 	  /* Lock it.  */
 	  lwp->suspended++;
 
-	  if (ourstatus.value.sig != TARGET_SIGNAL_0
+	  if (ourstatus.value.sig != GDB_SIGNAL_0
 	      || current_inferior->last_resume_kind == resume_stop)
 	    {
-	      wstat = W_STOPCODE (target_signal_to_host (ourstatus.value.sig));
+	      wstat = W_STOPCODE (gdb_signal_to_host (ourstatus.value.sig));
 	      enqueue_one_deferred_signal (lwp, &wstat);
 	    }
 	}
@@ -2370,7 +2386,7 @@ retry:
 	  else
 	    {
 	      ourstatus->kind = TARGET_WAITKIND_SIGNALLED;
-	      ourstatus->value.sig = target_signal_from_host (WTERMSIG (w));
+	      ourstatus->value.sig = gdb_signal_from_host (WTERMSIG (w));
 
 	      if (debug_threads)
 		fprintf (stderr,
@@ -2542,7 +2558,7 @@ Check if we're already there.\n",
 	      if (stabilizing_threads)
 		{
 		  ourstatus->kind = TARGET_WAITKIND_STOPPED;
-		  ourstatus->value.sig = TARGET_SIGNAL_0;
+		  ourstatus->value.sig = GDB_SIGNAL_0;
 		  return ptid_of (event_child);
 		}
 	    }
@@ -2569,7 +2585,7 @@ Check if we're already there.\n",
 	       || WSTOPSIG (w) == __SIGRTMIN + 1))
 	  ||
 #endif
-	  (pass_signals[target_signal_from_host (WSTOPSIG (w))]
+	  (pass_signals[gdb_signal_from_host (WSTOPSIG (w))]
 	   && !(WSTOPSIG (w) == SIGSTOP
 		&& current_inferior->last_resume_kind == resume_stop))))
     {
@@ -2715,18 +2731,18 @@ Check if we're already there.\n",
       /* A thread that has been requested to stop by GDB with vCont;t,
 	 and it stopped cleanly, so report as SIG0.  The use of
 	 SIGSTOP is an implementation detail.  */
-      ourstatus->value.sig = TARGET_SIGNAL_0;
+      ourstatus->value.sig = GDB_SIGNAL_0;
     }
   else if (current_inferior->last_resume_kind == resume_stop
 	   && WSTOPSIG (w) != SIGSTOP)
     {
       /* A thread that has been requested to stop by GDB with vCont;t,
 	 but, it stopped for other reasons.  */
-      ourstatus->value.sig = target_signal_from_host (WSTOPSIG (w));
+      ourstatus->value.sig = gdb_signal_from_host (WSTOPSIG (w));
     }
   else
     {
-      ourstatus->value.sig = target_signal_from_host (WSTOPSIG (w));
+      ourstatus->value.sig = gdb_signal_from_host (WSTOPSIG (w));
     }
 
   gdb_assert (ptid_equal (step_over_bkpt, null_ptid));
@@ -3075,14 +3091,19 @@ lwp_running (struct inferior_list_entry *entry, void *data)
 static void
 stop_all_lwps (int suspend, struct lwp_info *except)
 {
-  stopping_threads = 1;
+  /* Should not be called recursively.  */
+  gdb_assert (stopping_threads == NOT_STOPPING_THREADS);
+
+  stopping_threads = (suspend
+		      ? STOPPING_AND_SUSPENDING_THREADS
+		      : STOPPING_THREADS);
 
   if (suspend)
     find_inferior (&all_lwps, suspend_and_send_sigstop_callback, except);
   else
     find_inferior (&all_lwps, send_sigstop_callback, except);
   for_each_inferior (&all_lwps, wait_for_sigstop);
-  stopping_threads = 0;
+  stopping_threads = NOT_STOPPING_THREADS;
 }
 
 /* Resume execution of the inferior process.
@@ -3318,10 +3339,11 @@ linux_set_resume_request (struct inferior_list_entry *entry, void *arg)
       ptid_t ptid = r->resume[ndx].thread;
       if (ptid_equal (ptid, minus_one_ptid)
 	  || ptid_equal (ptid, entry->id)
-	  || (ptid_is_pid (ptid)
-	      && (ptid_get_pid (ptid) == pid_of (lwp)))
-	  || (ptid_get_lwp (ptid) == -1
-	      && (ptid_get_pid (ptid) == pid_of (lwp))))
+	  /* Handle both 'pPID' and 'pPID.-1' as meaning 'all threads
+	     of PID'.  */
+	  || (ptid_get_pid (ptid) == pid_of (lwp)
+	      && (ptid_is_pid (ptid)
+		  || ptid_get_lwp (ptid) == -1)))
 	{
 	  if (r->resume[ndx].kind == resume_stop
 	      && thread->last_resume_kind == resume_stop)
@@ -3997,7 +4019,8 @@ regsets_fetch_inferior_registers (struct regcache *regcache)
 	data = buf;
 
 #ifndef __sparc__
-      res = ptrace (regset->get_request, pid, nt_type, data);
+      res = ptrace (regset->get_request, pid,
+		    (PTRACE_ARG3_TYPE) (long) nt_type, data);
 #else
       res = ptrace (regset->get_request, pid, data, nt_type);
 #endif
@@ -4070,7 +4093,8 @@ regsets_store_inferior_registers (struct regcache *regcache)
 	data = buf;
 
 #ifndef __sparc__
-      res = ptrace (regset->get_request, pid, nt_type, data);
+      res = ptrace (regset->get_request, pid,
+		    (PTRACE_ARG3_TYPE) (long) nt_type, data);
 #else
       res = ptrace (regset->get_request, pid, data, nt_type);
 #endif
@@ -4082,7 +4106,8 @@ regsets_store_inferior_registers (struct regcache *regcache)
 
 	  /* Only now do we write the register set.  */
 #ifndef __sparc__
-	  res = ptrace (regset->set_request, pid, nt_type, data);
+	  res = ptrace (regset->set_request, pid,
+			(PTRACE_ARG3_TYPE) (long) nt_type, data);
 #else
 	  res = ptrace (regset->set_request, pid, data, nt_type);
 #endif
@@ -4356,23 +4381,20 @@ linux_store_registers (struct regcache *regcache, int regno)
 static int
 linux_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
 {
-  register int i;
-  /* Round starting address down to longword boundary.  */
-  register CORE_ADDR addr = memaddr & -(CORE_ADDR) sizeof (PTRACE_XFER_TYPE);
-  /* Round ending address up; get number of longwords that makes.  */
-  register int count
-    = (((memaddr + len) - addr) + sizeof (PTRACE_XFER_TYPE) - 1)
-      / sizeof (PTRACE_XFER_TYPE);
-  /* Allocate buffer of that many longwords.  */
-  register PTRACE_XFER_TYPE *buffer
-    = (PTRACE_XFER_TYPE *) alloca (count * sizeof (PTRACE_XFER_TYPE));
-  int fd;
-  char filename[64];
   int pid = lwpid_of (get_thread_lwp (current_inferior));
+  register PTRACE_XFER_TYPE *buffer;
+  register CORE_ADDR addr;
+  register int count;
+  char filename[64];
+  register int i;
+  int ret;
+  int fd;
 
   /* Try using /proc.  Don't bother for one word.  */
   if (len >= 3 * sizeof (long))
     {
+      int bytes;
+
       /* We could keep this file open and cache it - possibly one per
 	 thread.  That requires some juggling, but is even faster.  */
       sprintf (filename, "/proc/%d/mem", pid);
@@ -4385,38 +4407,59 @@ linux_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
 	 32-bit platforms (for instance, SPARC debugging a SPARC64
 	 application).  */
 #ifdef HAVE_PREAD64
-      if (pread64 (fd, myaddr, len, memaddr) != len)
+      bytes = pread64 (fd, myaddr, len, memaddr);
 #else
-      if (lseek (fd, memaddr, SEEK_SET) == -1 || read (fd, myaddr, len) != len)
+      bytes = -1;
+      if (lseek (fd, memaddr, SEEK_SET) != -1)
+	bytes = read (fd, myaddr, len);
 #endif
-	{
-	  close (fd);
-	  goto no_proc;
-	}
 
       close (fd);
-      return 0;
+      if (bytes == len)
+	return 0;
+
+      /* Some data was read, we'll try to get the rest with ptrace.  */
+      if (bytes > 0)
+	{
+	  memaddr += bytes;
+	  myaddr += bytes;
+	  len -= bytes;
+	}
     }
 
  no_proc:
+  /* Round starting address down to longword boundary.  */
+  addr = memaddr & -(CORE_ADDR) sizeof (PTRACE_XFER_TYPE);
+  /* Round ending address up; get number of longwords that makes.  */
+  count = ((((memaddr + len) - addr) + sizeof (PTRACE_XFER_TYPE) - 1)
+	   / sizeof (PTRACE_XFER_TYPE));
+  /* Allocate buffer of that many longwords.  */
+  buffer = (PTRACE_XFER_TYPE *) alloca (count * sizeof (PTRACE_XFER_TYPE));
+
   /* Read all the longwords */
+  errno = 0;
   for (i = 0; i < count; i++, addr += sizeof (PTRACE_XFER_TYPE))
     {
-      errno = 0;
       /* Coerce the 3rd arg to a uintptr_t first to avoid potential gcc warning
 	 about coercing an 8 byte integer to a 4 byte pointer.  */
       buffer[i] = ptrace (PTRACE_PEEKTEXT, pid,
 			  (PTRACE_ARG3_TYPE) (uintptr_t) addr, 0);
       if (errno)
-	return errno;
+	break;
     }
+  ret = errno;
 
   /* Copy appropriate bytes out of the buffer.  */
-  memcpy (myaddr,
-	  (char *) buffer + (memaddr & (sizeof (PTRACE_XFER_TYPE) - 1)),
-	  len);
+  if (i > 0)
+    {
+      i *= sizeof (PTRACE_XFER_TYPE);
+      i -= memaddr & (sizeof (PTRACE_XFER_TYPE) - 1);
+      memcpy (myaddr,
+	      (char *) buffer + (memaddr & (sizeof (PTRACE_XFER_TYPE) - 1)),
+	      i < len ? i : len);
+    }
 
-  return 0;
+  return ret;
 }
 
 /* Copy LEN bytes of data from debugger memory at MYADDR to inferior's
@@ -4759,6 +4802,9 @@ linux_stopped_data_address (void)
 }
 
 #if defined(__UCLIBC__) && defined(HAS_NOMMU)
+#if ! (defined(PT_TEXT_ADDR) \
+       || defined(PT_DATA_ADDR) \
+       || defined(PT_TEXT_END_ADDR))
 #if defined(__mcoldfire__)
 /* These should really be defined in the kernel's ptrace.h header.  */
 #define PT_TEXT_ADDR 49*4
@@ -4772,6 +4818,7 @@ linux_stopped_data_address (void)
 #define PT_TEXT_ADDR     (0x10000*4)
 #define PT_DATA_ADDR     (0x10004*4)
 #define PT_TEXT_END_ADDR (0x10008*4)
+#endif
 #endif
 
 /* Under uClinux, programs are loaded at non-zero offsets, which we need
@@ -5446,6 +5493,7 @@ get_r_debug (const int pid, const int is_elf64)
       if (is_elf64)
 	{
 	  Elf64_Dyn *const dyn = (Elf64_Dyn *) buf;
+#ifdef DT_MIPS_RLD_MAP
 	  union
 	    {
 	      Elf64_Xword map;
@@ -5461,6 +5509,7 @@ get_r_debug (const int pid, const int is_elf64)
 	      else
 		break;
 	    }
+#endif	/* DT_MIPS_RLD_MAP */
 
 	  if (dyn->d_tag == DT_DEBUG && map == -1)
 	    map = dyn->d_un.d_val;
@@ -5471,6 +5520,7 @@ get_r_debug (const int pid, const int is_elf64)
       else
 	{
 	  Elf32_Dyn *const dyn = (Elf32_Dyn *) buf;
+#ifdef DT_MIPS_RLD_MAP
 	  union
 	    {
 	      Elf32_Word map;
@@ -5486,6 +5536,7 @@ get_r_debug (const int pid, const int is_elf64)
 	      else
 		break;
 	    }
+#endif	/* DT_MIPS_RLD_MAP */
 
 	  if (dyn->d_tag == DT_DEBUG && map == -1)
 	    map = dyn->d_un.d_val;
@@ -5605,7 +5656,13 @@ linux_qxfer_libraries_svr4 (const char *annex, unsigned char *readbuf,
   if (priv->r_debug == 0)
     priv->r_debug = get_r_debug (pid, is_elf64);
 
-  if (priv->r_debug == (CORE_ADDR) -1 || priv->r_debug == 0)
+  /* We failed to find DT_DEBUG.  Such situation will not change for this
+     inferior - do not retry it.  Report it to GDB as E01, see for the reasons
+     at the GDB solib-svr4.c side.  */
+  if (priv->r_debug == (CORE_ADDR) -1)
+    return -1;
+
+  if (priv->r_debug == 0)
     {
       document = xstrdup ("<library-list-svr4 version=\"1.0\"/>\n");
     }

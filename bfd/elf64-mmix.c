@@ -1,5 +1,6 @@
 /* MMIX-specific support for 64-bit ELF.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010
+   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009, 2010, 2011,
+   2012
    Free Software Foundation, Inc.
    Contributed by Hans-Peter Nilsson <hp@bitrange.com>
 
@@ -1475,9 +1476,9 @@ mmix_elf_relocate_section (output_bfd, info, input_bfd, input_section,
 	  name = h->root.root.string;
 	}
 
-      if (sec != NULL && elf_discarded_section (sec))
+      if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, relend, howto, contents);
+					 rel, 1, relend, howto, 0, contents);
 
       if (info->relocatable)
 	{
@@ -1770,7 +1771,9 @@ mmix_final_link_relocate (reloc_howto_type *howto, asection *input_section,
 	first_global = 255;
       else
 	{
-	  first_global = bfd_get_section_vma (abfd, regsec) / 8;
+	  first_global
+	    = bfd_get_section_vma (input_section->output_section->owner,
+				   regsec) / 8;
 	  if (strcmp (bfd_get_section_name (symsec->owner, symsec),
 		      MMIX_REG_CONTENTS_SECTION_NAME) == 0)
 	    {

@@ -31,6 +31,7 @@ details. */
 #include "child_info.h"
 #include "ntdll.h"
 #include "exception.h"
+#include "cygwait.h"
 
 #define CALL_HANDLER_RETRY_OUTER 10
 #define CALL_HANDLER_RETRY_INNER 10
@@ -714,7 +715,7 @@ handle_sigsuspend (sigset_t tempmask)
   sigproc_printf ("oldmask %p, newmask %p", oldmask, tempmask);
 
   pthread_testcancel ();
-  cancelable_wait (signal_arrived);
+  cancelable_wait (signal_arrived, LARGE_NULL, cw_cancel | cw_cancel_self);
 
   set_sig_errno (EINTR);	// Per POSIX
 
@@ -865,7 +866,7 @@ setup_handler (int sig, void *handler, struct sigaction& siga, _cygtls *tls)
 	     If the thread is already suspended (which can occur when a program
 	     has called SuspendThread on itself) then just queue the signal. */
 
-	  sigproc_printf ("suspending thread");
+	  sigproc_printf ("suspending thread, tls %p, _main_tls %p", tls, _main_tls);
 	  res = SuspendThread (hth);
 	  /* Just set pending if thread is already suspended */
 	  if (res)
@@ -1194,6 +1195,7 @@ sigpacket::process ()
     handler = NULL;
 
   _cygtls *use_tls = tls ?: _main_tls;
+  sigproc_printf ("tls %p, use_tls %p", tls, use_tls);
 
   if (si.si_signo == SIGKILL)
     goto exit_sig;

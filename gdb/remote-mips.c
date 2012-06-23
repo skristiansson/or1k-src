@@ -1537,7 +1537,6 @@ common_open (struct target_ops *ops, char *name, int from_tty,
 	     enum mips_monitor_type new_monitor,
 	     const char *new_monitor_prompt)
 {
-  char *ptype;
   char *serial_port_name;
   char *remote_name = 0;
   char *local_name = 0;
@@ -1757,7 +1756,7 @@ mips_detach (struct target_ops *ops, char *args, int from_tty)
 
 static void
 mips_resume (struct target_ops *ops,
-	     ptid_t ptid, int step, enum target_signal siggnal)
+	     ptid_t ptid, int step, enum gdb_signal siggnal)
 {
   int err;
 
@@ -1771,7 +1770,7 @@ mips_resume (struct target_ops *ops,
 /* Return the signal corresponding to SIG, where SIG is the number which
    the MIPS protocol uses for the signal.  */
 
-static enum target_signal
+static enum gdb_signal
 mips_signal_from_protocol (int sig)
 {
   /* We allow a few more signals than the IDT board actually returns, on
@@ -1779,13 +1778,13 @@ mips_signal_from_protocol (int sig)
      for these signals is widely agreed upon.  */
   if (sig <= 0
       || sig > 31)
-    return TARGET_SIGNAL_UNKNOWN;
+    return GDB_SIGNAL_UNKNOWN;
 
-  /* Don't want to use target_signal_from_host because we are converting
+  /* Don't want to use gdb_signal_from_host because we are converting
      from MIPS signal numbers, not host ones.  Our internal numbers
      match the MIPS numbers for the signals the board can return, which
      are: SIGINT, SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGTRAP.  */
-  return (enum target_signal) sig;
+  return (enum gdb_signal) sig;
 }
 
 /* Set the register designated by REGNO to the value designated by VALUE.  */
@@ -1828,7 +1827,6 @@ mips_wait (struct target_ops *ops,
   ULONGEST rpc, rfp, rsp;
   char pc_string[17], fp_string[17], sp_string[17], flags[20];
   int nfields;
-  int i;
 
   interrupt_count = 0;
   hit_watchpoint = 0;
@@ -1839,7 +1837,7 @@ mips_wait (struct target_ops *ops,
   if (!mips_need_reply)
     {
       status->kind = TARGET_WAITKIND_STOPPED;
-      status->value.sig = TARGET_SIGNAL_TRAP;
+      status->value.sig = GDB_SIGNAL_TRAP;
       return inferior_ptid;
     }
 

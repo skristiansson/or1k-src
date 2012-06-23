@@ -804,7 +804,7 @@ static void
 gdbtk_annotate_signal (void)
 {
   char *buf;
-  struct thread_info *tp = inferior_thread ();
+  struct thread_info *tp;
 
   /* Inform gui that the target has stopped. This is
      a necessary stop button evil. We don't want signal notification
@@ -812,9 +812,14 @@ gdbtk_annotate_signal (void)
      timeout. */
   Tcl_Eval (gdbtk_interp, "gdbtk_stop_idle_callback");
 
+  if (ptid_equal (inferior_ptid, null_ptid))
+    return;
+
+  tp = inferior_thread ();
+
   buf = xstrprintf ("gdbtk_signal %s {%s}",
-	     target_signal_to_name (tp->suspend.stop_signal),
-	     target_signal_to_string (tp->suspend.stop_signal));
+	     gdb_signal_to_name (tp->suspend.stop_signal),
+	     gdb_signal_to_string (tp->suspend.stop_signal));
   if (Tcl_Eval (gdbtk_interp, buf) != TCL_OK)
     report_error ();
   free(buf);

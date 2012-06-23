@@ -1,12 +1,12 @@
-/Makefile.am/1.1/Mon Sep 28 16:42:21 2009//
-/Makefile.in/1.4/Mon Dec 19 22:03:28 2011//
-/abort.c/1.1/Mon Sep 28 16:42:21 2009//
-/aclocal.m4/1.4/Mon Dec 19 22:03:28 2011//
-/configure/1.5/Mon Dec 19 22:03:28 2011//
-/configure.in/1.1/Mon Sep 28 16:42:21 2009//
-/longjmp.S/1.1/Mon Sep 28 16:42:21 2009//
-/setjmp.S/1.1/Mon Sep 28 16:42:21 2009//
-/strcmp.c/1.1/Mon Sep 28 16:42:21 2009//
-/strcpy.c/1.1/Mon Sep 28 16:42:21 2009//
-/strlen.c/1.1/Mon Sep 28 16:42:21 2009//
+/Makefile.am/1.1/Mon May  7 21:35:08 2012//
+/Makefile.in/1.4/Mon May  7 21:35:08 2012//
+/abort.c/1.1/Mon May  7 21:35:08 2012//
+/aclocal.m4/1.4/Mon May  7 21:35:08 2012//
+/configure/1.5/Mon May  7 21:35:08 2012//
+/configure.in/1.1/Mon May  7 21:35:08 2012//
+/longjmp.S/1.1/Mon May  7 21:35:08 2012//
+/setjmp.S/1.1/Mon May  7 21:35:08 2012//
+/strcmp.c/1.1/Mon May  7 21:35:08 2012//
+/strcpy.c/1.1/Mon May  7 21:35:08 2012//
+/strlen.c/1.1/Mon May  7 21:35:08 2012//
 D

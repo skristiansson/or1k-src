@@ -823,9 +823,15 @@ Gdb_index_info_reader::record_cu_ranges(Dwarf_die* die)
       return;
     }
 
-  off_t low_pc = die->ref_attribute(elfcpp::DW_AT_low_pc, &shndx);
-  off_t high_pc = die->ref_attribute(elfcpp::DW_AT_high_pc, &shndx2);
-  if ((low_pc != 0 || high_pc != 0) && low_pc != -1 && high_pc != -1)
+  off_t low_pc = die->address_attribute(elfcpp::DW_AT_low_pc, &shndx);
+  off_t high_pc = die->address_attribute(elfcpp::DW_AT_high_pc, &shndx2);
+  if (high_pc == -1)
+    {
+      high_pc = die->uint_attribute(elfcpp::DW_AT_high_pc);
+      high_pc += low_pc;
+      shndx2 = shndx;
+    }
+  if ((low_pc != 0 || high_pc != 0) && low_pc != -1)
     {
       if (shndx != shndx2)
         {
@@ -1166,8 +1172,9 @@ Gdb_index::do_write(Output_file* of)
 	      base = (os->address()
 		      + object->output_section_offset(range.shndx));
 	    }
-	  elfcpp::Swap<64, false>::writeval(pov, base + range.start);
-	  elfcpp::Swap<64, false>::writeval(pov + 8, base + range.end);
+	  elfcpp::Swap_aligned32<64, false>::writeval(pov, base + range.start);
+	  elfcpp::Swap_aligned32<64, false>::writeval(pov + 8,
+						      base + range.end);
 	  elfcpp::Swap<32, false>::writeval(pov + 16, cu_index);
 	  pov += 20;
 	}

@@ -26,6 +26,7 @@ details. */
 #include "cygthread.h"
 #include "child_info.h"
 #include <asm/socket.h>
+#include "cygwait.h"
 
 #define close_maybe(h) \
   do { \
@@ -53,13 +54,20 @@ fhandler_pty_slave::get_unit ()
 bool
 bytes_available (DWORD& n, HANDLE h)
 {
-  bool succeeded = PeekNamedPipe (h, NULL, 0, NULL, &n, NULL);
-  if (!succeeded)
+  DWORD navail, nleft;
+  navail = nleft = 0;
+  bool succeeded = PeekNamedPipe (h, NULL, 0, NULL, &navail, &nleft);
+  if (succeeded)
+    /* nleft should always be the right choice unless something has written 0
+       bytes to the pipe.  In that pathological case we return the actual number
+       of bytes available in the pipe. See cgf-000008 for more details.  */
+    n = nleft ?: navail;
+  else
     {
       termios_printf ("PeekNamedPipe(%p) failed, %E", h);
       n = 0;
     }
-  debug_only_printf ("%u bytes available", n);
+  debug_only_printf ("n %u, nleft %u, navail %u");
   return succeeded;
 }
 
@@ -730,14 +738,14 @@ fhandler_pty_slave::read (void *ptr, size_t& len)
 	      goto out;
 	    }
 	  break;
-	case WAIT_OBJECT_0 + 1:
+	case WAIT_SIGNALED:
 	  if (totalread > 0)
 	    goto out;
 	  termios_printf ("wait catched signal");
 	  set_sig_errno (EINTR);
 	  totalread = -1;
 	  goto out;
-	case WAIT_OBJECT_0 + 2:
+	case WAIT_CANCELED:
 	  process_state.pop ();
 	  pthread::static_cancel_self ();
 	  /*NOTREACHED*/
@@ -765,14 +773,14 @@ fhandler_pty_slave::read (void *ptr, size_t& len)
 	case WAIT_OBJECT_0:
 	case WAIT_ABANDONED_0:
 	  break;
-	case WAIT_OBJECT_0 + 1:
+	case WAIT_SIGNALED:
 	  if (totalread > 0)
 	    goto out;
-	  termios_printf ("wait for mutex catched signal");
+	  termios_printf ("wait for mutex caught signal");
 	  set_sig_errno (EINTR);
 	  totalread = -1;
 	  goto out;
-	case WAIT_OBJECT_0 + 2:
+	case WAIT_CANCELED:
 	  process_state.pop ();
 	  pthread::static_cancel_self ();
 	  /*NOTREACHED*/
@@ -1429,7 +1437,7 @@ fhandler_pty_master::ioctl (unsigned int cmd, void *arg)
 	    set_errno (EINVAL);
 	    return -1;
 	  }
-	*(int *) arg = (DWORD) n;
+	*(int *) arg = (int) n;
       }
       break;
     default:

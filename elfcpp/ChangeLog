@@ -1,3 +1,26 @@
+2012-05-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gold/14091
+	* x86_64.h (R_X86_64_RELATIVE64): New.
+
+2012-05-01  Cary Coutant  <ccoutant@google.com>
+
+	* dwarf.h (enum DW_TAG, enum DW_FORM, enum DW_AT, enum DW_ENCODING)
+	(enum DW_OP, enum DW_CFA): Remove.
+	Include dwarf2.def.
+
+2012-04-23  Cary Coutant  <ccoutant@google.com>
+
+	* elfcpp_swap.h (struct Swap_aligned32): New template.
+
+2012-04-16  David S. Miller  <davem@davemloft.net>
+
+	* sparc.h (R_SPARC_JMP_IREL): New relocation.
+
+2012-04-12  David S. Miller  <davem@davemloft.net>
+
+	* sparc.h (R_SPARC_WDISP10): New relocation.
+
 2012-03-12  Cary Coutant  <ccoutant@google.com>
 
 	Update DWARF enums from ../include/dwarf2.h.

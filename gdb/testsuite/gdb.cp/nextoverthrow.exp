@@ -22,7 +22,7 @@ set binfile $objdir/$subdir/$testfile
 
 # Create and source the file that provides information about the compiler
 # used to compile the test case.
-if [get_compiler_info ${binfile} "c++"] {
+if [get_compiler_info "c++"] {
     untested nextoverthrow.exp
     return -1
 }
@@ -53,6 +53,17 @@ gdb_test_multiple "print _Unwind_DebugHook" "check for unwinder hook" {
 	set ok 0
     }
 }
+if {!$ok} {
+    gdb_test_multiple "info probe" "check for stap probe in unwinder" {
+	-re ".*libgcc.*unwind.*\r\n$gdb_prompt $" {
+	    pass "check for stap probe in unwinder"
+	    set ok 1
+	}
+	-re "\r\n$gdb_prompt $" {
+	}
+    }
+}
+
 if {!$ok} {
     unsupported "nextoverthrow.exp could not find _Unwind_DebugHook"
     return -1

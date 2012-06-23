@@ -113,8 +113,6 @@ show_parserdebug (struct ui_file *file, int from_tty,
 
 static void free_funcalls (void *ignore);
 
-static int prefixify_expression (struct expression *);
-
 static int prefixify_subexp (struct expression *, struct expression *, int,
 			     int);
 
@@ -182,13 +180,9 @@ free_funcalls (void *ignore)
 /* This page contains the functions for adding data to the struct expression
    being constructed.  */
 
-/* Helper function to initialize the expout, expout_size, expout_ptr
-   trio before it is used to store expression elements created during
-   the parsing of an expression.  INITIAL_SIZE is the initial size of
-   the expout array.  LANG is the language used to parse the expression.
-   And GDBARCH is the gdbarch to use during parsing.  */
+/* See definition in parser-defs.h.  */
 
-static void
+void
 initialize_expout (int initial_size, const struct language_defn *lang,
 		   struct gdbarch *gdbarch)
 {
@@ -200,11 +194,9 @@ initialize_expout (int initial_size, const struct language_defn *lang,
   expout->gdbarch = gdbarch;
 }
 
-/* Helper function that frees any unsed space in the expout array.
-   It is generally used when the parser has just been parsed and
-   created.  */
+/* See definition in parser-defs.h.  */
 
-static void
+void
 reallocate_expout (void)
 {
   /* Record the actual number of expression elements, and then
@@ -804,14 +796,10 @@ copy_name (struct stoken token)
   return namecopy;
 }
 
-/* Reverse an expression from suffix form (in which it is constructed)
-   to prefix form (in which we can conveniently print or execute it).
-   Ordinarily this always returns -1.  However, if EXPOUT_LAST_STRUCT
-   is not -1 (i.e., we are trying to complete a field name), it will
-   return the index of the subexpression which is the left-hand-side
-   of the struct operation at EXPOUT_LAST_STRUCT.  */
 
-static int
+/* See comments on parser-defs.h.  */
+
+int
 prefixify_expression (struct expression *expr)
 {
   int len = sizeof (struct expression) + EXP_ELEM_TO_BYTES (expr->nelts);
@@ -1310,7 +1298,6 @@ int
 parse_float (const char *p, int len, DOUBLEST *d, const char **suffix)
 {
   char *copy;
-  char *s;
   int n, num;
 
   copy = xmalloc (len + 1);
@@ -1380,6 +1367,49 @@ check_type_stack_depth (void)
     }
 }
 
+/* A helper function for insert_type and insert_type_address_space.
+   This does work of expanding the type stack and inserting the new
+   element, ELEMENT, into the stack at location SLOT.  */
+
+static void
+insert_into_type_stack (int slot, union type_stack_elt element)
+{
+  check_type_stack_depth ();
+
+  if (slot < type_stack_depth)
+    memmove (&type_stack[slot + 1], &type_stack[slot],
+	     (type_stack_depth - slot) * sizeof (union type_stack_elt));
+  type_stack[slot] = element;
+  ++type_stack_depth;
+}
+
+/* Insert a new type, TP, at the bottom of the type stack.  If TP is
+   tp_pointer or tp_reference, it is inserted at the bottom.  If TP is
+   a qualifier, it is inserted at slot 1 (just above a previous
+   tp_pointer) if there is anything on the stack, or simply pushed if
+   the stack is empty.  Other values for TP are invalid.  */
+
+void
+insert_type (enum type_pieces tp)
+{
+  union type_stack_elt element;
+  int slot;
+
+  gdb_assert (tp == tp_pointer || tp == tp_reference
+	      || tp == tp_const || tp == tp_volatile);
+
+  /* If there is anything on the stack (we know it will be a
+     tp_pointer), insert the qualifier above it.  Otherwise, simply
+     push this on the top of the stack.  */
+  if (type_stack_depth && (tp == tp_const || tp == tp_volatile))
+    slot = 1;
+  else
+    slot = 0;
+
+  element.piece = tp;
+  insert_into_type_stack (slot, element);
+}
+
 void
 push_type (enum type_pieces tp)
 {
@@ -1394,10 +1424,32 @@ push_type_int (int n)
   type_stack[type_stack_depth++].int_val = n;
 }
 
+/* Insert a tp_space_identifier and the corresponding address space
+   value into the stack.  STRING is the name of an address space, as
+   recognized by address_space_name_to_int.  If the stack is empty,
+   the new elements are simply pushed.  If the stack is not empty,
+   this function assumes that the first item on the stack is a
+   tp_pointer, and the new values are inserted above the first
+   item.  */
+
 void
-push_type_address_space (char *string)
+insert_type_address_space (char *string)
 {
-  push_type_int (address_space_name_to_int (parse_gdbarch, string));
+  union type_stack_elt element;
+  int slot;
+
+  /* If there is anything on the stack (we know it will be a
+     tp_pointer), insert the address space qualifier above it.
+     Otherwise, simply push this on the top of the stack.  */
+  if (type_stack_depth)
+    slot = 1;
+  else
+    slot = 0;
+
+  element.piece = tp_space_identifier;
+  insert_into_type_stack (slot, element);
+  element.int_val = address_space_name_to_int (parse_gdbarch, string);
+  insert_into_type_stack (slot, element);
 }
 
 enum type_pieces

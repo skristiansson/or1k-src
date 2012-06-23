@@ -1,13 +1,7 @@
-/Makefile.am/1.6/Sat Jan  1 15:33:24 2011//
-/Makefile.in/1.9/Sat Jan  1 15:33:24 2011//
-/dummy.c/1.4/Sat Jan  1 15:33:24 2011//
-/memchr.c/1.5/Sat Jan  1 15:33:24 2011//
-/memchr.valgrind/1.1/Sun May 23 00:57:01 2010//
-/memmem.c/1.5/Sat Jan  1 15:33:24 2011//
-/stddef.in.h/1.2/Sat Jan  1 15:33:24 2011//
-/stdint.in.h/1.5/Sat Jan  1 15:33:24 2011//
-/str-two-way.h/1.5/Sat Jan  1 15:33:24 2011//
-/string.in.h/1.5/Sat Jan  1 15:33:24 2011//
-/wchar.in.h/1.5/Sat Jan  1 15:33:24 2011//
 D/extra////
 D/m4////
+/Makefile.in/1.14/Sat Jun 23 00:21:39 2012//
+/aclocal.m4/1.1/Thu Apr 19 19:34:51 2012//
+/config.in/1.1/Thu Apr 19 19:34:51 2012//
+/configure/1.1/Thu Apr 19 19:34:51 2012//
+/configure.ac/1.1/Thu Apr 19 19:34:51 2012//

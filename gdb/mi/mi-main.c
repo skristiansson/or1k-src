@@ -210,7 +210,7 @@ proceed_thread (struct thread_info *thread, int pid)
 
   switch_to_thread (thread->ptid);
   clear_proceed_status ();
-  proceed ((CORE_ADDR) -1, TARGET_SIGNAL_DEFAULT, 0);
+  proceed ((CORE_ADDR) -1, GDB_SIGNAL_DEFAULT, 0);
 }
 
 static int
@@ -1131,8 +1131,6 @@ get_register (struct frame_info *frame, int regnum, int format)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
   struct ui_out *uiout = current_uiout;
-  CORE_ADDR addr;
-  enum lval_type lval;
   struct value *val;
 
   if (format == 'N')
@@ -2066,7 +2064,7 @@ mi_cmd_execute (struct mi_parse *parse)
 	 provide --thread if it wishes to operate on a specific
 	 thread.  */
       if (inf->pid != 0)
-	tp = any_thread_of_process (inf->pid);
+	tp = any_live_thread_of_process (inf->pid);
       switch_to_thread (tp ? tp->ptid : null_ptid);
       set_current_program_space (inf->pspace);
     }

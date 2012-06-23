@@ -22,7 +22,12 @@
 #endif
 #include <signal.h>
 
+#include "gdbthread.h"
 #include "gdb_proc_service.h"
+
+#define PTRACE_ARG3_TYPE void *
+#define PTRACE_ARG4_TYPE void *
+#define PTRACE_XFER_TYPE long
 
 #ifdef HAVE_LINUX_REGSETS
 typedef void (*regset_fill_func) (struct regcache *, void *);

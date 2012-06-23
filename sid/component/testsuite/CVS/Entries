@@ -1,6 +1,3 @@
-/ChangeLog/1.65/Mon Feb  5 20:28:41 2007//
-/Makefile.am/1.2/Sat Aug  4 12:10:31 2001//
-/Makefile.in/1.10/Mon Feb  5 20:28:41 2007//
 D/config////
 D/lib////
 D/sidcomp.audio////
@@ -32,3 +29,6 @@ D/sidcomp.rtc////
 D/sidcomp.sched////
 D/sidcomp.timers////
 D/sidcomp.uart////
+/ChangeLog/1.65/Mon May  7 21:35:09 2012//
+/Makefile.am/1.2/Mon May  7 21:35:09 2012//
+/Makefile.in/1.10/Mon May  7 21:35:09 2012//

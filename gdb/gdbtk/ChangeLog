@@ -1,3 +1,67 @@
+2012-05-25  Roland Schwingel  <roland.schwingel@onevision.com>
+
+	* generic/gdbtk-bp.c (gdb_set_bp): Add new NULL param
+	to call to create_breakpoint() due to changes in gdb.
+	* generic/gdbtk-cmds.c (gdb_listfuncs): Iterator param
+	in call to ALL_BLOCK_SYMBOLS() now is a pointer to
+	struct block_iterator instead of struct dict_iterator.
+	* generic/gdbtk-stack.c (gdb_block_vars,gdb_get_blocks)
+	(gdb_get_vars_command): Likewise.
+	* generic/gdbtk-hooks.c (gdbtk_annotate_signal): Change
+	function calls: target_signal_to_name -> gdb_signal_to_name
+	target_signal_to_string -> gdb_signal_to_string due to
+	recent changes in gdb.
+
+2012-05-25  Roland Schwingel  <roland.schwingel@onevision.com>
+
+	* library/locals.tcl: Updated copyright.
+	(reconfig): New method for getting prefs updates.
+	* library/prefs.tcl: Updated copyright.
+	(pref_read): Moved comment. Take color for changed
+	fields from gdb/src/PC_TAG prefs value.
+	(pref_set_defaults): Change default of
+	PC_TAG color to a somewhat darker green.
+	(pref_set_colors): Call pref_load_default in central place.
+	(pref_set_option_db): Remove hard wired old color for
+	changed values.
+	* library/regwin.itb: Update copyright.
+	(reconfig): Update highlight color of register table.
+	* library/srcpref.itb: Update copyright.
+	(_build_win): Change text of PC color chooser.
+	(_apply): Update global changed fields color from PC_TAG color.
+	* library/vartree.itb (update_var): use changed field color from
+	global colors list.
+	(_init_data): Remove local copy of changed vars color.
+
+2012-05-25  Roland Schwingel  <roland.schwingel@onevision.com>
+
+	* generic/gdbtk-stack.c: Updated copyright informations.
+	include "stack.h" and "solib.h" (when needed).
+	(gdb_stack): Some reformatting.
+	(get_frame_name): Updated usage of gdb api for
+	backtrace generation. Some reformatting. Removed
+	dead code. Also handle frame type ARCH_FRAME now.
+	* library/stackwin.it[bh]: Remove dead instance
+	variable maxwidth. Updated copyright informations.
+
+2012-04-19  Keith Seitz  <keiths@redhat.com>
+
+	From Patrick Monnerat  <pm@datasphere.ch>:
+	* generic/gdbtk-hooks.c (gdbtk_annotate_signal): Avoid
+	dereferencing a null (i.e.: dead) process/thread.
+
+2012-04-19  Roland Schwingel  <roland.schwingel@onevision.com>
+
+	* generic/gdbtk-bp.c: Updated copyright.
+	(gdb_find_bp_at_line): Don't access location struct
+	of breakpoint if it is NULL. 
+
+2012-04-13  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* generic/gdbtk-register.c (get_register_types): Use
+	host_address_to_string function to avoid use of "%lx" and
+	typecasts.
+
 2012-03-30  Pierre Muller  <muller@ics.u-strasbg.fr>
 
 	* generic/gdbtk.h (close_bfds): Fix prototype.

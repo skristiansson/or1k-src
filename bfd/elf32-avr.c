@@ -1,6 +1,7 @@
 /* AVR-specific support for 32-bit ELF
    Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
-   2010, 2011  Free Software Foundation, Inc.
+   2010, 2011, 2012
+   Free Software Foundation, Inc.
    Contributed by Denis Chertykov <denisc@overta.ru>
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -516,6 +517,48 @@ static reloc_howto_type elf_avr_howto_table[] =
 	 0x000000ff,		/* src_mask */
 	 0x000000ff,		/* dst_mask */
 	 FALSE),		/* pcrel_offset */
+  /* lo8-part to use in  .byte lo8(sym).  */
+  HOWTO (R_AVR_8_LO8,		/* type */
+	 0,			/* rightshift */
+	 0,			/* size (0 = byte, 1 = short, 2 = long) */
+	 8,			/* bitsize */
+	 FALSE,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_dont,/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 "R_AVR_8_LO8",		/* name */
+	 FALSE,			/* partial_inplace */
+	 0xffffff,		/* src_mask */
+	 0xffffff,		/* dst_mask */
+	 FALSE),		/* pcrel_offset */
+  /* hi8-part to use in  .byte hi8(sym).  */
+  HOWTO (R_AVR_8_HI8,		/* type */
+	 8,			/* rightshift */
+	 0,			/* size (0 = byte, 1 = short, 2 = long) */
+	 8,			/* bitsize */
+	 FALSE,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_dont,/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 "R_AVR_8_HI8",		/* name */
+	 FALSE,			/* partial_inplace */
+	 0xffffff,		/* src_mask */
+	 0xffffff,		/* dst_mask */
+	 FALSE),		/* pcrel_offset */
+  /* hlo8-part to use in  .byte hlo8(sym).  */
+  HOWTO (R_AVR_8_HLO8,		/* type */
+	 16,			/* rightshift */
+	 0,			/* size (0 = byte, 1 = short, 2 = long) */
+	 8,			/* bitsize */
+	 FALSE,			/* pc_relative */
+	 0,			/* bitpos */
+	 complain_overflow_dont,/* complain_on_overflow */
+	 bfd_elf_generic_reloc,	/* special_function */
+	 "R_AVR_8_HLO8",	/* name */
+	 FALSE,			/* partial_inplace */
+	 0xffffff,		/* src_mask */
+	 0xffffff,		/* dst_mask */
+	 FALSE),		/* pcrel_offset */
 };
 
 /* Map BFD reloc types to AVR ELF reloc types.  */
@@ -554,7 +597,10 @@ static const struct avr_reloc_map avr_reloc_map[] =
   { BFD_RELOC_AVR_LDI,              R_AVR_LDI  },
   { BFD_RELOC_AVR_6,                R_AVR_6    },
   { BFD_RELOC_AVR_6_ADIW,           R_AVR_6_ADIW },
-  { BFD_RELOC_8,                    R_AVR_8 }
+  { BFD_RELOC_8,                    R_AVR_8 },
+  { BFD_RELOC_AVR_8_LO,             R_AVR_8_LO8 },
+  { BFD_RELOC_AVR_8_HI,             R_AVR_8_HI8 },
+  { BFD_RELOC_AVR_8_HLO,            R_AVR_8_HLO8 }
 };
 
 /* Meant to be filled one day with the wrap around address for the
@@ -1189,9 +1235,9 @@ elf32_avr_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	  name = h->root.root.string;
 	}
 
-      if (sec != NULL && elf_discarded_section (sec))
+      if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, relend, howto, contents);
+					 rel, 1, relend, howto, 0, contents);
 
       if (info->relocatable)
 	continue;

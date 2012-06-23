@@ -497,8 +497,9 @@ BFD_JUMP_TABLE macros.
 .  bfd_boolean (*_bfd_gc_sections) (bfd *, struct bfd_link_info *);
 .
 .  {* Sets the bitmask of allowed and disallowed section flags.  *}
-.  void (*_bfd_lookup_section_flags) (struct bfd_link_info *,
-.				      struct flag_info *);
+.  bfd_boolean (*_bfd_lookup_section_flags) (struct bfd_link_info *,
+.					     struct flag_info *,
+.					     asection *);
 .
 .  {* Attempt to merge SEC_MERGE sections.  *}
 .  bfd_boolean (*_bfd_merge_sections) (bfd *, struct bfd_link_info *);
@@ -717,6 +718,7 @@ extern const bfd_target bfd_elf32_us_cris_vec;
 extern const bfd_target bfd_elf32_v850_vec;
 extern const bfd_target bfd_elf32_vax_vec;
 extern const bfd_target bfd_elf32_xc16x_vec;
+extern const bfd_target bfd_elf32_xgate_vec;
 extern const bfd_target bfd_elf32_xstormy16_vec;
 extern const bfd_target bfd_elf32_xtensa_be_vec;
 extern const bfd_target bfd_elf32_xtensa_le_vec;
@@ -1090,6 +1092,7 @@ static const bfd_target * const _bfd_target_vector[] =
 	&bfd_elf32_v850_vec,
 	&bfd_elf32_vax_vec,
 	&bfd_elf32_xc16x_vec,
+	&bfd_elf32_xgate_vec,
 	&bfd_elf32_xstormy16_vec,
 	&bfd_elf32_xtensa_be_vec,
 	&bfd_elf32_xtensa_le_vec,

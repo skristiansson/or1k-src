@@ -40,6 +40,7 @@
 #include "obstack.h"
 #include "ecoff.h"
 #include "dw2gencfi.h"
+#include "wchar.h"
 
 #ifndef TC_START_LABEL
 #define TC_START_LABEL(x,y,z) (x == ':')
@@ -232,6 +233,10 @@ static unsigned int bundle_align_p2;
    we are expecting to see .bundle_unlock.  */
 static fragS *bundle_lock_frag;
 static frchainS *bundle_lock_frchain;
+
+/* This is incremented by .bundle_lock and decremented by .bundle_unlock,
+   to allow nesting.  */
+static unsigned int bundle_lock_depth;
 #endif
 
 static void do_s_func (int end_p, const char *default_prefix);
@@ -246,7 +251,7 @@ static void s_reloc (int);
 static int hex_float (int, char *);
 static segT get_known_segmented_expression (expressionS * expP);
 static void pobegin (void);
-static int get_non_macro_line_sb (sb *);
+static size_t get_non_macro_line_sb (sb *);
 static void generate_file_debug (void);
 static char *_find_end_of_line (char *, int, int, int);
 
@@ -574,10 +579,10 @@ pobegin (void)
 static char *scrub_string;
 static char *scrub_string_end;
 
-static int
-scrub_from_string (char *buf, int buflen)
+static size_t
+scrub_from_string (char *buf, size_t buflen)
 {
-  int copy;
+  size_t copy;
 
   copy = scrub_string_end - scrub_string;
   if (copy > buflen)
@@ -1176,7 +1181,6 @@ read_a_source_file (char *name)
 	      bump_line_counters ();
 	      s += 4;
 
-	      sb_new (&sbuf);
 	      ends = strstr (s, "#NO_APP\n");
 
 	      if (!ends)
@@ -1230,8 +1234,8 @@ read_a_source_file (char *name)
 	      new_tmp = new_buf;
 	      for (;;)
 		{
-		  int space;
-		  int size;
+		  size_t space;
+		  size_t size;
 
 		  space = (new_buf + new_length) - new_tmp;
 		  size = do_scrub_chars (scrub_from_string, new_tmp, space);
@@ -1257,7 +1261,9 @@ read_a_source_file (char *name)
 		 actual macro expansion (possibly nested) and other
 		 input expansion work.  Beware that in messages, line
 		 numbers and possibly file names will be incorrect.  */
-	      sb_add_string (&sbuf, new_buf);
+	      new_length = strlen (new_buf);
+	      sb_build (&sbuf, new_length);
+	      sb_add_buffer (&sbuf, new_buf, new_length);
 	      input_scrub_include_sb (&sbuf, input_line_pointer, 0);
 	      sb_kill (&sbuf);
 	      buffer_limit = input_scrub_next_buffer (&input_line_pointer);
@@ -1287,6 +1293,7 @@ read_a_source_file (char *name)
 		    _(".bundle_lock with no matching .bundle_unlock"));
       bundle_lock_frag = NULL;
       bundle_lock_frchain = NULL;
+      bundle_lock_depth = 0;
     }
 #endif
 
@@ -1583,13 +1590,106 @@ s_altmacro (int on)
   macro_set_alternate (on);
 }
 
+/* Read a symbol name from input_line_pointer.
+
+   Stores the symbol name in a buffer and returns a pointer to this buffer.
+   The buffer is xalloc'ed.  It is the caller's responsibility to free
+   this buffer.
+
+   The name is not left in the i_l_p buffer as it may need processing
+   to handle escape characters.
+
+   Advances i_l_p to the next non-whitespace character.
+
+   If a symbol name could not be read, the routine issues an error
+   messages, skips to the end of the line and returns NULL.  */
+
+static char *
+read_symbol_name (void)
+{
+  char * name;
+  char * start;
+  char c;
+
+  c = *input_line_pointer++;
+
+  if (c == '"')
+    {
+#define SYM_NAME_CHUNK_LEN 128
+      ptrdiff_t len = SYM_NAME_CHUNK_LEN;
+      char * name_end;
+      unsigned int C;
+
+      start = name = xmalloc (len + 1);
+
+      name_end = name + SYM_NAME_CHUNK_LEN;
+
+      while (is_a_char (C = next_char_of_string ()))
+	{
+	  if (name >= name_end)
+	    {
+	      ptrdiff_t sofar;
+
+	      sofar = name - start;
+	      len += SYM_NAME_CHUNK_LEN;
+	      start = xrealloc (start, len + 1);
+	      name_end = start + len;
+	      name = start + sofar;
+	    }
+	  
+	  *name++ = (char) C;
+	}
+      *name = 0;
+
+      /* Since quoted symbol names can contain non-ASCII characters,
+	 check the string and warn if it cannot be recognised by the
+	 current character set.  */
+      if (mbstowcs (NULL, name, len) == (size_t) -1)
+	as_warn (_("symbol name not recognised in the current locale"));
+    }
+  else if (is_name_beginner (c) || c == '\001')
+    {
+      ptrdiff_t len;
+
+      name = input_line_pointer - 1;
+
+      /* We accept \001 in a name in case this is
+	 being called with a constructed string.  */
+      while (is_part_of_name (c = *input_line_pointer++)
+	     || c == '\001')
+	;
+
+      len = (input_line_pointer - name) - 1;
+      start = xmalloc (len + 1);
+
+      memcpy (start, name, len);
+      start[len] = 0;
+
+      /* Skip a name ender char if one is present.  */
+      if (! is_name_ender (c))
+	--input_line_pointer;
+    }
+  else
+    name = start = NULL;
+
+  if (name == start)
+    {
+      as_bad (_("expected symbol name"));
+      ignore_rest_of_line ();
+      return NULL;
+    }
+    
+  SKIP_WHITESPACE ();
+
+  return start;
+}
+
+
 symbolS *
 s_comm_internal (int param,
 		 symbolS *(*comm_parse_extra) (int, symbolS *, addressT))
 {
   char *name;
-  char c;
-  char *p;
   offsetT temp, size;
   symbolS *symbolP = NULL;
   char *stop = NULL;
@@ -1599,20 +1699,8 @@ s_comm_internal (int param,
   if (flag_mri)
     stop = mri_comment_field (&stopc);
 
-  name = input_line_pointer;
-  c = get_symbol_end ();
-  /* Just after name is now '\0'.  */
-  p = input_line_pointer;
-  *p = c;
-
-  if (name == p)
-    {
-      as_bad (_("expected symbol name"));
-      ignore_rest_of_line ();
-      goto out;
-    }
-
-  SKIP_WHITESPACE ();
+  if ((name = read_symbol_name ()) == NULL)
+    goto out;
 
   /* Accept an optional comma after the name.  The comma used to be
      required, but Irix 5 cc does not generate it for .lcomm.  */
@@ -1635,7 +1723,6 @@ s_comm_internal (int param,
       goto out;
     }
 
-  *p = 0;
   symbolP = symbol_find_or_make (name);
   if ((S_IS_DEFINED (symbolP) || symbol_equated_p (symbolP))
       && !S_IS_COMMON (symbolP))
@@ -1644,7 +1731,6 @@ s_comm_internal (int param,
 	{
 	  symbolP = NULL;
 	  as_bad (_("symbol `%s' is already defined"), name);
-	  *p = c;
 	  ignore_rest_of_line ();
 	  goto out;
 	}
@@ -1662,7 +1748,6 @@ s_comm_internal (int param,
     as_warn (_("size of \"%s\" is already %ld; not changing to %ld"),
 	     name, (long) size, (long) temp);
 
-  *p = c;
   if (comm_parse_extra != NULL)
     symbolP = (*comm_parse_extra) (param, symbolP, size);
   else
@@ -1676,6 +1761,8 @@ s_comm_internal (int param,
  out:
   if (flag_mri)
     mri_comment_end (stop, stopc);
+  if (name != NULL)
+    free (name);
   return symbolP;
 }
 
@@ -2179,12 +2266,12 @@ s_globl (int ignore ATTRIBUTE_UNUSED)
 
   do
     {
-      name = input_line_pointer;
-      c = get_symbol_end ();
+      if ((name = read_symbol_name ()) == NULL)
+	return;
+
       symbolP = symbol_find_or_make (name);
       S_SET_EXTERNAL (symbolP);
 
-      *input_line_pointer = c;
       SKIP_WHITESPACE ();
       c = *input_line_pointer;
       if (c == ',')
@@ -2194,6 +2281,8 @@ s_globl (int ignore ATTRIBUTE_UNUSED)
 	  if (is_end_of_line[(unsigned char) *input_line_pointer])
 	    c = '\n';
 	}
+
+      free (name);
     }
   while (c == ',');
 
@@ -2349,8 +2438,8 @@ s_irp (int irpc)
 
   as_where (&file, &line);
 
-  sb_new (&s);
   eol = find_end_of_line (input_line_pointer, 0);
+  sb_build (&s, eol - input_line_pointer);
   sb_add_buffer (&s, input_line_pointer, eol - input_line_pointer);
   input_line_pointer = eol;
 
@@ -2580,33 +2669,17 @@ void
 s_lsym (int ignore ATTRIBUTE_UNUSED)
 {
   char *name;
-  char c;
-  char *p;
   expressionS exp;
   symbolS *symbolP;
 
   /* We permit ANY defined expression: BSD4.2 demands constants.  */
-  name = input_line_pointer;
-  c = get_symbol_end ();
-  p = input_line_pointer;
-  *p = c;
-
-  if (name == p)
-    {
-      as_bad (_("expected symbol name"));
-      ignore_rest_of_line ();
-      return;
-    }
-
-  SKIP_WHITESPACE ();
+  if ((name = read_symbol_name ()) == NULL)
+    return;
 
   if (*input_line_pointer != ',')
     {
-      *p = 0;
       as_bad (_("expected comma after \"%s\""), name);
-      *p = c;
-      ignore_rest_of_line ();
-      return;
+      goto err_out;
     }
 
   input_line_pointer++;
@@ -2616,11 +2689,9 @@ s_lsym (int ignore ATTRIBUTE_UNUSED)
       && exp.X_op != O_register)
     {
       as_bad (_("bad expression"));
-      ignore_rest_of_line ();
-      return;
+      goto err_out;
     }
 
-  *p = 0;
   symbolP = symbol_find_or_make (name);
 
   if (S_GET_SEGMENT (symbolP) == undefined_section)
@@ -2638,8 +2709,14 @@ s_lsym (int ignore ATTRIBUTE_UNUSED)
       as_bad (_("symbol `%s' is already defined"), name);
     }
 
-  *p = c;
   demand_empty_rest_of_line ();
+  free (name);
+  return;
+
+ err_out:
+  ignore_rest_of_line ();
+  free (name);
+  return;
 }
 
 /* Read a line into an sb.  Returns the character that ended the line
@@ -2672,13 +2749,13 @@ get_line_sb (sb *line, int in_macro)
   return *input_line_pointer++;
 }
 
-static int
+static size_t
 get_non_macro_line_sb (sb *line)
 {
   return get_line_sb (line, 0);
 }
 
-static int
+static size_t
 get_macro_line_sb (sb *line)
 {
   return get_line_sb (line, 1);
@@ -2697,17 +2774,20 @@ s_macro (int ignore ATTRIBUTE_UNUSED)
 
   as_where (&file, &line);
 
-  sb_new (&s);
   eol = find_end_of_line (input_line_pointer, 0);
+  sb_build (&s, eol - input_line_pointer);
   sb_add_buffer (&s, input_line_pointer, eol - input_line_pointer);
   input_line_pointer = eol;
 
   if (line_label != NULL)
     {
       sb label;
+      size_t len;
 
-      sb_new (&label);
-      sb_add_string (&label, S_GET_NAME (line_label));
+      name = S_GET_NAME (line_label);
+      len = strlen (name);
+      sb_build (&label, len);
+      sb_add_buffer (&label, name, len);
       err = define_macro (0, &s, &label, get_macro_line_sb, file, line, &name);
       sb_kill (&label);
     }
@@ -3131,7 +3211,7 @@ do_repeat (int count, const char *start, const char *end)
       return;
     }
 
-  sb_new (&many);
+  sb_build (&many, count * one.len);
   while (count-- > 0)
     sb_add_sb (&many, &one);
 
@@ -3171,7 +3251,7 @@ do_repeat_with_expander (int count,
 	  char * sub;
 	  sb processed;
 
-	  sb_new (& processed);
+	  sb_build (& processed, one.len);
 	  sb_add_sb (& processed, & one);
 	  sub = strstr (processed.ptr, expander);
 	  len = sprintf (sub, "%d", count);
@@ -3283,42 +3363,25 @@ void
 s_set (int equiv)
 {
   char *name;
-  char delim;
-  char *end_name;
 
   /* Especial apologies for the random logic:
      this just grew, and could be parsed much more simply!
      Dean in haste.  */
-  name = input_line_pointer;
-  delim = get_symbol_end ();
-  end_name = input_line_pointer;
-  *end_name = delim;
-
-  if (name == end_name)
-    {
-      as_bad (_("expected symbol name"));
-      ignore_rest_of_line ();
-      return;
-    }
-
-  SKIP_WHITESPACE ();
+  if ((name = read_symbol_name ()) == NULL)
+    return;
 
   if (*input_line_pointer != ',')
     {
-      *end_name = 0;
       as_bad (_("expected comma after \"%s\""), name);
-      *end_name = delim;
       ignore_rest_of_line ();
+      free (name);
       return;
     }
 
   input_line_pointer++;
-  *end_name = 0;
-
   assign_symbol (name, equiv);
-  *end_name = delim;
-
   demand_empty_rest_of_line ();
+  free (name);
 }
 
 void
@@ -3622,23 +3685,12 @@ void
 s_weakref (int ignore ATTRIBUTE_UNUSED)
 {
   char *name;
-  char delim;
-  char *end_name;
   symbolS *symbolP;
   symbolS *symbolP2;
   expressionS exp;
 
-  name = input_line_pointer;
-  delim = get_symbol_end ();
-  end_name = input_line_pointer;
-
-  if (name == end_name)
-    {
-      as_bad (_("expected symbol name"));
-      *end_name = delim;
-      ignore_rest_of_line ();
-      return;
-    }
+  if ((name = read_symbol_name ()) == NULL)
+    return;
 
   symbolP = symbol_find_or_make (name);
 
@@ -3647,41 +3699,27 @@ s_weakref (int ignore ATTRIBUTE_UNUSED)
       if (!S_IS_VOLATILE (symbolP))
 	{
 	  as_bad (_("symbol `%s' is already defined"), name);
-	  *end_name = delim;
-	  ignore_rest_of_line ();
-	  return;
+	  goto err_out;
 	}
       symbolP = symbol_clone (symbolP, 1);
       S_CLEAR_VOLATILE (symbolP);
     }
 
-  *end_name = delim;
-
   SKIP_WHITESPACE ();
 
   if (*input_line_pointer != ',')
     {
-      *end_name = 0;
       as_bad (_("expected comma after \"%s\""), name);
-      *end_name = delim;
-      ignore_rest_of_line ();
-      return;
+      goto err_out;
     }
 
   input_line_pointer++;
 
   SKIP_WHITESPACE ();
+  free (name);
 
-  name = input_line_pointer;
-  delim = get_symbol_end ();
-  end_name = input_line_pointer;
-
-  if (name == end_name)
-    {
-      as_bad (_("expected symbol name"));
-      ignore_rest_of_line ();
-      return;
-    }
+  if ((name = read_symbol_name ()) == NULL)
+    return;
 
   if ((symbolP2 = symbol_find_noref (name, 1)) == NULL
       && (symbolP2 = md_undefined_symbol (name)) == NULL)
@@ -3712,6 +3750,7 @@ s_weakref (int ignore ATTRIBUTE_UNUSED)
 	  while (symp != symbolP)
 	    {
 	      char *old_loop = loop;
+
 	      symp = symbol_get_value_expression (symp)->X_add_symbol;
 	      loop = concat (loop, " => ", S_GET_NAME (symp),
 			     (const char *) NULL);
@@ -3722,8 +3761,7 @@ s_weakref (int ignore ATTRIBUTE_UNUSED)
 		  S_GET_NAME (symbolP), loop);
 
 	  free (loop);
-
-	  *end_name = delim;
+	  free (name);
 	  ignore_rest_of_line ();
 	  return;
 	}
@@ -3733,8 +3771,6 @@ s_weakref (int ignore ATTRIBUTE_UNUSED)
 	 miss intermediate links.  */
       /* symbolP2 = symp; */
     }
-
-  *end_name = delim;
 
   memset (&exp, 0, sizeof (exp));
   exp.X_op = O_symbol;
@@ -3746,6 +3782,13 @@ s_weakref (int ignore ATTRIBUTE_UNUSED)
   S_SET_WEAKREFR (symbolP);
 
   demand_empty_rest_of_line ();
+  free (name);
+  return;
+
+ err_out:
+  ignore_rest_of_line ();
+  free (name);
+  return;
 }
 
 
@@ -6062,14 +6105,12 @@ s_bundle_lock (int arg ATTRIBUTE_UNUSED)
       return;
     }
 
-  if (bundle_lock_frag != NULL)
+  if (bundle_lock_depth == 0)
     {
-      as_bad (_("second .bundle_lock without .bundle_unlock"));
-      return;
+      bundle_lock_frchain = frchain_now;
+      bundle_lock_frag = start_bundle ();
     }
-
-  bundle_lock_frchain = frchain_now;
-  bundle_lock_frag = start_bundle ();
+  ++bundle_lock_depth;
 }
 
 void
@@ -6086,6 +6127,10 @@ s_bundle_unlock (int arg ATTRIBUTE_UNUSED)
     }
 
   gas_assert (bundle_align_p2 > 0);
+
+  gas_assert (bundle_lock_depth > 0);
+  if (--bundle_lock_depth > 0)
+    return;
 
   size = pending_bundle_size (bundle_lock_frag);
 
@@ -6126,8 +6171,9 @@ void
 input_scrub_insert_line (const char *line)
 {
   sb newline;
-  sb_new (&newline);
-  sb_add_string (&newline, line);
+  size_t len = strlen (line);
+  sb_build (&newline, len);
+  sb_add_buffer (&newline, line, len);
   input_scrub_include_sb (&newline, input_line_pointer, 0);
   sb_kill (&newline);
   buffer_limit = input_scrub_next_buffer (&input_line_pointer);

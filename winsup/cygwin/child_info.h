@@ -1,6 +1,6 @@
 /* child_info.h: shared child info for cygwin
 
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2008, 2009, 2011
+   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2008, 2009, 2011, 2012
    Red Hat, Inc.
 
 This file is part of Cygwin.
@@ -35,7 +35,7 @@ enum child_status
 #define EXEC_MAGIC_SIZE sizeof(child_info)
 
 /* Change this value if you get a message indicating that it is out-of-sync. */
-#define CURR_CHILD_INFO_MAGIC 0xca644850U
+#define CURR_CHILD_INFO_MAGIC 0xf1378eabU
 
 #define NPROCS	256
 
@@ -66,6 +66,7 @@ public:
   HANDLE subproc_ready;	// used for synchronization with parent
   HANDLE user_h;
   HANDLE parent;
+  DWORD parent_winpid;
   DWORD cygheap_reserve_sz;
   unsigned fhandler_union_cb;
   DWORD exit_code;	// process exit code
@@ -175,6 +176,7 @@ public:
     lock->release ();
     return !!hExeced;
   }
+  bool get_parent_handle ();
   bool has_execed_cygwin () const { return iscygwin () && has_execed (); }
   operator HANDLE& () {return hExeced;}
   int worker (const char *, const char *const *, const char *const [], int,

@@ -1,22 +1,22 @@
-/HOWTO/1.1/Wed Mar 25 21:16:04 2009//
-/MAINTAINERS/1.13/Tue Nov 29 06:33:48 2011//
-/Makefile.am/1.50/Thu May 19 06:04:59 2011/-ko/
-/Makefile.in/1.64/Thu May 19 06:04:59 2011/-ko/
-/Makefile.shared/1.1/Thu Dec 13 23:49:38 2001//
-/NEWS/1.16/Mon Dec 19 22:03:17 2011/-ko/
-/README/1.21/Mon Dec 19 22:03:17 2011/-ko/
-/acconfig.h/1.5/Tue Aug 18 19:57:59 2009//
-/acinclude.m4/1.34/Mon Dec 19 22:03:17 2011/-ko/
-/aclocal.m4/1.35/Mon Dec 19 22:03:17 2011/-ko/
-/configure/1.70/Mon Dec 19 22:03:17 2011/-ko/
-/configure.in/1.45/Tue Jun  8 18:44:12 2010/-ko/
-/confsubdir.m4/1.1/Mon Apr 23 22:52:29 2007//
-/newlib.hin/1.21/Tue Jun  8 18:44:12 2010//
-/stamp-h.in/1.2/Fri Jan 20 22:42:45 2006//
 D/doc////
 D/iconvdata////
 D/libc////
 D/libm////
 D/testsuite////
-/ChangeLog/1.1672/Thu Apr 12 16:02:22 2012/-ko/
-/configure.host/1.125/Thu Apr 12 15:59:05 2012/-ko/
+/ChangeLog/1.1682/Sat Jun 23 00:23:28 2012/-ko/
+/HOWTO/1.1/Mon May  7 21:35:08 2012//
+/MAINTAINERS/1.13/Mon May  7 21:35:08 2012//
+/Makefile.am/1.50/Mon May  7 21:35:08 2012/-ko/
+/Makefile.in/1.64/Mon May  7 21:35:08 2012/-ko/
+/Makefile.shared/1.1/Mon May  7 21:35:08 2012//
+/NEWS/1.16/Mon May  7 21:35:08 2012/-ko/
+/README/1.21/Mon May  7 21:35:08 2012/-ko/
+/acconfig.h/1.5/Mon May  7 21:35:08 2012//
+/acinclude.m4/1.34/Mon May  7 21:35:08 2012/-ko/
+/aclocal.m4/1.35/Mon May  7 21:35:08 2012/-ko/
+/configure/1.70/Mon May  7 21:35:08 2012/-ko/
+/configure.host/1.125/Sat Jun 23 00:12:40 2012/-ko/
+/configure.in/1.45/Mon May  7 21:35:08 2012/-ko/
+/confsubdir.m4/1.1/Mon May  7 21:35:08 2012//
+/newlib.hin/1.21/Mon May  7 21:35:09 2012//
+/stamp-h.in/1.2/Mon May  7 21:35:09 2012//

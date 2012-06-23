@@ -1140,14 +1140,12 @@ static void
 make_symbol_overload_list_block (const char *name,
                                  const struct block *block)
 {
-  struct dict_iterator iter;
+  struct block_iterator iter;
   struct symbol *sym;
 
-  const struct dictionary *dict = BLOCK_DICT (block);
-
-  for (sym = dict_iter_name_first (dict, name, &iter);
+  for (sym = block_iter_name_first (block, name, &iter);
        sym != NULL;
-       sym = dict_iter_name_next (name, &iter))
+       sym = block_iter_name_next (name, &iter))
     overload_list_add_symbol (sym, name);
 }
 
@@ -1322,12 +1320,9 @@ make_symbol_overload_list_using (const char *func_name,
 static void
 make_symbol_overload_list_qualified (const char *func_name)
 {
-  struct symbol *sym;
   struct symtab *s;
   struct objfile *objfile;
   const struct block *b, *surrounding_static_block = 0;
-  struct dict_iterator iter;
-  const struct dictionary *dict;
 
   /* Look through the partial symtabs for all symbols which begin by
      matching FUNC_NAME.  Make sure we read that symbol table in.  */

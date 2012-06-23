@@ -254,7 +254,8 @@ static void
 complete_command (char *arg, int from_tty)
 {
   int argpoint;
-  char **completions, *point, *arg_prefix;
+  char *point, *arg_prefix;
+  VEC (char_ptr) *completions;
 
   dont_repeat ();
 
@@ -282,33 +283,30 @@ complete_command (char *arg, int from_tty)
 
   if (completions)
     {
-      int item, size;
+      int ix, size = VEC_length (char_ptr, completions);
+      char *item, *prev = NULL;
 
-      for (size = 0; completions[size]; ++size)
-	;
-      qsort (completions, size, sizeof (char *), compare_strings);
+      qsort (VEC_address (char_ptr, completions), size,
+	     sizeof (char *), compare_strings);
 
       /* We do extra processing here since we only want to print each
 	 unique item once.  */
-      item = 0;
-      while (item < size)
+      for (ix = 0; VEC_iterate (char_ptr, completions, ix, item); ++ix)
 	{
 	  int next_item;
 
-	  printf_unfiltered ("%s%s\n", arg_prefix, completions[item]);
-	  next_item = item + 1;
-	  while (next_item < size
-		 && ! strcmp (completions[item], completions[next_item]))
+	  if (prev == NULL || strcmp (item, prev) != 0)
 	    {
-	      xfree (completions[next_item]);
-	      ++next_item;
+	      printf_unfiltered ("%s%s\n", arg_prefix, item);
+	      xfree (prev);
+	      prev = item;
 	    }
-
-	  xfree (completions[item]);
-	  item = next_item;
+	  else
+	    xfree (item);
 	}
 
-      xfree (completions);
+      xfree (prev);
+      VEC_free (char_ptr, completions);
     }
 }
 
@@ -417,7 +415,7 @@ cd_command (char *dir, int from_tty)
     {
       if (IS_DIR_SEPARATOR (p[0]) && p[1] == '.'
 	  && (p[2] == 0 || IS_DIR_SEPARATOR (p[2])))
-	strcpy (p, p + 2);
+	memmove (p, p + 2, strlen (p + 2) + 1);
       else if (IS_DIR_SEPARATOR (p[0]) && p[1] == '.' && p[2] == '.'
 	       && (p[3] == 0 || IS_DIR_SEPARATOR (p[3])))
 	{
@@ -436,7 +434,7 @@ cd_command (char *dir, int from_tty)
 		++p;
 	      else
 		{
-		  strcpy (q - 1, p + 3);
+		  memmove (q - 1, p + 3, strlen (p + 3) + 1);
 		  p = q - 1;
 		}
 	    }
@@ -1425,7 +1423,6 @@ alias_command (char *args, int from_tty)
     }
   else
     {
-      int i;
       dyn_string_t alias_prefix_dyn_string, command_prefix_dyn_string;
       char *alias_prefix, *command_prefix;
       struct cmd_list_element *c_alias, *c_command;

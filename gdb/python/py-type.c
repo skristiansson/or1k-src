@@ -167,11 +167,24 @@ convert_field (struct type *type, int field)
 
   if (!field_is_static (&TYPE_FIELD (type, field)))
     {
-      arg = PyLong_FromLong (TYPE_FIELD_BITPOS (type, field));
+      const char *attrstring;
+
+      if (TYPE_CODE (type) == TYPE_CODE_ENUM)
+	{
+	  arg = gdb_py_long_from_longest (TYPE_FIELD_ENUMVAL (type, field));
+	  attrstring = "enumval";
+	}
+      else
+	{
+	  arg = PyLong_FromLong (TYPE_FIELD_BITPOS (type, field));
+	  attrstring = "bitpos";
+	}
+
       if (!arg)
 	goto fail;
 
-      if (PyObject_SetAttrString (result, "bitpos", arg) < 0)
+      /* At least python-2.4 had the second parameter non-const.  */
+      if (PyObject_SetAttrString (result, (char *) attrstring, arg) < 0)
 	goto failarg;
     }
 
@@ -1018,6 +1031,10 @@ check_types_equal (struct type *type1, struct type *type2,
 	      if (FIELD_BITPOS (*field1) != FIELD_BITPOS (*field2))
 		return Py_NE;
 	      break;
+	    case FIELD_LOC_KIND_ENUMVAL:
+	      if (FIELD_ENUMVAL (*field1) != FIELD_ENUMVAL (*field2))
+		return Py_NE;
+	      break;
 	    case FIELD_LOC_KIND_PHYSADDR:
 	      if (FIELD_STATIC_PHYSADDR (*field1)
 		  != FIELD_STATIC_PHYSADDR (*field2))
@@ -1055,7 +1072,6 @@ check_types_equal (struct type *type1, struct type *type2,
   if (TYPE_TARGET_TYPE (type1) != NULL)
     {
       struct type_equality_entry entry;
-      int added;
 
       if (TYPE_TARGET_TYPE (type2) == NULL)
 	return Py_NE;
@@ -1255,7 +1271,6 @@ typy_getitem (PyObject *self, PyObject *key)
   struct type *type = ((type_object *) self)->type;
   char *field;
   int i;
-  volatile struct gdb_exception except;
 
   field = python_string_to_host_string (key);
   if (field == NULL)
@@ -1317,7 +1332,6 @@ typy_has_key (PyObject *self, PyObject *args)
   struct type *type = ((type_object *) self)->type;
   const char *field;
   int i;
-  volatile struct gdb_exception except;
 
   if (!PyArg_ParseTuple (args, "s", &field))
     return NULL;
@@ -1414,7 +1428,6 @@ typy_iterator_iternext (PyObject *self)
 {
   typy_iterator_object *iter_obj = (typy_iterator_object *) self;
   struct type *type = iter_obj->source->type;
-  int i;
   PyObject *result;
   
   if (iter_obj->field < TYPE_NFIELDS (type))

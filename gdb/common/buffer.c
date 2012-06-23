@@ -47,8 +47,6 @@ buffer_grow (struct buffer *buffer, const char *data, size_t size)
   while (buffer->used_size + size > new_buffer_size)
     new_buffer_size *= 2;
   new_buffer = xrealloc (buffer->buffer, new_buffer_size);
-  if (!new_buffer)
-    abort ();
   memcpy (new_buffer + buffer->used_size, data, size);
   buffer->buffer = new_buffer;
   buffer->buffer_size = new_buffer_size;
@@ -101,6 +99,7 @@ buffer_xml_printf (struct buffer *buffer, const char *format, ...)
 	  char buf[32];
 	  char *p;
 	  char *str = buf;
+	  const char *f_old = f;
 	  
 	  switch (*f)
 	    {
@@ -119,14 +118,56 @@ buffer_xml_printf (struct buffer *buffer, const char *format, ...)
 	    case 'o':
 	      sprintf (str, "%o", va_arg (ap, unsigned int));
 	      break;
+	    case 'l':
+	      f++;
+	      switch (*f)
+		{
+		case 'd':
+		  sprintf (str, "%ld", va_arg (ap, long));
+		  break;
+		case 'u':
+		  sprintf (str, "%lu", va_arg (ap, unsigned long));
+		  break;
+		case 'x':
+		  sprintf (str, "%lx", va_arg (ap, unsigned long));
+		  break;
+		case 'o':
+		  sprintf (str, "%lo", va_arg (ap, unsigned long));
+		  break;
+		case 'l':
+		  f++;
+		  switch (*f)
+		    {
+		    case 'd':
+		      sprintf (str, "%lld", va_arg (ap, long long));
+		      break;
+		    case 'u':
+		      sprintf (str, "%llu", va_arg (ap, unsigned long long));
+		      break;
+		    case 'x':
+		      sprintf (str, "%llx", va_arg (ap, unsigned long long));
+		      break;
+		    case 'o':
+		      sprintf (str, "%llo", va_arg (ap, unsigned long long));
+		      break;
+		    default:
+		      str = 0;
+		      break;
+		    }
+		  break;
+		default:
+		  str = 0;
+		  break;
+		}
+	      break;
 	    default:
 	      str = 0;
 	      break;
 	    }
-	  
+
 	  if (str)
 	    {
-	      buffer_grow (buffer, prev, f - prev - 1);
+	      buffer_grow (buffer, prev, f_old - prev - 1);
 	      p = xml_escape_text (str);
 	      buffer_grow_str (buffer, p);
 	      xfree (p);

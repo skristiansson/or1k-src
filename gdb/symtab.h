@@ -22,6 +22,7 @@
 #define SYMTAB_H 1
 
 #include "vec.h"
+#include "gdb_vecs.h"
 
 /* Opaque declarations.  */
 struct ui_file;
@@ -35,6 +36,7 @@ struct axs_value;
 struct agent_expr;
 struct program_space;
 struct language_defn;
+struct probe;
 
 /* Some of the structures in this file are space critical.
    The space-critical structures are:
@@ -109,10 +111,7 @@ struct general_symbol_info
 
   union
   {
-    /* The fact that this is a long not a LONGEST mainly limits the
-       range of a LOC_CONST.  Since LOC_CONST_BYTES exists, I'm not
-       sure that is a big deal.  */
-    long ivalue;
+    LONGEST ivalue;
 
     struct block *block;
 
@@ -340,6 +339,10 @@ struct minimal_symbol
   /* Classification type for this minimal symbol.  */
 
   ENUM_BITFIELD(minimal_symbol_type) type : 8;
+
+  /* Non-zero if this symbol was created by gdb.
+     Such symbols do not appear in the output of "info var|fun".  */
+  unsigned int created_by_gdb : 1;
 
   /* Two flag bits provided for the use of the target.  */
   unsigned int target_flag_1 : 1;
@@ -835,6 +838,23 @@ struct symtab
   /* struct call_site entries for this compilation unit or NULL.  */
 
   htab_t call_site_htab;
+
+  /* If non-NULL, then this points to a NULL-terminated vector of
+     included symbol tables.  When searching the static or global
+     block of this symbol table, the corresponding block of all
+     included symbol tables will also be searched.  Note that this
+     list must be flattened -- the symbol reader is responsible for
+     ensuring that this vector contains the transitive closure of all
+     included symbol tables.  */
+
+  struct symtab **includes;
+
+  /* If this is an included symbol table, this points to one includer
+     of the table.  This user is considered the canonical symbol table
+     containing this one.  An included symbol table may itself be
+     included by another.  */
+
+  struct symtab *user;
 };
 
 #define BLOCKVECTOR(symtab)	(symtab)->blockvector
@@ -1045,6 +1065,9 @@ struct symtab_and_line
   CORE_ADDR end;
   int explicit_pc;
   int explicit_line;
+
+  /* The probe associated with this symtab_and_line.  */
+  struct probe *probe;
 };
 
 extern void init_sal (struct symtab_and_line *sal);
@@ -1132,16 +1155,17 @@ extern void forget_cached_source_info (void);
 
 extern void select_source_symtab (struct symtab *);
 
-extern char **default_make_symbol_completion_list_break_on
+extern VEC (char_ptr) *default_make_symbol_completion_list_break_on
   (char *text, char *word, const char *break_on);
-extern char **default_make_symbol_completion_list (char *, char *);
-extern char **make_symbol_completion_list (char *, char *);
-extern char **make_symbol_completion_list_fn (struct cmd_list_element *,
-					      char *, char *);
+extern VEC (char_ptr) *default_make_symbol_completion_list (char *, char *);
+extern VEC (char_ptr) *make_symbol_completion_list (char *, char *);
+extern VEC (char_ptr) *make_symbol_completion_list_fn (struct cmd_list_element *,
+						       char *, char *);
 
-extern char **make_file_symbol_completion_list (char *, char *, char *);
+extern VEC (char_ptr) *make_file_symbol_completion_list (char *,
+							 char *, char *);
 
-extern char **make_source_files_completion_list (char *, char *);
+extern VEC (char_ptr) *make_source_files_completion_list (char *, char *);
 
 /* symtab.c */
 

@@ -1443,9 +1443,9 @@ elf_vax_relocate_section (bfd *output_bfd,
 	    relocation = 0;
 	}
 
-      if (sec != NULL && elf_discarded_section (sec))
+      if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, relend, howto, contents);
+					 rel, 1, relend, howto, 0, contents);
 
       if (info->relocatable)
 	continue;
@@ -1691,14 +1691,12 @@ elf_vax_relocate_section (bfd *output_bfd,
 		    }
 		}
 
-	      if (!strcmp (bfd_get_section_name (input_bfd, input_section),
-			   ".text") != 0 ||
-		  (info->shared
-		   && ELF32_R_TYPE(outrel.r_info) != R_VAX_32
-		   && ELF32_R_TYPE(outrel.r_info) != R_VAX_RELATIVE
-		   && ELF32_R_TYPE(outrel.r_info) != R_VAX_COPY
-		   && ELF32_R_TYPE(outrel.r_info) != R_VAX_JMP_SLOT
-		   && ELF32_R_TYPE(outrel.r_info) != R_VAX_GLOB_DAT))
+	      if ((input_section->flags & SEC_CODE) != 0
+		  || (ELF32_R_TYPE (outrel.r_info) != R_VAX_32
+		      && ELF32_R_TYPE (outrel.r_info) != R_VAX_RELATIVE
+		      && ELF32_R_TYPE (outrel.r_info) != R_VAX_COPY
+		      && ELF32_R_TYPE (outrel.r_info) != R_VAX_JMP_SLOT
+		      && ELF32_R_TYPE (outrel.r_info) != R_VAX_GLOB_DAT))
 		{
 		  if (h != NULL)
 		    (*_bfd_error_handler)

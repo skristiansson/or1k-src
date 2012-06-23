@@ -23,14 +23,19 @@ AC_INIT(main.c)
 AC_CONFIG_HEADER(config.h:config.in)
 AM_MAINTAINER_MODE
 
+# Provide more thorough testing by -lmcheck.
+# Set it to 'true' for development snapshots, 'false' for releases or
+# pre-releases.
+development=true
+
 AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
-gl_EARLY
 ACX_LARGEFILE
 AM_PROG_CC_STDC
 
 AC_CONFIG_AUX_DIR(..)
 AC_CANONICAL_SYSTEM
+AC_ARG_PROGRAM
 
 # Dependency checking.
 ZW_CREATE_DEPDIR
@@ -46,6 +51,12 @@ case "`$MAKE --version 2>&1 | sed 1q`" in
 esac
 AM_CONDITIONAL(GMAKE, test "$MAKE_IS_GNU" = yes)
 AC_PROG_MAKE_SET
+
+# Configure gnulib.  We need to build gnulib under some other
+# directory not "gnulib", to avoid the problem of both GDB and
+# GDBserver wanting to build it in the same directory, when building
+# in the source dir.
+ACX_CONFIGURE_DIR(["gnulib"], ["build-gnulib"])
 
 dnl List of object files and targets accumulated by configure.
 
@@ -72,12 +83,12 @@ if test x"$USE_NLS" = xyes; then
    CONFIG_UNINSTALL="$CONFIG_UNINSTALL uninstall-po"
 fi
 
-gl_INIT
+GNULIB=build-gnulib/import
 
 # For Makefile dependencies.
 GNULIB_STDINT_H=
 if test x"$STDINT_H" != x; then
-  GNULIB_STDINT_H=gnulib/$STDINT_H
+  GNULIB_STDINT_H=$GNULIB/$STDINT_H
 fi
 AC_SUBST(GNULIB_STDINT_H)
 
@@ -105,10 +116,6 @@ if test x"$gdb_cv_have_makeinfo_click" = xyes; then
 fi
 AC_SUBST(MAKEINFO_EXTRA_FLAGS)
 
-# GDB does not use automake, but gnulib does.  This line lets us
-# generate its Makefile.in.
-AM_INIT_AUTOMAKE(gdb, UNUSED-VERSION, [no-define])
-
 GDB_AC_WITH_DIR(DEBUGDIR, separate-debug-dir,
     [look for global separate debug info in this path @<:@LIBDIR/debug@:>@],
     [${libdir}/debug])
@@ -133,6 +140,31 @@ AS_HELP_STRING([--with-relocated-sources=PATH], [automatically relocate this pat
  AC_DEFINE_DIR(RELOC_SRCDIR, reloc_srcdir,
               [Relocated directory for source files. ])
 ])
+
+AC_MSG_CHECKING([for default auto-load directory])
+AC_ARG_WITH(auto-load-dir,
+AS_HELP_STRING([--with-auto-load-dir=PATH],
+  [directories from which to load auto-loaded scripts @<:@$debugdir:$datadir/auto-load@:>@]),,
+  [with_auto_load_dir='$debugdir:$datadir/auto-load'])
+escape_dir=`echo $with_auto_load_dir | sed 's/[[$]]\(datadir\|debugdir\)\>/\\\\\\\\\\\\&/g'`
+AC_DEFINE_DIR(AUTO_LOAD_DIR, escape_dir,
+	      [Directories from which to load auto-loaded scripts.])
+AC_MSG_RESULT([$with_auto_load_dir])
+
+AC_MSG_CHECKING([for default auto-load safe-path])
+AC_ARG_WITH(auto-load-safe-path,
+AS_HELP_STRING([--with-auto-load-safe-path=PATH],
+  [directories safe to hold auto-loaded files @<:@--with-auto-load-dir@:>@])
+AS_HELP_STRING([--without-auto-load-safe-path],
+               [do not restrict auto-loaded files locations]),
+    [if test "$with_auto_load_safe_path" = "no"; then
+     with_auto_load_safe_path="/"
+     fi],
+[with_auto_load_safe_path="$with_auto_load_dir"])
+escape_dir=`echo $with_auto_load_safe_path | sed 's/[[$]]\(datadir\|debugdir\)\>/\\\\\\\\\\\\&/g'`
+AC_DEFINE_DIR(AUTO_LOAD_SAFE_PATH, escape_dir,
+	      [Directories safe to hold auto-loaded files.])
+AC_MSG_RESULT([$with_auto_load_safe_path])
 
 AC_CONFIG_SUBDIRS(testsuite)
 
@@ -612,6 +644,11 @@ AC_SUBST(READLINE)
 AC_SUBST(READLINE_DEPS)
 AC_SUBST(READLINE_CFLAGS)
 AC_SUBST(READLINE_TEXI_INCFLAG)
+
+dnl -lmcheck provides cheap enough memory mangling for debugging purposes.
+if $development; then
+  AC_CHECK_LIB(mcheck, main)
+fi
 
 # Generate jit-reader.h
 
@@ -1670,7 +1707,7 @@ if test ${build} = ${host} -a ${host} = ${target} ; then
       if test $gdb_cv_have_aix_thread_debug = yes; then
          CONFIG_SRCS="${CONFIG_SRCS} aix-thread.c"
          CONFIG_OBS="${CONFIG_OBS} aix-thread.o"
-         CONFIG_LDFLAGS="${CONFIG_LDFLAGS} -lpthdebug"
+         LIBS="$LIBS -lpthdebug"
 
          # Older versions of AIX do not provide the declaration for
          # the getthrds function (it appears that it was introduced
@@ -1795,8 +1832,8 @@ AC_ARG_ENABLE(werror,
      *) AC_MSG_ERROR(bad value ${enableval} for --enable-werror) ;;
    esac])
 
-# Enable -Werror by default when using gcc
-if test "${GCC}" = yes -a -z "${ERROR_ON_WARNING}" ; then
+# Enable -Werror by default when using gcc.  Turn it off for releases.
+if test "${GCC}" = yes -a -z "${ERROR_ON_WARNING}" && $development; then
     ERROR_ON_WARNING=yes
 fi
 
@@ -1813,7 +1850,8 @@ fi
 build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith \
 -Wformat-nonliteral -Wno-pointer-sign \
 -Wno-unused -Wunused-value -Wunused-function \
--Wno-switch -Wno-char-subscripts -Wmissing-prototypes"
+-Wno-switch -Wno-char-subscripts -Wmissing-prototypes \
+-Wdeclaration-after-statement"
 
 # Enable -Wno-format by default when using gcc on mingw since many
 # GCC versions complain about %I64.
@@ -1934,7 +1972,7 @@ AC_CACHE_CHECK([for ELF support in BFD], gdb_cv_var_elf,
 [bfd *abfd = NULL; bfd_get_elf_phdr_upper_bound (abfd); ],
 gdb_cv_var_elf=yes, gdb_cv_var_elf=no)])
 if test $gdb_cv_var_elf = yes; then
-  CONFIG_OBS="$CONFIG_OBS elfread.o"
+  CONFIG_OBS="$CONFIG_OBS elfread.o stap-probe.o"
   AC_DEFINE(HAVE_ELF, 1,
 	    [Define if ELF support should be included.])
   # -ldl is provided by bfd/Makfile.am (LIBDL) <PLUGINS>.
@@ -2230,7 +2268,7 @@ dnl  At the moment, we just assume it's UTF-8.
 AC_DEFINE(GDB_DEFAULT_HOST_CHARSET, "UTF-8",
           [Define to be a string naming the default host character set.])
 
-AC_OUTPUT(Makefile .gdbinit:gdbinit.in doc/Makefile gnulib/Makefile data-directory/Makefile,
+AC_OUTPUT(Makefile gdb-gdb.gdb doc/Makefile data-directory/Makefile,
 [
 case x$CONFIG_HEADERS in
 xconfig.h:config.in)

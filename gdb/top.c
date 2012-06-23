@@ -47,6 +47,7 @@
 #include "gdbthread.h"
 #include "python/python.h"
 #include "interps.h"
+#include "observer.h"
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -1297,8 +1298,8 @@ quit_target (void *arg)
   if (write_history_p && history_filename)
     write_history (history_filename);
 
-  do_final_cleanups (ALL_CLEANUPS);    /* Do any final cleanups before
-					  exiting.  */
+  do_final_cleanups (all_cleanups ());    /* Do any final cleanups before
+					     exiting.  */
   return 0;
 }
 
@@ -1559,6 +1560,15 @@ show_exec_done_display_p (struct ui_file *file, int from_tty,
 			    "asynchronous execution commands is %s.\n"),
 		    value);
 }
+
+/* "set" command for the gdb_datadir configuration variable.  */
+
+static void
+set_gdb_datadir (char *args, int from_tty, struct cmd_list_element *c)
+{
+  observer_notify_gdb_datadir_changed ();
+}
+
 static void
 init_main (void)
 {
@@ -1666,7 +1676,7 @@ Use \"on\" to enable the notification, and \"off\" to disable it."),
                            _("Show GDB's data directory."),
                            _("\
 When set, GDB uses the specified path to search for data files."),
-                           NULL, NULL,
+                           set_gdb_datadir, NULL,
                            &setlist,
                            &showlist);
 }

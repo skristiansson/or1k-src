@@ -390,7 +390,6 @@ struct init_cygheap: public mini_cygheap
   struct _cygtls **threadlist;
   size_t sthreads;
   pid_t pid;			/* my pid */
-  HANDLE pid_handle;		/* handle for my pid */
   struct {			/* Equivalent to using LIST_HEAD. */
     struct inode_t *lh_first;
   } inode_list;			/* Global inode pointer for adv. locking. */
@@ -459,7 +458,7 @@ class cygheap_fdnew : public cygheap_fdmanip
   ~cygheap_fdnew ()
   {
     if (cygheap->fdtab[fd])
-      cygheap->fdtab[fd]->refcnt (1);
+      cygheap->fdtab[fd]->inc_refcnt ();
   }
   void operator = (fhandler_base *fh) {cygheap->fdtab[fd] = fh;}
 };
@@ -477,7 +476,7 @@ public:
 	this->fd = fd;
 	locked = lockit;
 	fh = cygheap->fdtab[fd];
-	fh->refcnt (1);
+	fh->inc_refcnt ();
       }
     else
       {
@@ -492,7 +491,7 @@ public:
   }
   ~cygheap_fdget ()
   {
-    if (fh && fh->refcnt (-1) <= 0)
+    if (fh && fh->dec_refcnt () <= 0)
       {
 	debug_only_printf ("deleting fh %p", fh);
 	delete fh;

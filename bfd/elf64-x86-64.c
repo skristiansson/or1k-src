@@ -979,24 +979,17 @@ elf_x86_64_create_dynamic_sections (bfd *dynobj,
     abort ();
 
   if (!info->no_ld_generated_unwind_info
-      && bfd_get_section_by_name (dynobj, ".eh_frame") == NULL
+      && htab->plt_eh_frame == NULL
       && htab->elf.splt != NULL)
     {
-      const struct elf_x86_64_backend_data *const abed
-	= get_elf_x86_64_backend_data (dynobj);
-      flagword flags = get_elf_backend_data (dynobj)->dynamic_sec_flags;
+      flagword flags = (SEC_ALLOC | SEC_LOAD | SEC_READONLY
+			| SEC_HAS_CONTENTS | SEC_IN_MEMORY
+			| SEC_LINKER_CREATED);
       htab->plt_eh_frame
-	= bfd_make_section_with_flags (dynobj, ".eh_frame",
-				       flags | SEC_READONLY);
+	= bfd_make_section_anyway_with_flags (dynobj, ".eh_frame", flags);
       if (htab->plt_eh_frame == NULL
 	  || !bfd_set_section_alignment (dynobj, htab->plt_eh_frame, 3))
 	return FALSE;
-
-      htab->plt_eh_frame->size = abed->eh_frame_plt_size;
-      htab->plt_eh_frame->contents
-	= bfd_alloc (dynobj, htab->plt_eh_frame->size);
-      memcpy (htab->plt_eh_frame->contents,
-	      abed->eh_frame_plt, abed->eh_frame_plt_size);
     }
   return TRUE;
 }
@@ -2795,6 +2788,17 @@ elf_x86_64_size_dynamic_sections (bfd *output_bfd,
 	htab->elf.sgotplt->size = 0;
     }
 
+  if (htab->plt_eh_frame != NULL
+      && htab->elf.splt != NULL
+      && htab->elf.splt->size != 0
+      && !bfd_is_abs_section (htab->elf.splt->output_section)
+      && _bfd_elf_eh_frame_present (info))
+    {
+      const struct elf_x86_64_backend_data *arch_data
+	= (const struct elf_x86_64_backend_data *) bed->arch_data;
+      htab->plt_eh_frame->size = arch_data->eh_frame_plt_size;
+    }
+
   /* We now have determined the sizes of the various dynamic sections.
      Allocate memory for them.  */
   relocs = FALSE;
@@ -2808,6 +2812,7 @@ elf_x86_64_size_dynamic_sections (bfd *output_bfd,
 	  || s == htab->elf.sgotplt
 	  || s == htab->elf.iplt
 	  || s == htab->elf.igotplt
+	  || s == htab->plt_eh_frame
 	  || s == htab->sdynbss)
 	{
 	  /* Strip this section if we don't need it; see the
@@ -2859,11 +2864,16 @@ elf_x86_64_size_dynamic_sections (bfd *output_bfd,
     }
 
   if (htab->plt_eh_frame != NULL
-      && htab->elf.splt != NULL
-      && htab->elf.splt->size != 0
-      && (htab->elf.splt->flags & SEC_EXCLUDE) == 0)
-    bfd_put_32 (dynobj, htab->elf.splt->size,
-		htab->plt_eh_frame->contents + PLT_FDE_LEN_OFFSET);
+      && htab->plt_eh_frame->contents != NULL)
+    {
+      const struct elf_x86_64_backend_data *arch_data
+	= (const struct elf_x86_64_backend_data *) bed->arch_data;
+
+      memcpy (htab->plt_eh_frame->contents,
+	      arch_data->eh_frame_plt, htab->plt_eh_frame->size);
+      bfd_put_32 (dynobj, htab->elf.splt->size,
+		  htab->plt_eh_frame->contents + PLT_FDE_LEN_OFFSET);
+    }
 
   if (htab->elf.dynamic_sections_created)
     {
@@ -3143,9 +3153,9 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 				   unresolved_reloc, warned);
 	}
 
-      if (sec != NULL && elf_discarded_section (sec))
+      if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, relend, howto, contents);
+					 rel, 1, relend, howto, 0, contents);
 
       if (info->relocatable)
 	continue;
@@ -3681,6 +3691,36 @@ elf_x86_64_relocate_section (bfd *output_bfd,
 		      outrel.r_info = htab->r_info (0,
 						    R_X86_64_RELATIVE64);
 		      outrel.r_addend = relocation + rel->r_addend;
+		      /* Check addend overflow.  */
+		      if ((outrel.r_addend & 0x80000000)
+			  != (rel->r_addend & 0x80000000))
+			{
+			  const char *name;
+			  int addend = rel->r_addend;
+			  if (h && h->root.root.string)
+			    name = h->root.root.string;
+			  else
+			    name = bfd_elf_sym_name (input_bfd, symtab_hdr,
+						     sym, NULL);
+			  if (addend < 0)
+			    (*_bfd_error_handler)
+			      (_("%B: addend -0x%x in relocation %s against "
+				 "symbol `%s' at 0x%lx in section `%A' is "
+				 "out of range"),
+			       input_bfd, input_section, addend,
+			       x86_64_elf_howto_table[r_type].name,
+			       name, (unsigned long) rel->r_offset);
+			  else
+			    (*_bfd_error_handler)
+			      (_("%B: addend 0x%x in relocation %s against "
+				 "symbol `%s' at 0x%lx in section `%A' is "
+				 "out of range"),
+			       input_bfd, input_section, addend,
+			       x86_64_elf_howto_table[r_type].name,
+			       name, (unsigned long) rel->r_offset);
+			  bfd_set_error (bfd_error_bad_value);
+			  return FALSE;
+			}
 		    }
 		  else
 		    {
@@ -4230,7 +4270,7 @@ static bfd_boolean
 elf_x86_64_finish_dynamic_symbol (bfd *output_bfd,
 				  struct bfd_link_info *info,
 				  struct elf_link_hash_entry *h,
-				  Elf_Internal_Sym *sym)
+				  Elf_Internal_Sym *sym ATTRIBUTE_UNUSED)
 {
   struct elf_x86_64_link_hash_table *htab;
   const struct elf_x86_64_backend_data *const abed
@@ -4469,13 +4509,6 @@ do_glob_dat:
       elf_append_rela (output_bfd, htab->srelbss, &rela);
     }
 
-  /* Mark _DYNAMIC and _GLOBAL_OFFSET_TABLE_ as absolute.  SYM may
-     be NULL for local symbols.  */
-  if (sym != NULL
-      && (strcmp (h->root.root.string, "_DYNAMIC") == 0
-	  || h == htab->elf.hgot))
-    sym->st_shndx = SHN_ABS;
-
   return TRUE;
 }
 
@@ -4503,6 +4536,7 @@ elf_x86_64_reloc_type_class (const Elf_Internal_Rela *rela)
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {
     case R_X86_64_RELATIVE:
+    case R_X86_64_RELATIVE64:
       return reloc_class_relative;
     case R_X86_64_JUMP_SLOT:
       return reloc_class_plt;
@@ -4699,7 +4733,8 @@ elf_x86_64_finish_dynamic_sections (bfd *output_bfd,
     }
 
   /* Adjust .eh_frame for .plt section.  */
-  if (htab->plt_eh_frame != NULL)
+  if (htab->plt_eh_frame != NULL
+      && htab->plt_eh_frame->contents != NULL)
     {
       if (htab->elf.splt != NULL
 	  && htab->elf.splt->size != 0
@@ -4715,8 +4750,7 @@ elf_x86_64_finish_dynamic_sections (bfd *output_bfd,
 			     htab->plt_eh_frame->contents
 			     + PLT_FDE_START_OFFSET);
 	}
-      if (htab->plt_eh_frame->sec_info_type
-	  == ELF_INFO_TYPE_EH_FRAME)
+      if (htab->plt_eh_frame->sec_info_type == SEC_INFO_TYPE_EH_FRAME)
 	{
 	  if (! _bfd_elf_write_section_eh_frame (output_bfd, info,
 						 htab->plt_eh_frame,
@@ -5134,13 +5168,16 @@ static const bfd_byte elf_x86_64_nacl_plt0_entry[NACL_PLT_ENTRY_SIZE] =
     0x4d, 0x01, 0xfb,             	/* add %r15, %r11		*/
     0x41, 0xff, 0xe3,             	/* jmpq *%r11			*/
 
-    /* 41 bytes of nop to pad out to the standard size.  */
+    /* 9-byte nop sequence to pad out to the next 32-byte boundary.  */
+    0x2e, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, /* nopl %cs:0x0(%rax,%rax,1)	*/
+
+    /* 32 bytes of nop to pad out to the standard size.  */
     0x66, 0x66, 0x66, 0x66, 0x66, 0x66,    /* excess data32 prefixes	*/
     0x2e, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, /* nopw %cs:0x0(%rax,%rax,1)	*/
     0x66, 0x66, 0x66, 0x66, 0x66, 0x66,    /* excess data32 prefixes	*/
     0x2e, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, /* nopw %cs:0x0(%rax,%rax,1)	*/
-    0x66, 0x66,                            /* excess data32 prefixes	*/
-    0x2e, 0x0f, 0x1f, 0x84, 0, 0, 0, 0, 0, /* nopw %cs:0x0(%rax,%rax,1)	*/
+    0x66,                                  /* excess data32 prefix	*/
+    0x90                                   /* nop */
   };
 
 static const bfd_byte elf_x86_64_nacl_plt_entry[NACL_PLT_ENTRY_SIZE] =

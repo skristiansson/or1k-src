@@ -26,12 +26,12 @@ AC_CONFIG_HEADER(config.h:config.in)
 AM_MAINTAINER_MODE
 
 AC_PROG_CC
-gl_EARLY
 AC_GNU_SOURCE
 
 AC_CANONICAL_SYSTEM
 
 AC_PROG_INSTALL
+AC_PROG_RANLIB
 
 AC_ARG_PROGRAM
 
@@ -42,6 +42,13 @@ AC_FUNC_ALLOCA
 
 # Check for the 'make' the user wants to use.
 AC_CHECK_PROGS(MAKE, make)
+
+# Configure gnulib.  We can't use AC_CONFIG_SUBDIRS as that'd expect
+# to find the the source subdir to be configured directly under
+# gdbserver/.  We need to build gnulib under some other directory not
+# "gnulib", to avoid the problem of both GDB and GDBserver wanting to
+# build it in the same directory, when building in the source dir.
+ACX_CONFIGURE_DIR(["../gnulib"], ["build-gnulib-gdbserver"])
 
 AC_CHECK_HEADERS(sgtty.h termio.h termios.h sys/reg.h string.h dnl
 		 proc_service.h sys/procfs.h thread_db.h linux/elf.h dnl
@@ -167,7 +174,7 @@ AC_TRY_LINK([
   [AC_MSG_RESULT(no)])
 fi
 
-AC_CHECK_DECLS([strerror, perror, memmem, vasprintf, vsnprintf])
+AC_CHECK_DECLS([strerror, perror, vasprintf, vsnprintf])
 
 AC_CHECK_TYPES(socklen_t, [], [],
 [#include <sys/types.h>
@@ -276,6 +283,16 @@ if test "$ac_cv_header_sys_procfs_h" = yes; then
   BFD_HAVE_SYS_PROCFS_TYPE(psaddr_t)
   BFD_HAVE_SYS_PROCFS_TYPE(prgregset_t)
   BFD_HAVE_SYS_PROCFS_TYPE(elf_fpregset_t)
+fi
+
+dnl Some systems (e.g., Android) have lwpid_t defined in libthread_db.h.
+if test "$bfd_cv_have_sys_procfs_type_lwpid_t" != yes; then
+  GDBSERVER_HAVE_THREAD_DB_TYPE(lwpid_t)
+fi
+
+dnl Some systems (e.g., Android) have psaddr_t defined in libthread_db.h.
+if test "$bfd_cv_have_sys_procfs_type_psaddr_t" != yes; then
+  GDBSERVER_HAVE_THREAD_DB_TYPE(psaddr_t)
 fi
 
 dnl Check for libdl, but do not add it to LIBS as only gdbserver
@@ -429,18 +446,15 @@ AC_SUBST(srv_xmlfiles)
 AC_SUBST(IPA_DEPFILES)
 AC_SUBST(extra_libraries)
 
-gl_INIT
-# GDBserver does not use automake, but gnulib does.  This line lets
-# us generate its Makefile.in.
-AM_INIT_AUTOMAKE(gdbserver, UNUSED-VERSION, [no-define])
+GNULIB=build-gnulib-gdbserver/import
 
 GNULIB_STDINT_H=
 if test x"$STDINT_H" != x; then
-  GNULIB_STDINT_H=gnulib/$STDINT_H
+  GNULIB_STDINT_H=$GNULIB/$STDINT_H
 fi
 AC_SUBST(GNULIB_STDINT_H)
 
-AC_OUTPUT(Makefile gnulib/Makefile:${srcdir}/../gnulib/Makefile.in,
+AC_OUTPUT(Makefile,
 [case x$CONFIG_HEADERS in
 xconfig.h:config.in)
 echo > stamp-h ;;

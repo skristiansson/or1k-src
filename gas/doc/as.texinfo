@@ -369,7 +369,7 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
 @ifset M68HC11
 
 @emph{Target M68HC11 options:}
-   [@b{-m68hc11}|@b{-m68hc12}|@b{-m68hcs12}]
+   [@b{-m68hc11}|@b{-m68hc12}|@b{-m68hcs12}|@b{-mm9s12x}|@b{-mm9s12xg}]
    [@b{-mshort}|@b{-mlong}]
    [@b{-mshort-double}|@b{-mlong-double}]
    [@b{--force-long-branches}] [@b{--short-branches}]
@@ -1050,9 +1050,13 @@ Motorola 68HC11 or 68HC12 series.
 
 @table @gcctabopt
 
-@item -m68hc11 | -m68hc12 | -m68hcs12
+@item -m68hc11 | -m68hc12 | -m68hcs12 | -mm9s12x | -mm9s12xg
 Specify what processor is the target.  The default is
 defined by the configuration option when building the assembler.
+
+@item --xgate-ramoffset
+Instruct the linker to offset RAM addresses from S12X address space into
+XGATE address space.
 
 @item -mshort
 Specify to use the 16-bit integer ABI.
@@ -1083,10 +1087,10 @@ when the instruction does not support direct addressing mode.
 Print the syntax of instruction in case of error.
 
 @item --print-opcodes
-print the list of instructions with syntax and then exit.
+Print the list of instructions with syntax and then exit.
 
 @item --generate-example
-print an example of instruction for each possible instruction and then exit.
+Print an example of instruction for each possible instruction and then exit.
 This option is only useful for testing @command{@value{AS}}.
 
 @end table
@@ -2481,10 +2485,10 @@ On most machines, you can also use @code{$} in symbol names; exceptions
 are noted in @ref{Machine Dependencies}.
 @end ifset
 No symbol may begin with a digit.  Case is significant.
-There is no length limit: all characters are significant.  Symbols are
-delimited by characters not in that set, or by the beginning of a file
-(since the source program must end with a newline, the end of a file is
-not a possible symbol delimiter).  @xref{Symbols}.
+There is no length limit: all characters are significant.  Multibyte characters
+are supported.  Symbols are delimited by characters not in that set, or by the
+beginning of a file (since the source program must end with a newline, the end
+of a file is not a possible symbol delimiter).  @xref{Symbols}.
 @cindex length of symbols
 
 @node Statements
@@ -3409,6 +3413,11 @@ on the H8/300), and underscores.
 
 Case of letters is significant: @code{foo} is a different symbol name
 than @code{Foo}.
+
+Multibyte characters are supported.  To generate a symbol name containing
+multibyte characters enclose it within double quotes and use escape codes. cf
+@xref{Strings}.  Generating a multibyte symbol name from a label is not
+currently supported.
 
 Each symbol has exactly one name.  Each name in an assembly language program
 refers to exactly one symbol.  You may use that symbol name any number of times
@@ -4342,9 +4351,12 @@ first instruction of the sequence so that the whole sequence starts on an
 aligned bundle boundary.  It's an error if the sequence is longer than the
 bundle size.
 
-Bundle-locked sequences do not nest.  It's an error if two
-@code{.bundle_lock} directives appear without an intervening
-@code{.bundle_unlock} directive.
+For convenience when using @code{.bundle_lock} and @code{.bundle_unlock}
+inside assembler macros (@pxref{Macro}), bundle-locked sequences may be
+nested.  That is, a second @code{.bundle_lock} directive before the next
+@code{.bundle_unlock} directive has no effect except that it must be
+matched by another closing @code{.bundle_unlock} so that there is the
+same number of @code{.bundle_lock} and @code{.bundle_unlock} directives.
 
 @node Byte
 @section @code{.byte @var{expressions}}
@@ -7029,6 +7041,9 @@ subject, see the hardware manufacturer's manual.
 @ifset V850
 * V850-Dependent::              V850 Dependent Features
 @end ifset
+@ifset XGATE
+* XGATE-Dependent::             XGATE Features
+@end ifset
 @ifset XSTORMY16
 * XSTORMY16-Dependent::         XStormy16 Dependent Features
 @end ifset
@@ -7254,6 +7269,10 @@ family.
 
 @ifset V850
 @include c-v850.texi
+@end ifset
+
+@ifset XGATE
+@include c-xgate.texi
 @end ifset
 
 @ifset XSTORMY16

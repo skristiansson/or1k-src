@@ -59,6 +59,7 @@
 
 #include "features/arm-with-m.c"
 #include "features/arm-with-m-fpa-layout.c"
+#include "features/arm-with-m-vfp-d16.c"
 #include "features/arm-with-iwmmxt.c"
 #include "features/arm-with-vfpv2.c"
 #include "features/arm-with-vfpv3.c"
@@ -379,7 +380,6 @@ arm_find_mapping_symbol (CORE_ADDR memaddr, CORE_ADDR *start)
 int
 arm_pc_is_thumb (struct gdbarch *gdbarch, CORE_ADDR memaddr)
 {
-  struct obj_section *sec;
   struct minimal_symbol *sym;
   char type;
   struct displaced_step_closure* dsc
@@ -1284,7 +1284,7 @@ static CORE_ADDR
 arm_skip_stack_protector(CORE_ADDR pc, struct gdbarch *gdbarch)
 {
   enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
-  unsigned int address, basereg;
+  unsigned int basereg;
   struct minimal_symbol *stack_chk_guard;
   int offset;
   int is_thumb = arm_pc_is_thumb (gdbarch, pc);
@@ -1376,7 +1376,6 @@ arm_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
   unsigned long inst;
   CORE_ADDR skip_pc;
   CORE_ADDR func_addr, limit_pc;
-  struct symtab_and_line sal;
 
   /* See if we can determine the end of the prologue via the symbol table.
      If so, then return either PC, or the PC after the prologue, whichever
@@ -1535,7 +1534,6 @@ thumb_scan_prologue (struct gdbarch *gdbarch, CORE_ADDR prev_pc,
 {
   CORE_ADDR prologue_start;
   CORE_ADDR prologue_end;
-  CORE_ADDR current_pc;
 
   if (find_pc_partial_function (block_addr, NULL, &prologue_start,
 				&prologue_end))
@@ -5131,7 +5129,7 @@ static gdb_byte *
 extend_buffer_earlier (gdb_byte *buf, CORE_ADDR endaddr,
 		       int old_len, int new_len)
 {
-  gdb_byte *new_buf, *middle;
+  gdb_byte *new_buf;
   int bytes_to_read = new_len - old_len;
 
   new_buf = xmalloc (new_len);
@@ -5164,7 +5162,7 @@ arm_adjust_breakpoint_address (struct gdbarch *gdbarch, CORE_ADDR bpaddr)
   gdb_byte *buf;
   char map_type;
   CORE_ADDR boundary, func_start;
-  int buf_len, buf2_len;
+  int buf_len;
   enum bfd_endian order = gdbarch_byte_order_for_code (gdbarch);
   int i, any, last_it, last_it_count;
 
@@ -6864,7 +6862,7 @@ cleanup_block_load_pc (struct gdbarch *gdbarch,
 		       struct displaced_step_closure *dsc)
 {
   uint32_t status = displaced_read_reg (regs, dsc, ARM_PS_REGNUM);
-  int load_executed = condition_true (dsc->u.block.cond, status), i;
+  int load_executed = condition_true (dsc->u.block.cond, status);
   unsigned int mask = dsc->u.block.regmask, write_reg = ARM_PC_REGNUM;
   unsigned int regs_loaded = bitcount (mask);
   unsigned int num_to_shuffle = regs_loaded, clobbered;
@@ -8706,8 +8704,6 @@ static void
 arm_remote_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr,
 			       int *kindptr)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-
   arm_breakpoint_from_pc (gdbarch, pcptr, kindptr);
 
   if (arm_pc_is_thumb (gdbarch, *pcptr) && *kindptr == 4)
@@ -9010,11 +9006,12 @@ arm_store_return_value (struct type *type, struct regcache *regs,
 /* Handle function return values.  */
 
 static enum return_value_convention
-arm_return_value (struct gdbarch *gdbarch, struct type *func_type,
+arm_return_value (struct gdbarch *gdbarch, struct value *function,
 		  struct type *valtype, struct regcache *regcache,
 		  gdb_byte *readbuf, const gdb_byte *writebuf)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  struct type *func_type = function ? value_type (function) : NULL;
   enum arm_vfp_cprc_base_type vfp_base_type;
   int vfp_base_count;
 
@@ -9281,8 +9278,6 @@ static void
 arm_show_fallback_mode (struct ui_file *file, int from_tty,
 			struct cmd_list_element *c, const char *value)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (target_gdbarch);
-
   fprintf_filtered (file,
 		    _("The current execution mode assumed "
 		      "(when symbols are unavailable) is \"%s\".\n"),
@@ -9572,7 +9567,6 @@ arm_neon_quad_write (struct gdbarch *gdbarch, struct regcache *regcache,
 		     int regnum, const gdb_byte *buf)
 {
   char name_buf[4];
-  gdb_byte reg_buf[8];
   int offset, double_regnum;
 
   sprintf (name_buf, "d%d", regnum << 1);
@@ -9686,7 +9680,7 @@ arm_register_g_packet_guesses (struct gdbarch *gdbarch)
 	 cater for remote targets whose register set layout is the
 	 same as the FPA layout.  */
       register_remote_g_packet_guess (gdbarch,
-				      /* r0-r12,sp,lr,pc; f0-f7; fps,cpsr */
+				      /* r0-r12,sp,lr,pc; f0-f7; fps,xpsr */
 				      (16 * INT_REGISTER_SIZE)
 				      + (8 * FP_REGISTER_SIZE)
 				      + (2 * INT_REGISTER_SIZE),
@@ -9698,6 +9692,14 @@ arm_register_g_packet_guesses (struct gdbarch *gdbarch)
 				      (16 * INT_REGISTER_SIZE)
 				      + INT_REGISTER_SIZE,
 				      tdesc_arm_with_m);
+
+      /* M-profile plus M4F VFP.  */
+      register_remote_g_packet_guess (gdbarch,
+				      /* r0-r12,sp,lr,pc; d0-d15; fpscr,xpsr */
+				      (16 * INT_REGISTER_SIZE)
+				      + (16 * VFP_REGISTER_SIZE)
+				      + (2 * INT_REGISTER_SIZE),
+				      tdesc_arm_with_m_vfp_d16);
     }
 
   /* Otherwise we don't have a useful guess.  */
@@ -10333,6 +10335,7 @@ _initialize_arm_tdep (void)
   /* Initialize the standard target descriptions.  */
   initialize_tdesc_arm_with_m ();
   initialize_tdesc_arm_with_m_fpa_layout ();
+  initialize_tdesc_arm_with_m_vfp_d16 ();
   initialize_tdesc_arm_with_iwmmxt ();
   initialize_tdesc_arm_with_vfpv2 ();
   initialize_tdesc_arm_with_vfpv3 ();

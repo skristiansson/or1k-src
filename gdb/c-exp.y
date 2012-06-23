@@ -172,9 +172,10 @@ static struct stoken operator_stoken (const char *);
 /* %type <bval> block */
 
 /* Fancy type parsing.  */
-%type <voidval> func_mod direct_abs_decl abs_decl
+%type <voidval> func_mod direct_abs_decl abs_decl ptr_operator
 %type <tval> ptype
 %type <lval> array_mod
+%type <tval> conversion_type_id
 
 %token <typed_val_int> INT
 %token <typed_val_float> FLOAT
@@ -931,9 +932,7 @@ variable:	name_not_typename
 	;
 
 space_identifier : '@' NAME
-		{ push_type_address_space (copy_name ($2.stoken));
-		  push_type (tp_space_identifier);
-		}
+		{ insert_type_address_space (copy_name ($2.stoken)); }
 	;
 
 const_or_volatile: const_or_volatile_noopt
@@ -952,14 +951,23 @@ const_or_volatile_or_space_identifier:
 	|
 	;
 
-abs_decl:	'*'
-			{ push_type (tp_pointer); $$ = 0; }
-	|	'*' abs_decl
-			{ push_type (tp_pointer); $$ = $2; }
+ptr_operator:
+		ptr_operator '*'
+			{ insert_type (tp_pointer); }
+		const_or_volatile_or_space_identifier
+			{ $$ = 0; }
+	|	'*' 
+			{ insert_type (tp_pointer); }
+		const_or_volatile_or_space_identifier
+			{ $$ = 0; }
 	|	'&'
-			{ push_type (tp_reference); $$ = 0; }
-	|	'&' abs_decl
-			{ push_type (tp_reference); $$ = $2; }
+			{ insert_type (tp_reference); $$ = 0; }
+	|	'&' ptr_operator
+			{ insert_type (tp_reference); $$ = 0; }
+	;
+
+abs_decl:	ptr_operator direct_abs_decl
+	|	ptr_operator
 	|	direct_abs_decl
 	;
 
@@ -1203,8 +1211,16 @@ nonempty_typelist
 	;
 
 ptype	:	typebase
-	|	ptype const_or_volatile_or_space_identifier abs_decl const_or_volatile_or_space_identifier
+	|	ptype abs_decl
 		{ $$ = follow_types ($1); }
+	;
+
+conversion_type_id: typebase conversion_declarator
+		{ $$ = follow_types ($1); }
+	;
+
+conversion_declarator:  /* Nothing.  */
+	| ptr_operator conversion_declarator
 	;
 
 const_and_volatile: 	CONST_KEYWORD VOLATILE_KEYWORD
@@ -1212,23 +1228,23 @@ const_and_volatile: 	CONST_KEYWORD VOLATILE_KEYWORD
 	;
 
 const_or_volatile_noopt:  	const_and_volatile 
-			{ push_type (tp_const);
-			  push_type (tp_volatile); 
+			{ insert_type (tp_const);
+			  insert_type (tp_volatile); 
 			}
 	| 		CONST_KEYWORD
-			{ push_type (tp_const); }
+			{ insert_type (tp_const); }
 	| 		VOLATILE_KEYWORD
-			{ push_type (tp_volatile); }
+			{ insert_type (tp_volatile); }
 	;
 
 operator:	OPERATOR NEW
 			{ $$ = operator_stoken (" new"); }
 	|	OPERATOR DELETE
-			{ $$ = operator_stoken (" delete "); }
+			{ $$ = operator_stoken (" delete"); }
 	|	OPERATOR NEW '[' ']'
 			{ $$ = operator_stoken (" new[]"); }
 	|	OPERATOR DELETE '[' ']'
-			{ $$ = operator_stoken (" delete[] "); }
+			{ $$ = operator_stoken (" delete[]"); }
 	|	OPERATOR '+'
 			{ $$ = operator_stoken ("+"); }
 	|	OPERATOR '-'
@@ -1325,7 +1341,7 @@ operator:	OPERATOR NEW
 			{ $$ = operator_stoken ("()"); }
 	|	OPERATOR '[' ']'
 			{ $$ = operator_stoken ("[]"); }
-	|	OPERATOR ptype
+	|	OPERATOR conversion_type_id
 			{ char *name;
 			  long length;
 			  struct ui_file *buf = mem_fileopen ();
@@ -1419,9 +1435,6 @@ parse_number (char *p, int len, int parsed_float, YYSTYPE *putithere)
 
   if (parsed_float)
     {
-      const char *suffix;
-      int suffix_len;
-
       /* If it ends at "df", "dd" or "dl", take it as type of decimal floating
          point.  Return DECFLOAT.  */
 
@@ -2508,9 +2521,8 @@ classify_name (struct block *block)
 
 /* Like classify_name, but used by the inner loop of the lexer, when a
    name might have already been seen.  FIRST_NAME is true if the token
-   in `yylval' is the first component of a name, false otherwise.  If
-   this function returns NAME, it might not have updated `yylval'.
-   This is ok because the caller only cares about TYPENAME.  */
+   in `yylval' is the first component of a name, false otherwise.  */
+
 static int
 classify_inner_name (struct block *block, int first_name)
 {
@@ -2524,18 +2536,28 @@ classify_inner_name (struct block *block, int first_name)
   if (TYPE_CODE (type) != TYPE_CODE_STRUCT
       && TYPE_CODE (type) != TYPE_CODE_UNION
       && TYPE_CODE (type) != TYPE_CODE_NAMESPACE)
-    /* We know the caller won't expect us to update yylval.  */
-    return NAME;
+    return ERROR;
 
   copy = copy_name (yylval.tsym.stoken);
-  new_type = cp_lookup_nested_type (yylval.tsym.type, copy, block);
+  yylval.ssym.sym = cp_lookup_nested_symbol (yylval.tsym.type, copy, block);
+  if (yylval.ssym.sym == NULL)
+    return ERROR;
 
-  if (new_type == NULL)
-    /* We know the caller won't expect us to update yylval.  */
-    return NAME;
+  switch (SYMBOL_CLASS (yylval.ssym.sym))
+    {
+    case LOC_BLOCK:
+    case LOC_LABEL:
+      return ERROR;
 
-  yylval.tsym.type = new_type;
-  return TYPENAME;
+    case LOC_TYPEDEF:
+      yylval.tsym.type = SYMBOL_TYPE (yylval.ssym.sym);;
+      return TYPENAME;
+
+    default:
+      yylval.ssym.is_a_field_of_this = 0;
+      return NAME;
+    }
+  internal_error (__FILE__, __LINE__, _("not reached"));
 }
 
 /* The outer level of a two-level lexer.  This calls the inner lexer
@@ -2595,7 +2617,7 @@ yylex (void)
 						first_iter);
 	  /* We keep going until we either run out of names, or until
 	     we have a qualified name which is not a type.  */
-	  if (classification != TYPENAME)
+	  if (classification != TYPENAME && classification != NAME)
 	    {
 	      /* Push the final component and leave the loop.  */
 	      VEC_safe_push (token_and_value, token_fifo, &next);

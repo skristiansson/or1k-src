@@ -126,11 +126,11 @@ macho_symtab_add_minsym (struct objfile *objfile, const asymbol *sym)
          interested in will have a section.  */
       /* Relocate all non-absolute and non-TLS symbols by the
          section offset.  */
-      if (sym->section != &bfd_abs_section
+      if (sym->section != bfd_abs_section_ptr
           && !(sym->section->flags & SEC_THREAD_LOCAL))
         symaddr += offset;
 
-      if (sym->section == &bfd_abs_section)
+      if (sym->section == bfd_abs_section_ptr)
         ms_type = mst_abs;
       else if (sym->section->flags & SEC_CODE)
         {
@@ -563,7 +563,7 @@ macho_add_oso_symfile (oso_el *oso, bfd *abfd,
           res = macho_resolve_oso_sym_with_minsym (main_objfile, sym);
           if (res != 0)
             {
-              sym->section = &bfd_com_section;
+              sym->section = bfd_com_section_ptr;
               sym->value = res;
             }
         }
@@ -1032,6 +1032,7 @@ static const struct sym_fns macho_sym_fns = {
   default_symfile_segments,	/* Get segment information from a file.  */
   NULL,
   macho_symfile_relocate,	/* Relocate a debug section.  */
+  NULL,				/* sym_get_probes */
   &psym_functions
 };
 

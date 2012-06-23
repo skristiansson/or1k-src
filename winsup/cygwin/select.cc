@@ -34,6 +34,7 @@ details. */
 #include "pinfo.h"
 #include "sigproc.h"
 #include "cygtls.h"
+#include "cygwait.h"
 
 /*
  * All these defines below should be in sys/types.h
@@ -81,7 +82,7 @@ typedef long fd_mask;
     { \
       (s)->thread_errno =  EBADF; \
       return -1; \
-    } \
+    }
 
 /* The main select code.
  */
@@ -89,14 +90,17 @@ extern "C" int
 cygwin_select (int maxfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	       struct timeval *to)
 {
+  select_printf ("select(%d, %p, %p, %p, %p)", maxfds, readfds, writefds, exceptfds, to);
+
   select_stuff sel;
   fd_set *dummy_readfds = allocfd_set (maxfds);
   fd_set *dummy_writefds = allocfd_set (maxfds);
   fd_set *dummy_exceptfds = allocfd_set (maxfds);
 
-  select_printf ("select(%d, %p, %p, %p, %p)", maxfds, readfds, writefds, exceptfds, to);
-
-  pthread_testcancel ();
+  /* Allocate some fd_set structures using the number of fds as a guide. */
+  fd_set *r = allocfd_set (maxfds);
+  fd_set *w = allocfd_set (maxfds);
+  fd_set *e = allocfd_set (maxfds);
 
   if (!readfds)
     readfds = dummy_readfds;
@@ -105,12 +109,7 @@ cygwin_select (int maxfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
   if (!exceptfds)
     exceptfds = dummy_exceptfds;
 
-  for (int i = 0; i < maxfds; i++)
-    if (!sel.test_and_set (i, readfds, writefds, exceptfds))
-      {
-	select_printf ("aborting due to test_and_set error");
-	return -1;	/* Invalid fd, maybe? */
-      }
+  pthread_testcancel ();
 
   /* Convert to milliseconds or INFINITE if to == NULL */
   DWORD ms = to ? (to->tv_sec * 1000) + (to->tv_usec / 1000) : INFINITE;
@@ -122,48 +121,84 @@ cygwin_select (int maxfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
   else
     select_printf ("to NULL, ms %x", ms);
 
-  select_printf ("sel.always_ready %d", sel.always_ready);
-
-  /* Allocate some fd_set structures using the number of fds as a guide. */
-  fd_set *r = allocfd_set (maxfds);
-  fd_set *w = allocfd_set (maxfds);
-  fd_set *e = allocfd_set (maxfds);
-
-  int res = 0;
   sel.return_on_signal = &_my_tls == _main_tls;
-  /* Degenerate case.  No fds to wait for.  Just wait. */
-  if (sel.start.next == NULL)
-    while (!res)
-      switch (cygwait (ms))
-	{
-	case WAIT_OBJECT_0:
-	  select_printf ("signal received");
-	  _my_tls.call_signal_handler ();
-	  if (!sel.return_on_signal)
-	    continue;		/* Emulate linux behavior */
-	  set_sig_errno (EINTR);
-	  res = -1;
-	  break;
-	case WAIT_OBJECT_0 + 1:
-	  sel.destroy ();
-	  pthread::static_cancel_self ();
-	  /*NOTREACHED*/
-	default:
-	  res = 1;	/* temporary flag.  Will be set to zero below. */
-	  break;
-	}
-  else if (sel.always_ready || ms == 0)
-    res = 0;
-  else
-    res = sel.wait (r, w, e, ms);
-  if (res >= 0)
+
+  int res = select_stuff::select_loop;
+
+  LONGLONG start_time = gtod.msecs ();	/* Record the current time for later use. */
+
+  while (res == select_stuff::select_loop)
     {
-      copyfd_set (readfds, r, maxfds);
-      copyfd_set (writefds, w, maxfds);
-      copyfd_set (exceptfds, e, maxfds);
-      res = (res > 0) ? 0 : sel.poll (readfds, writefds, exceptfds);
+      /* Build the select record per fd linked list and set state as
+	 needed. */
+      for (int i = 0; i < maxfds; i++)
+	if (!sel.test_and_set (i, readfds, writefds, exceptfds))
+	  {
+	    select_printf ("aborting due to test_and_set error");
+	    return -1;	/* Invalid fd, maybe? */
+	  }
+      select_printf ("sel.always_ready %d", sel.always_ready);
+
+      /* Degenerate case.  No fds to wait for.  Just wait for time to run out
+	 or signal to arrive. */
+      if (sel.start.next == NULL)
+	switch (cygwait (ms))
+	  {
+	  case WAIT_SIGNALED:
+	    select_printf ("signal received");
+	    _my_tls.call_signal_handler ();
+	    if (!sel.return_on_signal)
+	      res = select_stuff::select_loop;		/* Emulate linux behavior */
+	    else
+	      {
+		set_sig_errno (EINTR);
+		res = select_stuff::select_error;
+	      }
+	    break;
+	  case WAIT_CANCELED:
+	    sel.destroy ();
+	    pthread::static_cancel_self ();
+	    /*NOTREACHED*/
+	  default:
+	    res = select_stuff::select_set_zero;	/* Set res to zero below. */
+	    break;
+	  }
+      else if (sel.always_ready || ms == 0)
+	res = 0;					/* Catch any active fds via
+							   sel.poll() below */
+      else
+	res = sel.wait (r, w, e, ms);			/* wait for an fd to become
+							   become active or time out */
+      if (res >= 0)
+	{
+	  copyfd_set (readfds, r, maxfds);
+	  copyfd_set (writefds, w, maxfds);
+	  copyfd_set (exceptfds, e, maxfds);
+	  /* Actually set the bit mask from sel records */
+	  res = (res == select_stuff::select_set_zero) ? 0 : sel.poll (readfds, writefds, exceptfds);
+	}
+      /* Always clean up everything here.  If we're looping then build it
+	 all up again.  */
+      sel.cleanup ();
+      sel.destroy ();
+      /* Recalculate the time remaining to wait if we are going to be looping. */
+      if (res == select_stuff::select_loop && ms != INFINITE)
+	{
+	  select_printf ("recalculating ms");
+	  LONGLONG now = gtod.msecs ();
+	  if (now > (start_time + ms))
+	    select_printf ("timed out after verification");
+	  else
+	    {
+	      ms -= (now - start_time);
+	      start_time = now;
+	      select_printf ("ms now %u", ms);
+	    }
+	}
     }
 
+  if (res < -1)
+    res = -1;
   syscall_printf ("%R = select(%d, %p, %p, %p, %p)", res, maxfds, readfds,
 		  writefds, exceptfds, to);
   return res;
@@ -213,7 +248,7 @@ select_stuff::cleanup ()
 inline void
 select_stuff::destroy ()
 {
-  select_record *s = &start;
+  select_record *s;
   select_record *snext = start.next;
 
   select_printf ("deleting select records");
@@ -222,6 +257,7 @@ select_stuff::destroy ()
       snext = s->next;
       delete s;
     }
+  start.next = NULL;
 }
 
 select_stuff::~select_stuff ()
@@ -268,24 +304,19 @@ err:
 }
 
 /* The heart of select.  Waits for an fd to do something interesting. */
-int
+select_stuff::wait_states
 select_stuff::wait (fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 		    DWORD ms)
 {
-  int wait_ret;
   HANDLE w4[MAXIMUM_WAIT_OBJECTS];
   select_record *s = &start;
-  int m = 0;
-  int res = 0;
-  bool is_cancelable = false;
+  DWORD m = 0;
 
   w4[m++] = signal_arrived;  /* Always wait for the arrival of a signal. */
   if ((w4[m] = pthread::get_cancel_event ()) != NULL)
-    {
-      ++m;
-      is_cancelable = true;
-    }
+    m++;
 
+  DWORD startfds = m;
   /* Loop through the select chain, starting up anything appropriate and
      counting the number of active fds. */
   while ((s = s->next))
@@ -293,73 +324,77 @@ select_stuff::wait (fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
       if (m >= MAXIMUM_WAIT_OBJECTS)
 	{
 	  set_sig_errno (EINVAL);
-	  return -1;
+	  return select_error;
 	}
       if (!s->startup (s, this))
 	{
 	  s->set_select_errno ();
-	  return -1;
+	  return select_error;
 	}
-      if (s->h == NULL)
-	continue;
-      for (int i = 1; i < m; i++)
-	if (w4[i] == s->h)
-	  goto next_while;
-      w4[m++] = s->h;
-  next_while:
-      continue;
+      if (s->h != NULL)
+	{
+	  for (DWORD i = startfds; i < m; i++)
+	    if (w4[i] == s->h)
+	      goto next_while;
+	  w4[m++] = s->h;
+	}
+next_while:;
     }
 
-  LONGLONG start_time = gtod.msecs ();	/* Record the current time for later use. */
-
   debug_printf ("m %d, ms %u", m, ms);
-  for (;;)
+
+  DWORD wait_ret;
+  if (!windows_used)
+    wait_ret = WaitForMultipleObjects (m, w4, FALSE, ms);
+  else
+    /* Using MWMO_INPUTAVAILABLE is the officially supported solution for
+       the problem that the call to PeekMessage disarms the queue state
+       so that a subsequent MWFMO hangs, even if there are still messages
+       in the queue. */
+    wait_ret = MsgWaitForMultipleObjectsEx (m, w4, ms,
+					    QS_ALLINPUT | QS_ALLPOSTMESSAGE,
+					    MWMO_INPUTAVAILABLE);
+  select_printf ("wait_ret %d.  verifying", wait_ret);
+
+  wait_states res;
+  switch (wait_ret)
     {
-      if (!windows_used)
-	wait_ret = WaitForMultipleObjects (m, w4, FALSE, ms);
+    case WAIT_OBJECT_0:
+      select_printf ("signal received");
+      /* Need to get rid of everything when a signal occurs since we can't
+	 be assured that a signal handler won't jump out of select entirely. */
+      cleanup ();
+      destroy ();
+      _my_tls.call_signal_handler ();
+      if (!return_on_signal)
+	res = select_loop;
       else
-	/* Using MWMO_INPUTAVAILABLE is the officially supported solution for
-	   the problem that the call to PeekMessage disarms the queue state
-	   so that a subsequent MWFMO hangs, even if there are still messages
-	   in the queue. */
-	wait_ret = MsgWaitForMultipleObjectsEx (m, w4, ms,
-						QS_ALLINPUT | QS_ALLPOSTMESSAGE,
-						MWMO_INPUTAVAILABLE);
-
-      switch (wait_ret)
 	{
-	case WAIT_OBJECT_0:
-	  select_printf ("signal received");
-	  _my_tls.call_signal_handler ();
-	  if (!return_on_signal)
-	    continue;		/* Emulate linux behavior */
-	  cleanup ();
 	  set_sig_errno (EINTR);
-	  return -1;
-	case WAIT_OBJECT_0 + 1:
-	  if (is_cancelable)
-	    {
-	      cleanup ();
-	      destroy ();
-	      pthread::static_cancel_self ();
-	    }
-	  /* This wasn't a cancel event.  It was just a normal object to wait
-	     for.  */
-	  break;
-	case WAIT_FAILED:
-	  cleanup ();
-	  system_printf ("WaitForMultipleObjects failed");
-	  s = &start;
-	  s->set_select_errno ();
-	  return -1;
-	case WAIT_TIMEOUT:
-	  cleanup ();
-	  select_printf ("timed out");
-	  res = 1;
-	  goto out;
+	  res = select_signalled;	/* Cause loop exit in cygwin_select */
 	}
-
-      select_printf ("woke up.  wait_ret %d.  verifying", wait_ret);
+      break;
+    case WAIT_FAILED:
+      system_printf ("WaitForMultipleObjects failed");
+      s = &start;
+      s->set_select_errno ();
+      res = select_error;
+      break;
+    case WAIT_TIMEOUT:
+      select_printf ("timed out");
+      res = select_set_zero;
+      break;
+    case WAIT_OBJECT_0 + 1:
+      if (startfds > 1)
+	{
+	  cleanup ();
+	  destroy ();
+	  pthread::static_cancel_self ();
+	  /*NOTREACHED*/
+	}
+      /* Fall through.  This wasn't a cancel event.  It was just a normal object
+	 to wait for.  */
+    default:
       s = &start;
       bool gotone = false;
       /* Some types of objects (e.g., consoles) wake up on "inappropriate" events
@@ -369,40 +404,21 @@ select_stuff::wait (fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
       while ((s = s->next))
 	if (s->saw_error ())
 	  {
-	    cleanup ();
 	    set_errno (s->saw_error ());
-	    return -1;		/* Somebody detected an error */
+	    res = select_error;		/* Somebody detected an error */
+	    goto out;
 	  }
 	else if ((((wait_ret >= m && s->windows_handle) || s->h == w4[wait_ret]))
 		 && s->verify (s, readfds, writefds, exceptfds))
 	  gotone = true;
 
+      if (!gotone)
+	res = select_loop;
+      else
+	res = select_ok;
       select_printf ("gotone %d", gotone);
-      if (gotone)
-	{
-	  cleanup ();
-	  goto out;
-	}
-
-      if (ms == INFINITE)
-	{
-	  select_printf ("looping");
-	  continue;
-	}
-      select_printf ("recalculating ms");
-
-      LONGLONG now = gtod.msecs ();
-      if (now > (start_time + ms))
-	{
-	  cleanup ();
-	  select_printf ("timed out after verification");
-	  goto out;
-	}
-      ms -= (now - start_time);
-      start_time = now;
-      select_printf ("ms now %u", ms);
+      break;
     }
-
 out:
   select_printf ("returning %d", res);
   return res;
@@ -1288,7 +1304,7 @@ thread_socket (void *arg)
 			   / MAXIMUM_WAIT_OBJECTS));
   bool event = false;
 
-  select_printf ("stuff_start %p", si->start);
+  select_printf ("stuff_start %p, timeout %u", si->start, timeout);
   while (!event)
     {
       for (select_record *s = si->start; (s = s->next); )

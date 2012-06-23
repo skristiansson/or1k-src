@@ -72,7 +72,7 @@ EOF
 
 if [ "x${USE_LIBPATH}" = xyes ] ; then
   case ${target} in
-    *-*-linux-* | *-*-k*bsd*-*)
+    *-*-linux-* | *-*-k*bsd*-* | *-*-gnu*)
   fragment <<EOF
 #ifdef HAVE_GLOB
 #include <glob.h>
@@ -374,7 +374,7 @@ gld${EMULATION_NAME}_try_needed (struct dt_needed *needed,
 
 EOF
 case ${target} in
-  *-*-linux-* | *-*-k*bsd*-*)
+  *-*-linux-* | *-*-k*bsd*-* | *-*-gnu*)
     fragment <<EOF
 	  {
 	    struct bfd_link_needed_list *l;
@@ -620,7 +620,7 @@ EOF
     # FreeBSD
     ;;
 
-    *-*-linux-* | *-*-k*bsd*-*)
+    *-*-linux-* | *-*-k*bsd*-* | *-*-gnu*)
       fragment <<EOF
 /* For a native linker, check the file /etc/ld.so.conf for directories
    in which we may find shared libraries.  /etc/ld.so.conf is really
@@ -1142,10 +1142,11 @@ gld${EMULATION_NAME}_after_open (void)
 	  if (!warn_eh_frame)
 	    {
 	      s = bfd_get_section_by_name (abfd, ".eh_frame");
-	      warn_eh_frame
-		= (s
-		   && s->size > 8
-		   && !bfd_is_abs_section (s->output_section));
+	      while (s != NULL
+		     && (s->size <= 8
+			 || bfd_is_abs_section (s->output_section)))
+		s = bfd_get_next_section_by_name (s);
+	      warn_eh_frame = s != NULL;
 	    }
 	  if (elfbfd && warn_eh_frame)
 	    break;
@@ -1310,7 +1311,7 @@ EOF
     # FreeBSD
     ;;
 
-    *-*-linux-* | *-*-k*bsd*-*)
+    *-*-linux-* | *-*-k*bsd*-* | *-*-gnu*)
     # Linux
       fragment <<EOF
 	  if (gld${EMULATION_NAME}_check_ld_so_conf (l->name, force))
@@ -1861,7 +1862,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
 	       If the section already exists but does not have any flags
 	       set, then it has been created by the linker, probably as a
 	       result of a --section-start command line switch.  */
-	    lang_add_section (&os->children, s, os);
+	    lang_add_section (&os->children, s, NULL, os);
 	    return os;
 	  }
 
@@ -1875,7 +1876,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
      unused one and use that.  */
   if (match_by_name)
     {
-      lang_add_section (&match_by_name->children, s, match_by_name);
+      lang_add_section (&match_by_name->children, s, NULL, match_by_name);
       return match_by_name;
     }
 
@@ -1901,7 +1902,7 @@ gld${EMULATION_NAME}_place_orphan (asection *s,
       && hold[orphan_text].os != NULL)
     {
       os = hold[orphan_text].os;
-      lang_add_section (&os->children, s, os);
+      lang_add_section (&os->children, s, NULL, os);
       return os;
     }
 

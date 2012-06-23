@@ -445,9 +445,17 @@ proc_terminate ()
       /* Clean out proc processes from the pid list. */
       for (int i = 0; i < nprocs; i++)
 	{
-	  procs[i]->ppid = 1;
+	  /* If we've execed then the execed process will handle setting ppid
+	     to 1 iff it is a Cygwin process.  */
+	  if (!have_execed || !have_execed_cygwin)
+	    procs[i]->ppid = 1;
 	  if (procs[i].wait_thread)
 	    procs[i].wait_thread->terminate_thread ();
+	  /* Release memory associated with this process unless it is 'myself'.
+	     'myself' is only in the procs table when we've execed.  We reach
+	     here when the next process has finished initializing but we still
+	     can't free the memory used by 'myself' since it is used later on
+	     during cygwin tear down.  */
 	  if (procs[i] != myself)
 	    procs[i].release ();
 	}
@@ -529,7 +537,8 @@ sigproc_init ()
   char char_sa_buf[1024];
   PSECURITY_ATTRIBUTES sa = sec_user_nih ((PSECURITY_ATTRIBUTES) char_sa_buf, cygheap->user.sid());
   DWORD err = fhandler_pipe::create (sa, &my_readsig, &my_sendsig,
-				     sizeof (sigpacket), NULL, 0);
+				     sizeof (sigpacket), "sigwait",
+				     PIPE_ADD_PID);
   if (err)
     {
       SetLastError (err);

@@ -1,3 +1,257 @@
+2012-06-22  Roland McGrath  <mcgrathr@google.com>
+
+	* i386-opc.tbl: Add RepPrefixOk to ret.
+	* i386-tbl.h: Regenerate.
+
+	* i386-opc.h (RepPrefixOk): New enum constant.
+	(i386_opcode_modifier): New bitfield 'repprefixok'.
+	* i386-gen.c (opcode_modifiers): Add RepPrefixOk.
+	* i386-opc.tbl: Add RepPrefixOk to bsf, bsr, and to all
+	instructions that have IsString.
+	* i386-tbl.h: Regenerate.
+
+2012-06-11  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* ppc-opc.c (lvsl, lvebx, isellt, icbt, ldepx, lwepx, lvsr, lvehx)
+	(iselgt, lvewx, iseleq, isel, dcbst, dcbstep, dcbfl, dcbf, lbepx)
+	(lvx, dcbfep, dcbtstls, stvebx, dcbtstlse, stdepx, stwepx, dcbtls)
+	(stvehx, dcbtlse, stvewx, stbepx, icblc, stvx, dcbtstt, dcbtst)
+	(dcbtst, dcbtstep, dcbtt, dcbt, dcbt, lhepx, eciwx, dcbtep)
+	(dcread, lxvdsx, lvxl, dcblc, sthepx, ecowx, dcbi, dcread, icbtls)
+	(stvxl, lxsdx, lfdepx, stxsdx, stfdepx, dcba, dcbal, lxvw4x)
+	(tlbivax, lfdpx, lxvd2x, tlbsrx., stxvw4x, tlbsx, tlbsx., stfdpx)
+	(stfqx, stxvd2x, icbi, icbiep, icread, dcbzep): Change RA to RA0.
+
+2012-05-19  Alan Modra  <amodra@gmail.com>
+
+	* ppc-dis.c: Don't include elf32-ppc.h, do include elf/ppc.h.
+	(get_powerpc_dialect): Detect VLE sections from ELF sh_flags.
+
+2012-05-18  Alan Modra  <amodra@gmail.com>
+
+	* ia64-opc.c: Remove #include "ansidecl.h".
+	* z8kgen.c: Include sysdep.h first.
+
+	* arc-dis.c: Include sysdep.h first, remove some redundant includes.
+	* bfin-dis.c: Likewise.
+	* i860-dis.c: Likewise.
+	* ia64-dis.c: Likewise.
+	* ia64-gen.c: Likewise.
+	* m68hc11-dis.c: Likewise.
+	* mmix-dis.c: Likewise.
+	* msp430-dis.c: Likewise.
+	* or32-dis.c: Likewise.
+	* rl78-dis.c: Likewise.
+	* rx-dis.c: Likewise.
+	* tic4x-dis.c: Likewise.
+	* tilegx-opc.c: Likewise.
+	* tilepro-opc.c: Likewise.
+	* rx-decode.c: Regenerate.
+
+2012-05-17  James Lemke  <jwlemke@codesourcery.com>
+
+	* ppc-opc.c (powerpc_macros): Add entries for e_extlwi to e_clrlslwi.
+
+2012-05-17  James Lemke  <jwlemke@codesourcery.com>
+
+	* ppc-opc.c (extract_sprg): Use ALLOW8_SPRG to include VLE.
+
+2012-05-17  Daniel Richard G.  <skunk@iskunk.org>
+	    Nick Clifton  <nickc@redhat.com>
+
+	PR 14072
+	* configure.in: Add check that sysdep.h has been included before
+	any system header files.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* sysdep.h: Generate an error if included before config.h.
+	* alpha-opc.c: Include sysdep.h before any other header file.
+	* alpha-dis.c: Likewise.
+	* avr-dis.c: Likewise.
+	* cgen-opc.c: Likewise.
+	* cr16-dis.c: Likewise.
+	* cris-dis.c: Likewise.
+	* crx-dis.c: Likewise.
+	* d10v-dis.c: Likewise.
+	* d10v-opc.c: Likewise.
+	* d30v-dis.c: Likewise.
+	* d30v-opc.c: Likewise.
+	* h8500-dis.c: Likewise.
+	* i370-dis.c: Likewise.
+	* i370-opc.c: Likewise.
+	* m10200-dis.c: Likewise.
+	* m10300-dis.c: Likewise.
+	* micromips-opc.c: Likewise.
+	* mips-opc.c: Likewise.
+	* mips61-opc.c: Likewise.
+	* moxie-dis.c: Likewise.
+	* or32-opc.c: Likewise.
+	* pj-dis.c: Likewise.
+	* ppc-dis.c: Likewise.
+	* ppc-opc.c: Likewise.
+	* s390-dis.c: Likewise.
+	* sh-dis.c: Likewise.
+	* sh64-dis.c: Likewise.
+	* sparc-dis.c: Likewise.
+	* sparc-opc.c: Likewise.
+	* spu-dis.c: Likewise.
+	* tic30-dis.c: Likewise.
+	* tic54x-dis.c: Likewise.
+	* tic80-dis.c: Likewise.
+	* tic80-opc.c: Likewise.
+	* tilegx-dis.c: Likewise.
+	* tilepro-dis.c: Likewise.
+	* v850-dis.c: Likewise.
+	* v850-opc.c: Likewise.
+	* vax-dis.c: Likewise.
+	* w65-dis.c: Likewise.
+	* xgate-dis.c: Likewise.
+	* xtensa-dis.c: Likewise.
+	* rl78-decode.opc: Likewise.
+	* rl78-decode.c: Regenerate.
+	* rx-decode.opc: Likewise.
+	* rx-decode.c: Regenerate.
+
+2012-05-17  Alan Modra  <amodra@gmail.com>
+
+	* ppc_dis.c: Don't include elf/ppc.h.
+
+2012-05-16  Meador Inge  <meadori@codesourcery.com>
+
+	* arm-dis.c (arm_opcodes): Don't disassemble STMFD/LDMIA sp!, {reg}
+	to PUSH/POP {reg}.
+
+2012-05-15  James Murray <jsm@jsm-net.demon.co.uk>
+	    Stephane Carrez <stcarrez@nerim.fr>
+
+	* configure.in: Add S12X and XGATE co-processor support to m68hc11
+	target.
+	* disassemble.c: Likewise.
+	* configure: Regenerate.
+	* m68hc11-dis.c: Make objdump output more consistent, use hex
+	instead of decimal and use 0x prefix for hex.
+	* m68hc11-opc.c: Add S12X and XGATE opcodes.
+
+2012-05-14  James Lemke  <jwlemke@codesourcery.com>
+
+	* ppc-dis.c (get_powerpc_dialect): Use is_ppc_vle.
+	(PPC_OPCD_SEGS, VLE_OPCD_SEGS): New defines.
+	(vle_opcd_indices): New array.
+	(lookup_vle): New function.
+	(disassemble_init_powerpc): Revise for second (VLE) opcode table.
+	(print_insn_powerpc): Likewise.
+	* ppc-opc.c: Likewise.
+
+2012-05-14  Catherine Moore  <clm@codesourcery.com>
+	    Maciej W. Rozycki  <macro@codesourcery.com>
+	    Rhonda Wittels  <rhonda@codesourcery.com>
+	    Nathan Froyd <froydnj@codesourcery.com>
+
+	* ppc-opc.c (insert_arx, extract_arx): New functions.
+	(insert_ary, extract_ary): New functions.
+	(insert_li20, extract_li20): New functions.
+	(insert_rx, extract_rx): New functions.
+	(insert_ry, extract_ry): New functions.
+	(insert_sci8, extract_sci8): New functions.
+	(insert_sci8n, extract_sci8n): New functions.
+	(insert_sd4h, extract_sd4h): New functions.
+	(insert_sd4w, extract_sd4w): New functions.
+	(insert_vlesi, extract_vlesi): New functions.
+	(insert_vlensi, extract_vlensi): New functions.
+	(insert_vleui, extract_vleui): New functions.
+	(insert_vleil, extract_vleil): New functions.
+	(BI_MASK, BB_MASK, BT): Use PPC_OPERAND_CR_BIT.
+	(BI16, BI32, BO32, B8): New.
+	(B15, B24, CRD32, CRS): New.
+	(CRD, OBF, BFA, CR, CRFS): Use PPC_OPERAND_CR_REG.
+	(DB, IMM20, RD, Rx, ARX, RY, RZ): New.
+	(ARY, SCLSCI8, SCLSCI8N, SE_SD, SE_SDH): New.
+	(SH6_MASK): Use PPC_OPSHIFT_INV.
+	(SI8, UI5, OIMM5, UI7, BO16): New.
+	(VLESIMM, VLENSIMM, VLEUIMM, VLEUIMML): New.
+	(XT6, XA6, XB6, XB6S, XC6): Use PPC_OPSHIFT_INV.
+	(ALLOW8_SPRG): New.
+	(insert_sprg, extract_sprg): Check ALLOW8_SPRG.
+	(OPVUP, OPVUP_MASK OPVUP): New
+	(BD8, BD8_MASK, BD8IO, BD8IO_MASK): New.
+	(EBD8IO, EBD8IO1_MASK, EBD8IO2_MASK, EBD8IO3_MASK): New.
+	(BD15, BD15_MASK, EBD15, EBD15_MASK, EBD15BI, EBD15BI_MASK): New.
+	(BD24,BD24_MASK, C_LK, C_LK_MASK, C, C_MASK): New.
+	(IA16, IA16_MASK, I16A, I16A_MASK, I16L, I16L_MASK): New.
+	(IM7, IM7_MASK, LI20, LI20_MASK, SCI8, SCI8_MASK): New.
+	(SCI8BF, SCI8BF_MASK, SD4, SD4_MASK): New.
+	(SE_IM5, SE_IM5_MASK): New.
+	(SE_R, SE_R_MASK, SE_RR, SE_RR_MASK): New.
+	(EX, EX_MASK, BO16F, BO16T, BO32F, BO32T): New.
+	(BO32DNZ, BO32DZ): New.
+	(NO371, PPCSPE, PPCISEL, PPCEFS, MULHW): Include PPC_OPCODE_VLE.
+	(PPCVLE): New.
+	(powerpc_opcodes): Add new VLE instructions.  Update existing
+	instruction to include PPCVLE if supported.
+	* ppc-dis.c (ppc_opts): Add vle entry.
+	(get_powerpc_dialect): New function.
+	(powerpc_init_dialect): VLE support.
+	(print_insn_big_powerpc): Call get_powerpc_dialect.
+	(print_insn_little_powerpc): Likewise.
+	(operand_value_powerpc): Handle negative shift counts.
+	(print_insn_powerpc): Handle 2-byte instruction lengths.
+
+2012-05-11  Daniel Richard G.  <skunk@iskunk.org>
+
+	PR binutils/14028
+	* configure.in: Invoke ACX_HEADER_STRING.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* sysdep.h: If STRINGS_WITH_STRING is defined then include both
+	string.h and strings.h.
+
+2012-05-11  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/14006
+	* arm-dis.c (print_insn): Fix detection of instruction mode in
+	files containing multiple executable sections.
+
+2012-05-03  Sean Keys  <skeys@ipdatasys.com>
+
+	* Makefile.in, configure: regenerate
+	* disassemble.c (disassembler): Recognize ARCH_XGATE.
+	* xgate-dis.c (read_memory, print_insn, print_insn_xgate):
+	New functions.
+	* configure.in: Recognize xgate.
+	* xgate-dis.c, xgate-opc.c: New files for support of xgate
+	* Makefile.am (CFILES, ALL_MACHINES): New files for disassembly
+	and opcode generation for xgate.
+
+2012-04-30  DJ Delorie  <dj@redhat.com>
+
+	* rx-decode.opc (MOV): Do not sign-extend immediates which are
+	already the maximum bit size.
+	* rx-decode.c: Regenerate.
+
+2012-04-27  David S. Miller  <davem@davemloft.net>
+
+	* sparc-dis.c (v9a_asr_reg_names): Add 'cfr'.
+	* sparc-opc.c (sparc_opcodes): Add rd/wr cases for %cfr.
+
+	* sparc-opc.c (sparc_opcodes): Add 'wr X, %pause' and 'pause'.
+	* sparc-dis.c (v9a_asr_reg_names): Add 'pause'.
+
+	* sparc-opc.c (CBCOND): New define.
+	(CBCOND_XCC): Likewise.
+	(cbcond): New helper macro.
+	(sparc_opcodes): Add compare-and-branch instructions.
+
+	* sparc-dis.c (print_insn_sparc): Handle ')'.
+	* sparc-opc.c (sparc_opcodes): Add crypto instructions.
+
+	* sparc-opc.c (sparc_opcodes): Rework table to put HWCAP values
+	into new struct sparc_opcode 'hwcaps' field instead of 'flags'.
+
+2012-04-12  David S. Miller  <davem@davemloft.net>
+
+	* sparc-dis.c (X_DISP10): Define.
+	(print_insn_sparc): Handle '='.
+
 2012-04-01  Mike Frysinger  <vapier@gentoo.org>
 
 	* bfin-dis.c (fmtconst): Replace decimal handling with a single

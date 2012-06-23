@@ -1,3 +1,13 @@
+2012-06-03  Corinna Vinschen  <corinna@vinschen.de>
+
+	* cygcheck.cc (dump_sysinfo): Change "Server 8" to official
+	"Server 2012".
+
+2012-05-05  Corinna Vinschen  <corinna@vinschen.de>
+
+	* mkpasswd.c (current_user): Actually *use* $HOME if it's available.
+	Add comment to explain what we're doing here.
+
 2012-04-05  Corinna Vinschen  <corinna@vinschen.de>
 
 	* mkgroup.c (print_special_by_sid): Rename from print_special.  Change

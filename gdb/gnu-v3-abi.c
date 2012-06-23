@@ -130,28 +130,28 @@ build_gdb_vtable_type (struct gdbarch *arch)
   /* ptrdiff_t vcall_and_vbase_offsets[0]; */
   FIELD_NAME (*field) = "vcall_and_vbase_offsets";
   FIELD_TYPE (*field) = lookup_array_range_type (ptrdiff_type, 0, -1);
-  FIELD_BITPOS (*field) = offset * TARGET_CHAR_BIT;
+  SET_FIELD_BITPOS (*field, offset * TARGET_CHAR_BIT);
   offset += TYPE_LENGTH (FIELD_TYPE (*field));
   field++;
 
   /* ptrdiff_t offset_to_top; */
   FIELD_NAME (*field) = "offset_to_top";
   FIELD_TYPE (*field) = ptrdiff_type;
-  FIELD_BITPOS (*field) = offset * TARGET_CHAR_BIT;
+  SET_FIELD_BITPOS (*field, offset * TARGET_CHAR_BIT);
   offset += TYPE_LENGTH (FIELD_TYPE (*field));
   field++;
 
   /* void *type_info; */
   FIELD_NAME (*field) = "type_info";
   FIELD_TYPE (*field) = void_ptr_type;
-  FIELD_BITPOS (*field) = offset * TARGET_CHAR_BIT;
+  SET_FIELD_BITPOS (*field, offset * TARGET_CHAR_BIT);
   offset += TYPE_LENGTH (FIELD_TYPE (*field));
   field++;
 
   /* void (*virtual_functions[0]) (); */
   FIELD_NAME (*field) = "virtual_functions";
   FIELD_TYPE (*field) = lookup_array_range_type (ptr_to_void_fn_type, 0, -1);
-  FIELD_BITPOS (*field) = offset * TARGET_CHAR_BIT;
+  SET_FIELD_BITPOS (*field, offset * TARGET_CHAR_BIT);
   offset += TYPE_LENGTH (FIELD_TYPE (*field));
   field++;
 
@@ -430,8 +430,9 @@ gnuv3_baseclass_offset (struct type *type, int index,
   ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
 
   /* If it isn't a virtual base, this is easy.  The offset is in the
-     type definition.  */
-  if (!BASETYPE_VIA_VIRTUAL (type, index))
+     type definition.  Likewise for Java, which doesn't really have
+     virtual inheritance in the C++ sense.  */
+  if (!BASETYPE_VIA_VIRTUAL (type, index) || TYPE_CPLUS_REALLY_JAVA (type))
     return TYPE_BASECLASS_BITPOS (type, index) / 8;
 
   /* To access a virtual base, we need to use the vbase offset stored in
@@ -620,7 +621,12 @@ gnuv3_print_method_ptr (const gdb_byte *contents,
       print_longest (stream, 'd', 1, ptr_value);
     }
   else
-    print_address_demangle (gdbarch, ptr_value, stream, demangle);
+    {
+      struct value_print_options opts;
+
+      get_user_print_options (&opts);
+      print_address_demangle (&opts, gdbarch, ptr_value, stream, demangle);
+    }
 
   if (adjustment)
     {
@@ -890,8 +896,7 @@ print_one_vtable (struct gdbarch *gdbarch, struct value *value,
       if (ex.reason < 0)
 	printf_filtered (_("<error: %s>"), ex.message);
       else
-	print_function_pointer_address (gdbarch, addr, gdb_stdout,
-					opts->addressprint);
+	print_function_pointer_address (opts, gdbarch, addr, gdb_stdout);
       printf_filtered ("\n");
     }
 }

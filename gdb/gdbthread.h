@@ -123,7 +123,7 @@ struct thread_control_state
 struct thread_suspend_state
 {
   /* Last signal that the inferior received (why it stopped).  */
-  enum target_signal stop_signal;
+  enum gdb_signal stop_signal;
 };
 
 struct thread_info
@@ -216,7 +216,9 @@ struct thread_info
   int stop_requested;
 
   /* The initiating frame of a nexting operation, used for deciding
-     which exceptions to intercept.  */
+     which exceptions to intercept.  If it is null_frame_id no
+     bp_longjmp or bp_exception but longjmp has been caught just for
+     bp_longjmp_call_dummy.  */
   struct frame_id initiating_frame;
 
   /* Private data used by the target vector implementation.  */

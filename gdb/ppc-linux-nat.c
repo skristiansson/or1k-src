@@ -1421,17 +1421,20 @@ have_ptrace_booke_interface (void)
       /* Check for kernel support for BOOKE debug registers.  */
       if (ptrace (PPC_PTRACE_GETHWDBGINFO, tid, 0, &booke_debug_info) >= 0)
 	{
-	  have_ptrace_booke_interface = 1;
-	  max_slots_number = booke_debug_info.num_instruction_bps
-	    + booke_debug_info.num_data_bps
-	    + booke_debug_info.num_condition_regs;
+	  /* Check whether ptrace BOOKE interface is functional and
+	     provides any supported feature.  */
+	  if (booke_debug_info.features != 0)
+	    {
+	      have_ptrace_booke_interface = 1;
+	      max_slots_number = booke_debug_info.num_instruction_bps
+	        + booke_debug_info.num_data_bps
+	        + booke_debug_info.num_condition_regs;
+	      return have_ptrace_booke_interface;
+	    }
 	}
-      else
-	{
-	  /* Old school interface and no BOOKE debug registers support.  */
-	  have_ptrace_booke_interface = 0;
-	  memset (&booke_debug_info, 0, sizeof (struct ppc_debug_info));
-	}
+      /* Old school interface and no BOOKE debug registers support.  */
+      have_ptrace_booke_interface = 0;
+      memset (&booke_debug_info, 0, sizeof (struct ppc_debug_info));
     }
 
   return have_ptrace_booke_interface;
@@ -1461,7 +1464,7 @@ ppc_linux_can_use_hw_breakpoint (int type, int cnt, int ot)
   if (type == bp_hardware_watchpoint || type == bp_read_watchpoint
       || type == bp_access_watchpoint || type == bp_watchpoint)
     {
-      if (cnt > total_hw_wp)
+      if (cnt + ot > total_hw_wp)
 	return -1;
     }
   else if (type == bp_hardware_breakpoint)

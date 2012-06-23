@@ -1,10 +1,10 @@
-/Makefile.in/1.1/Tue Dec  6 18:54:43 2011//
-/body.h/1.1/Tue Dec  6 18:54:43 2011//
-/linespec.exp/1.4/Mon Jan 16 20:40:53 2012//
-/lspec.cc/1.1/Tue Dec  6 18:54:43 2011//
-/lspec.h/1.1/Tue Dec  6 18:54:43 2011//
 D/base////
-/ls-dollar.cc/1.1/Wed Mar 28 17:33:33 2012//
-/ls-dollar.exp/1.1/Wed Mar 28 17:33:33 2012//
-/ls-errs.c/1.1/Thu Apr  5 18:50:29 2012//
-/ls-errs.exp/1.1/Thu Apr  5 18:50:29 2012//
+/Makefile.in/1.2/Sat Jun 23 00:21:52 2012//
+/body.h/1.1/Mon May  7 21:35:07 2012//
+/linespec.exp/1.4/Mon May  7 21:35:07 2012//
+/ls-dollar.cc/1.1/Tue May  8 13:53:31 2012//
+/ls-dollar.exp/1.1/Tue May  8 13:53:31 2012//
+/ls-errs.c/1.1/Tue May  8 13:53:31 2012//
+/ls-errs.exp/1.2/Sat Jun 23 00:21:52 2012//
+/lspec.cc/1.1/Mon May  7 21:35:07 2012//
+/lspec.h/1.1/Mon May  7 21:35:07 2012//

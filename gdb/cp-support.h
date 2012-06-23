@@ -26,6 +26,7 @@
 
 #include "symtab.h"
 #include "vec.h"
+#include "gdb_vecs.h"
 #include "gdb_obstack.h"
 
 /* Opaque declarations.  */
@@ -174,19 +175,12 @@ extern struct type *cp_lookup_rtti_type (const char *name,
 
 extern int cp_is_anonymous (const char *namespace);
 
-DEF_VEC_P (const_char_ptr);
-
 extern void cp_add_using_directive (const char *dest,
                                     const char *src,
                                     const char *alias,
 				    const char *declaration,
 				    VEC (const_char_ptr) *excludes,
                                     struct obstack *obstack);
-
-extern void cp_initialize_namespace (void);
-
-extern void cp_finalize_namespace (struct block *static_block,
-				   struct obstack *obstack);
 
 extern void cp_set_block_scope (const struct symbol *symbol,
 				struct block *block,
@@ -219,9 +213,9 @@ extern struct symbol *cp_lookup_symbol_imports_or_template
       const struct block *block,
       const domain_enum domain);
 
-extern struct type *cp_lookup_nested_type (struct type *parent_type,
-					   const char *nested_name,
-					   const struct block *block);
+extern struct symbol *cp_lookup_nested_symbol (struct type *parent_type,
+					       const char *nested_name,
+					       const struct block *block);
 
 struct type *cp_lookup_transparent_type (const char *name);
 

@@ -18,6 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "server.h"
+#include "gdbthread.h"
 #include "agent.h"
 
 #if HAVE_UNISTD_H
@@ -70,8 +71,8 @@ int debug_threads;
 /* Enable debugging of h/w breakpoint/watchpoint support.  */
 int debug_hw_points;
 
-int pass_signals[TARGET_SIGNAL_LAST];
-int program_signals[TARGET_SIGNAL_LAST];
+int pass_signals[GDB_SIGNAL_LAST];
+int program_signals[GDB_SIGNAL_LAST];
 int program_signals_p;
 
 jmp_buf toplevel;
@@ -319,10 +320,8 @@ start_inferior (char **argv)
 	  current_inferior->last_resume_kind = resume_stop;
 	  current_inferior->last_status = last_status;
 	}
-      while (last_status.value.sig != TARGET_SIGNAL_TRAP);
+      while (last_status.value.sig != GDB_SIGNAL_TRAP);
 
-      current_inferior->last_resume_kind = resume_stop;
-      current_inferior->last_status = last_status;
       return signal_pid;
     }
 
@@ -369,8 +368,8 @@ attach_inferior (int pid)
 	 process using the "attach" command, but this is different; it's
 	 just using "target remote".  Pretend it's just starting up.  */
       if (last_status.kind == TARGET_WAITKIND_STOPPED
-	  && last_status.value.sig == TARGET_SIGNAL_STOP)
-	last_status.value.sig = TARGET_SIGNAL_TRAP;
+	  && last_status.value.sig == GDB_SIGNAL_STOP)
+	last_status.value.sig = GDB_SIGNAL_TRAP;
 
       current_inferior->last_resume_kind = resume_stop;
       current_inferior->last_status = last_status;
@@ -450,7 +449,7 @@ handle_general_set (char *own_buf)
 {
   if (strncmp ("QPassSignals:", own_buf, strlen ("QPassSignals:")) == 0)
     {
-      int numsigs = (int) TARGET_SIGNAL_LAST, i;
+      int numsigs = (int) GDB_SIGNAL_LAST, i;
       const char *p = own_buf + strlen ("QPassSignals:");
       CORE_ADDR cursig;
 
@@ -475,7 +474,7 @@ handle_general_set (char *own_buf)
 
   if (strncmp ("QProgramSignals:", own_buf, strlen ("QProgramSignals:")) == 0)
     {
-      int numsigs = (int) TARGET_SIGNAL_LAST, i;
+      int numsigs = (int) GDB_SIGNAL_LAST, i;
       const char *p = own_buf + strlen ("QProgramSignals:");
       CORE_ADDR cursig;
 
@@ -1161,13 +1160,10 @@ handle_qxfer_threads_proper (struct buffer *buffer)
     {
       ptid_t ptid = thread_to_gdb_id ((struct thread_info *)thread);
       char ptid_s[100];
-      int core = -1;
+      int core = target_core_of_thread (ptid);
       char core_s[21];
 
       write_ptid (ptid_s, ptid);
-
-      if (the_target->core_of_thread)
-	core = (*the_target->core_of_thread) (ptid);
 
       if (core != -1)
 	{
@@ -1937,9 +1933,9 @@ handle_v_cont (char *own_buf)
 	    goto err;
 	  p = q;
 
-	  if (!target_signal_to_host_p (sig))
+	  if (!gdb_signal_to_host_p (sig))
 	    goto err;
-	  resume_info[i].sig = target_signal_to_host (sig);
+	  resume_info[i].sig = gdb_signal_to_host (sig);
 	}
       else
 	{
@@ -1976,8 +1972,8 @@ handle_v_cont (char *own_buf)
 
   /* `cont_thread' is still used in occasional places in the backend,
      to implement single-thread scheduler-locking.  Doesn't make sense
-     to set it if we see a stop request, or any form of wildcard
-     vCont.  */
+     to set it if we see a stop request, or a wildcard action (one
+     with '-1' (all threads), or 'pPID.-1' (all threads of PID)).  */
   if (n == 1
       && !(ptid_equal (resume_info[0].thread, minus_one_ptid)
 	   || ptid_get_lwp (resume_info[0].thread) == -1)
@@ -2160,7 +2156,7 @@ handle_v_kill (char *own_buf)
   if (pid != 0 && kill_inferior (pid) == 0)
     {
       last_status.kind = TARGET_WAITKIND_SIGNALLED;
-      last_status.value.sig = TARGET_SIGNAL_KILL;
+      last_status.value.sig = GDB_SIGNAL_KILL;
       last_ptid = pid_to_ptid (pid);
       discard_queued_stop_replies (pid);
       write_ok (own_buf);
@@ -2383,7 +2379,7 @@ gdb_wants_thread_stopped (struct inferior_list_entry *entry)
       /* Most threads are stopped implicitly (all-stop); tag that with
 	 signal 0.  */
       thread->last_status.kind = TARGET_WAITKIND_STOPPED;
-      thread->last_status.value.sig = TARGET_SIGNAL_0;
+      thread->last_status.value.sig = GDB_SIGNAL_0;
     }
 }
 
@@ -2438,7 +2434,7 @@ handle_status (char *own_buf)
 	  struct target_waitstatus status;
 
 	  status.kind = TARGET_WAITKIND_STOPPED;
-	  status.value.sig = TARGET_SIGNAL_TRAP;
+	  status.value.sig = GDB_SIGNAL_TRAP;
 	  prepare_resume_reply (own_buf,
 				all_threads.head->id, &status);
 	}
@@ -2606,8 +2602,8 @@ main (int argc, char *argv[])
   int pid;
   char *arg_end, *port;
   char **next_arg = &argv[1];
-  int multi_mode = 0;
-  int attach = 0;
+  volatile int multi_mode = 0;
+  volatile int attach = 0;
   int was_running;
 
   while (*next_arg != NULL && **next_arg == '-')
@@ -3215,8 +3211,8 @@ process_serial_event (void)
     case 'C':
       require_running (own_buf);
       convert_ascii_to_int (own_buf + 1, &sig, 1);
-      if (target_signal_to_host_p (sig))
-	signal = target_signal_to_host (sig);
+      if (gdb_signal_to_host_p (sig))
+	signal = gdb_signal_to_host (sig);
       else
 	signal = 0;
       myresume (own_buf, 0, signal);
@@ -3224,8 +3220,8 @@ process_serial_event (void)
     case 'S':
       require_running (own_buf);
       convert_ascii_to_int (own_buf + 1, &sig, 1);
-      if (target_signal_to_host_p (sig))
-	signal = target_signal_to_host (sig);
+      if (gdb_signal_to_host_p (sig))
+	signal = gdb_signal_to_host (sig);
       else
 	signal = 0;
       myresume (own_buf, 1, signal);
@@ -3310,7 +3306,7 @@ process_serial_event (void)
       if (extended_protocol)
 	{
 	  last_status.kind = TARGET_WAITKIND_EXITED;
-	  last_status.value.sig = TARGET_SIGNAL_KILL;
+	  last_status.value.sig = GDB_SIGNAL_KILL;
 	  return 0;
 	}
       else
@@ -3354,7 +3350,7 @@ process_serial_event (void)
 	  else
 	    {
 	      last_status.kind = TARGET_WAITKIND_EXITED;
-	      last_status.value.sig = TARGET_SIGNAL_KILL;
+	      last_status.value.sig = GDB_SIGNAL_KILL;
 	    }
 	  return 0;
 	}
@@ -3478,7 +3474,7 @@ handle_target_event (int err, gdb_client_data client_data)
 
 	      resume_info.thread = last_ptid;
 	      resume_info.kind = resume_continue;
-	      resume_info.sig = target_signal_to_host (last_status.value.sig);
+	      resume_info.sig = gdb_signal_to_host (last_status.value.sig);
 	      (*the_target->resume) (&resume_info, 1);
 	    }
 	  else if (debug_threads)

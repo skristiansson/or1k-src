@@ -1,12 +1,12 @@
-/Makefile.am/1.7/Thu May 24 17:33:35 2007/-ko/
-/Makefile.in/1.21/Mon Dec 19 22:03:27 2011/-ko/
-/aclocal.m4/1.26/Mon Dec 19 22:03:27 2011/-ko/
-/configure/1.31/Mon Dec 19 22:03:27 2011/-ko/
-/configure.in/1.2/Thu Apr 13 19:56:25 2006/-ko/
-/m68kasm.h/1.1/Mon Jan  7 18:59:45 2008//
-/memcpy.S/1.6/Mon Feb  8 17:24:22 2010//
-/memset.S/1.4/Tue Jan  8 21:48:06 2008//
-/setjmp.S/1.2/Mon Jan  7 18:59:45 2008/-ko/
-/strcpy.c/1.1.1.1/Thu Feb 17 19:39:47 2000/-ko/
-/strlen.c/1.1.1.1/Thu Feb 17 19:39:47 2000/-ko/
+/Makefile.am/1.7/Mon May  7 21:35:08 2012/-ko/
+/Makefile.in/1.21/Mon May  7 21:35:08 2012/-ko/
+/aclocal.m4/1.26/Mon May  7 21:35:08 2012/-ko/
+/configure/1.31/Mon May  7 21:35:08 2012/-ko/
+/configure.in/1.2/Mon May  7 21:35:08 2012/-ko/
+/m68kasm.h/1.1/Mon May  7 21:35:08 2012//
+/memcpy.S/1.6/Mon May  7 21:35:08 2012//
+/memset.S/1.4/Mon May  7 21:35:08 2012//
+/setjmp.S/1.2/Mon May  7 21:35:08 2012/-ko/
+/strcpy.c/1.1.1.1/Mon May  7 21:35:08 2012/-ko/
+/strlen.c/1.1.1.1/Mon May  7 21:35:08 2012/-ko/
 D

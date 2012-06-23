@@ -987,27 +987,24 @@ iterate_over_all_matching_symtabs (struct linespec_state *state,
 						  ALL_DOMAIN,
 						  &matcher_data);
 
-      ALL_OBJFILE_SYMTABS (objfile, symtab)
+      ALL_OBJFILE_PRIMARY_SYMTABS (objfile, symtab)
 	{
-	  if (symtab->primary)
+	  struct block *block;
+
+	  block = BLOCKVECTOR_BLOCK (BLOCKVECTOR (symtab), STATIC_BLOCK);
+	  LA_ITERATE_OVER_SYMBOLS (block, name, domain, callback, data);
+
+	  if (include_inline)
 	    {
-	      struct block *block;
+	      struct symbol_and_data_callback cad = { callback, data };
+	      int i;
 
-	      block = BLOCKVECTOR_BLOCK (BLOCKVECTOR (symtab), STATIC_BLOCK);
-	      LA_ITERATE_OVER_SYMBOLS (block, name, domain, callback, data);
-
-	      if (include_inline)
+	      for (i = FIRST_LOCAL_BLOCK;
+		   i < BLOCKVECTOR_NBLOCKS (BLOCKVECTOR (symtab)); i++)
 		{
-		  struct symbol_and_data_callback cad = { callback, data };
-		  int i;
-
-		  for (i = FIRST_LOCAL_BLOCK;
-		       i < BLOCKVECTOR_NBLOCKS (BLOCKVECTOR (symtab)); i++)
-		    {
-		      block = BLOCKVECTOR_BLOCK (BLOCKVECTOR (symtab), i);
-		      LA_ITERATE_OVER_SYMBOLS (block, name, domain,
-					       iterate_inline_only, &cad);
-		    }
+		  block = BLOCKVECTOR_BLOCK (BLOCKVECTOR (symtab), i);
+		  LA_ITERATE_OVER_SYMBOLS (block, name, domain,
+					   iterate_inline_only, &cad);
 		}
 	    }
 	}
@@ -1899,7 +1896,7 @@ convert_linespec_to_sals (struct linespec_state *state, linespec_p ls)
 	       VEC_iterate (minsym_and_objfile_d, ls->minimal_symbols, i, elem);
 	       ++i)
 	    {
-	      pspace = SYMBOL_OBJ_SECTION (elem->minsym)->objfile->pspace;
+	      pspace = elem->objfile->pspace;
 	      set_current_program_space (pspace);
 	      minsym_found (state, elem->objfile, elem->minsym, &sals);
 	    }
@@ -2409,6 +2406,7 @@ decode_objc (struct linespec_state *self, linespec_p ls, char **argptr)
   info.state = self;
   info.file_symtabs = NULL;
   VEC_safe_push (symtab_p, info.file_symtabs, NULL);
+  make_cleanup (VEC_cleanup (symtab_p), &info.file_symtabs);
   info.result.symbols = NULL;
   info.result.minimal_symbols = NULL;
   values.nelts = 0;
@@ -2584,20 +2582,20 @@ compare_symbols (const void *a, const void *b)
 static int
 compare_msymbols (const void *a, const void *b)
 {
-  struct minimal_symbol * const *sa = a;
-  struct minimal_symbol * const *sb = b;
+  const struct minsym_and_objfile *sa = a;
+  const struct minsym_and_objfile *sb = b;
   uintptr_t uia, uib;
 
-  uia = (uintptr_t) SYMBOL_OBJ_SECTION (*sa)->objfile->pspace;
-  uib = (uintptr_t) SYMBOL_OBJ_SECTION (*sb)->objfile->pspace;
+  uia = (uintptr_t) sa->objfile->pspace;
+  uib = (uintptr_t) sa->objfile->pspace;
 
   if (uia < uib)
     return -1;
   if (uia > uib)
     return 1;
 
-  uia = (uintptr_t) *sa;
-  uib = (uintptr_t) *sb;
+  uia = (uintptr_t) sa->minsym;
+  uib = (uintptr_t) sb->minsym;
 
   if (uia < uib)
     return -1;
@@ -2671,7 +2669,6 @@ find_method (struct linespec_state *self, VEC (symtab_p) *file_symtabs,
   VEC (typep) *superclass_vec;
   VEC (const_char_ptr) *result_names;
   struct collect_info info;
-  char *name_iter;
 
   /* Sort symbols so that symbols with the same program space are next
      to each other.  */
@@ -2950,6 +2947,7 @@ find_linespec_symbols (struct linespec_state *state,
 
   /* Find a list of classes named KLASS.  */
   classes = lookup_prefix_sym (state, file_symtabs, klass);
+  make_cleanup (VEC_cleanup (symbolp), &classes);
   if (!VEC_empty (symbolp, classes))
     {
       /* Now locate a list of suitable methods named METHOD.  */
@@ -3386,8 +3384,6 @@ add_matching_symbols_to_info (const char *name,
 
   for (ix = 0; VEC_iterate (symtab_p, info->file_symtabs, ix, elt); ++ix)
     {
-      struct symbol *sym;
-
       if (elt == NULL)
 	{
 	  iterate_over_all_matching_symtabs (info->state, name, VAR_DOMAIN,

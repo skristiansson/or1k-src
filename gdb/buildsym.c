@@ -49,7 +49,7 @@
 #include "buildsym.h"		/* Our own declarations.  */
 #undef	EXTERN
 
-/* For cleanup_undefined_types and finish_global_stabs (somewhat
+/* For cleanup_undefined_stabs_types and finish_global_stabs (somewhat
    questionable--see comment where we call them).  */
 
 #include "stabsread.h"
@@ -100,20 +100,6 @@ static void record_pending_block (struct objfile *objfile,
 
 
 /* Maintain the lists of symbols and blocks.  */
-
-/* Add a pending list to free_pendings.  */
-void
-add_free_pendings (struct pending *list)
-{
-  struct pending *link = list;
-
-  if (list)
-    {
-      while (link->next) link = link->next;
-      link->next = free_pendings;
-      free_pendings = list;
-    }
-}
 
 /* Add a symbol to one of the lists of symbols.  */
 
@@ -228,11 +214,12 @@ free_pending_blocks (void)
    the order the symbols have in the list (reversed from the input
    file).  Put the block on the list of pending blocks.  */
 
-struct block *
-finish_block (struct symbol *symbol, struct pending **listhead,
-	      struct pending_block *old_blocks,
-	      CORE_ADDR start, CORE_ADDR end,
-	      struct objfile *objfile)
+static struct block *
+finish_block_internal (struct symbol *symbol, struct pending **listhead,
+		       struct pending_block *old_blocks,
+		       CORE_ADDR start, CORE_ADDR end,
+		       struct objfile *objfile,
+		       int is_global)
 {
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
   struct pending *next, *next1;
@@ -240,7 +227,9 @@ finish_block (struct symbol *symbol, struct pending **listhead,
   struct pending_block *pblock;
   struct pending_block *opblock;
 
-  block = allocate_block (&objfile->objfile_obstack);
+  block = (is_global
+	   ? allocate_global_block (&objfile->objfile_obstack)
+	   : allocate_block (&objfile->objfile_obstack));
 
   if (symbol)
     {
@@ -255,9 +244,6 @@ finish_block (struct symbol *symbol, struct pending **listhead,
 
   BLOCK_START (block) = start;
   BLOCK_END (block) = end;
-  /* Superblock filled in when containing block is made.  */
-  BLOCK_SUPERBLOCK (block) = NULL;
-  BLOCK_NAMESPACE (block) = NULL;
 
   /* Put the block in as the value of the symbol that names it.  */
 
@@ -275,7 +261,10 @@ finish_block (struct symbol *symbol, struct pending **listhead,
 	     parameter symbols.  */
 	  int nparams = 0, iparams;
 	  struct symbol *sym;
-	  ALL_BLOCK_SYMBOLS (block, iter, sym)
+
+	  /* Here we want to directly access the dictionary, because
+	     we haven't fully initialized the block yet.  */
+	  ALL_DICT_SYMBOLS (BLOCK_DICT (block), iter, sym)
 	    {
 	      if (SYMBOL_IS_ARGUMENT (sym))
 		nparams++;
@@ -287,7 +276,9 @@ finish_block (struct symbol *symbol, struct pending **listhead,
 		TYPE_ALLOC (ftype, nparams * sizeof (struct field));
 
 	      iparams = 0;
-	      ALL_BLOCK_SYMBOLS (block, iter, sym)
+	      /* Here we want to directly access the dictionary, because
+		 we haven't fully initialized the block yet.  */
+	      ALL_DICT_SYMBOLS (BLOCK_DICT (block), iter, sym)
 		{
 		  if (iparams == nparams)
 		    break;
@@ -396,6 +387,15 @@ finish_block (struct symbol *symbol, struct pending **listhead,
   return block;
 }
 
+struct block *
+finish_block (struct symbol *symbol, struct pending **listhead,
+	      struct pending_block *old_blocks,
+	      CORE_ADDR start, CORE_ADDR end,
+	      struct objfile *objfile)
+{
+  return finish_block_internal (symbol, listhead, old_blocks,
+				start, end, objfile, 0);
+}
 
 /* Record BLOCK on the list of all blocks in the file.  Put it after
    OPBLOCK, or at the beginning if opblock is NULL.  This puts the
@@ -496,10 +496,13 @@ make_blockvector (struct objfile *objfile)
       = addrmap_create_fixed (pending_addrmap, &objfile->objfile_obstack);
   else
     BLOCKVECTOR_MAP (blockvector) = 0;
-        
+
   /* Some compilers output blocks in the wrong order, but we depend on
      their being in the right order so we can binary search.  Check the
-     order and moan about it.  */
+     order and moan about it.
+     Note: Remember that the first two blocks are the global and static
+     blocks.  We could special case that fact and begin checking at block 2.
+     To avoid making that assumption we do not.  */
   if (BLOCKVECTOR_NBLOCKS (blockvector) > 1)
     {
       for (i = 1; i < BLOCKVECTOR_NBLOCKS (blockvector); i++)
@@ -907,7 +910,7 @@ watch_main_source_file_lossage (void)
     }
 }
 
-/* Helper function for qsort.  Parametes are `struct block *' pointers,
+/* Helper function for qsort.  Parameters are `struct block *' pointers,
    function sorts them in descending order by their BLOCK_START.  */
 
 static int
@@ -1001,13 +1004,13 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
      (this needs to be done before the finish_blocks so that
      file_symbols is still good).
 
-     Both cleanup_undefined_types and finish_global_stabs are stabs
+     Both cleanup_undefined_stabs_types and finish_global_stabs are stabs
      specific, but harmless for other symbol readers, since on gdb
      startup or when finished reading stabs, the state is set so these
      are no-ops.  FIXME: Is this handled right in case of QUIT?  Can
      we make this cleaner?  */
 
-  cleanup_undefined_types (objfile);
+  cleanup_undefined_stabs_types (objfile);
   finish_global_stabs (objfile);
 
   if (pending_blocks == NULL
@@ -1026,8 +1029,8 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
          blockvector.  */
       finish_block (0, &file_symbols, 0, last_source_start_addr,
 		    end_addr, objfile);
-      finish_block (0, &global_symbols, 0, last_source_start_addr,
-		    end_addr, objfile);
+      finish_block_internal (0, &global_symbols, 0, last_source_start_addr,
+			     end_addr, objfile, 1);
       blockvector = make_blockvector (objfile);
     }
 
@@ -1126,7 +1129,7 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
             {
               /* Since we are ignoring that subfile, we also need
                  to unlink the associated empty symtab that we created.
-                 Otherwise, we can into trouble because various parts
+                 Otherwise, we can run into trouble because various parts
                  such as the block-vector are uninitialized whereas
                  the rest of the code assumes that they are.
                  
@@ -1167,6 +1170,14 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
   if (symtab)
     {
       symtab->primary = 1;
+
+      if (symtab->blockvector)
+	{
+	  struct block *b = BLOCKVECTOR_BLOCK (symtab->blockvector,
+					       GLOBAL_BLOCK);
+
+	  set_block_symtab (b, symtab);
+	}
     }
 
   /* Default any symbols without a specified symtab to the primary
@@ -1187,9 +1198,10 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
 	    if (SYMBOL_SYMTAB (BLOCK_FUNCTION (block)) == NULL)
 	      SYMBOL_SYMTAB (BLOCK_FUNCTION (block)) = symtab;
 
-	  for (sym = dict_iterator_first (BLOCK_DICT (block), &iter);
-	       sym != NULL;
-	       sym = dict_iterator_next (&iter))
+	  /* Note that we only want to fix up symbols from the local
+	     blocks, not blocks coming from included symtabs.  That is why
+	     we use ALL_DICT_SYMBOLS here and not ALL_BLOCK_SYMBOLS.  */
+	  ALL_DICT_SYMBOLS (BLOCK_DICT (block), iter, sym)
 	    if (SYMBOL_SYMTAB (sym) == NULL)
 	      SYMBOL_SYMTAB (sym) = symtab;
 	}

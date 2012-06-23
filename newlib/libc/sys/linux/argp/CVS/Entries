@@ -1,14 +1,14 @@
-/Makefile.am/1.2/Tue Apr 11 19:02:10 2006//
-/Makefile.in/1.13/Mon Dec 19 22:03:39 2011//
-/argp-ba.c/1.1/Thu Aug 29 23:53:06 2002//
-/argp-eexst.c/1.1/Thu Aug 29 23:53:06 2002//
-/argp-fmtstream.c/1.1/Thu Aug 29 23:53:06 2002//
-/argp-fmtstream.h/1.1/Thu Aug 29 23:53:06 2002//
-/argp-fs-xinl.c/1.2/Thu Sep  8 22:45:49 2005//
-/argp-help.c/1.1/Thu Aug 29 23:53:06 2002//
-/argp-namefrob.h/1.1/Thu Aug 29 23:53:06 2002//
-/argp-parse.c/1.1/Thu Aug 29 23:53:06 2002//
-/argp-pv.c/1.1/Thu Aug 29 23:53:06 2002//
-/argp-pvh.c/1.1/Thu Aug 29 23:53:06 2002//
-/argp-xinl.c/1.2/Thu Sep  8 22:45:49 2005//
+/Makefile.am/1.2/Mon May  7 21:35:08 2012//
+/Makefile.in/1.13/Mon May  7 21:35:08 2012//
+/argp-ba.c/1.1/Mon May  7 21:35:08 2012//
+/argp-eexst.c/1.1/Mon May  7 21:35:08 2012//
+/argp-fmtstream.c/1.1/Mon May  7 21:35:08 2012//
+/argp-fmtstream.h/1.1/Mon May  7 21:35:08 2012//
+/argp-fs-xinl.c/1.2/Mon May  7 21:35:08 2012//
+/argp-help.c/1.1/Mon May  7 21:35:08 2012//
+/argp-namefrob.h/1.1/Mon May  7 21:35:08 2012//
+/argp-parse.c/1.1/Mon May  7 21:35:08 2012//
+/argp-pv.c/1.1/Mon May  7 21:35:08 2012//
+/argp-pvh.c/1.1/Mon May  7 21:35:08 2012//
+/argp-xinl.c/1.2/Mon May  7 21:35:08 2012//
 D

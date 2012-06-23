@@ -1,7 +1,7 @@
-/Makefile.am/1.1/Wed Jan 23 20:52:01 2002//
-/Makefile.in/1.5/Mon Feb  5 20:28:39 2007//
-/sid-vga-wrapper.cc/1.6/Wed Jan  8 06:46:48 2003//
-/sid-vga-wrapper.h/1.3/Fri Feb 15 01:18:49 2002//
-/vga.cc/1.3/Mon Mar  4 23:33:05 2002//
-/vga.h/1.1/Wed Jan 23 20:52:01 2002//
 D/tests////
+/Makefile.am/1.1/Mon May  7 21:35:09 2012//
+/Makefile.in/1.5/Mon May  7 21:35:09 2012//
+/sid-vga-wrapper.cc/1.6/Mon May  7 21:35:09 2012//
+/sid-vga-wrapper.h/1.3/Mon May  7 21:35:09 2012//
+/vga.cc/1.3/Mon May  7 21:35:09 2012//
+/vga.h/1.1/Mon May  7 21:35:09 2012//

@@ -1,9 +1,9 @@
-/ChangeLog/1.1/Mon Feb  5 20:34:31 2007//
-/Makefile.am/1.1/Mon Feb  5 20:34:31 2007//
-/Makefile.in/1.1/Mon Feb  5 20:34:31 2007//
-/cop-data-bus-width-test.sh/1.1/Mon Feb  5 20:34:31 2007//
-/customise-test.sh/1.1/Mon Feb  5 20:34:31 2007//
-/customise.sh/1.1/Mon Feb  5 20:34:31 2007//
 D/cfgs////
 D/gmap////
 D/option_unit////
+/ChangeLog/1.1/Mon May  7 21:35:11 2012//
+/Makefile.am/1.1/Mon May  7 21:35:11 2012//
+/Makefile.in/1.1/Mon May  7 21:35:11 2012//
+/cop-data-bus-width-test.sh/1.1/Mon May  7 21:35:11 2012//
+/customise-test.sh/1.1/Mon May  7 21:35:11 2012//
+/customise.sh/1.1/Mon May  7 21:35:11 2012//

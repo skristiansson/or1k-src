@@ -1,5 +1,3 @@
-/nm-linux.h/1.37/Wed Jan  4 08:17:18 2012/-ko/
-/nm-nto.h/1.8/Wed Jan  4 08:17:19 2012//
 D/a29k////
 D/alpha////
 D/arc////
@@ -52,3 +50,5 @@ D/w65////
 D/xstormy16////
 D/xtensa////
 D/z8k////
+/nm-linux.h/1.37/Mon May  7 21:35:06 2012/-ko/
+/nm-nto.h/1.8/Mon May  7 21:35:06 2012//

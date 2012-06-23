@@ -1,6 +1,6 @@
 /* MIPS-specific support for ELF
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
    Free Software Foundation, Inc.
 
    Most of the information added by Ian Lance Taylor, Cygnus Support,
@@ -1460,14 +1460,17 @@ section_allows_mips16_refs_p (asection *section)
    function, or 0 if we can't decide which function that is.  */
 
 static unsigned long
-mips16_stub_symndx (asection *sec ATTRIBUTE_UNUSED,
+mips16_stub_symndx (const struct elf_backend_data *bed,
+		    asection *sec ATTRIBUTE_UNUSED,
 		    const Elf_Internal_Rela *relocs,
 		    const Elf_Internal_Rela *relend)
 {
+  int int_rels_per_ext_rel = bed->s->int_rels_per_ext_rel;
   const Elf_Internal_Rela *rel;
 
-  /* Trust the first R_MIPS_NONE relocation, if any.  */
-  for (rel = relocs; rel < relend; rel++)
+  /* Trust the first R_MIPS_NONE relocation, if any, but not a subsequent
+     one in a compound relocation.  */
+  for (rel = relocs; rel < relend; rel += int_rels_per_ext_rel)
     if (ELF_R_TYPE (sec->owner, rel->r_info) == R_MIPS_NONE)
       return ELF_R_SYM (sec->owner, rel->r_info);
 
@@ -7569,7 +7572,7 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       /* Look at the relocation information to figure out which symbol
          this is for.  */
 
-      r_symndx = mips16_stub_symndx (sec, relocs, rel_end);
+      r_symndx = mips16_stub_symndx (bed, sec, relocs, rel_end);
       if (r_symndx == 0)
 	{
 	  (*_bfd_error_handler)
@@ -7694,7 +7697,7 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
       /* Look at the relocation information to figure out which symbol
          this is for.  */
 
-      r_symndx = mips16_stub_symndx (sec, relocs, rel_end);
+      r_symndx = mips16_stub_symndx (bed, sec, relocs, rel_end);
       if (r_symndx == 0)
 	{
 	  (*_bfd_error_handler)
@@ -8662,7 +8665,8 @@ _bfd_mips_elf_adjust_dynamic_symbol (struct bfd_link_info *info,
 	  /* On non-VxWorks targets, the first two entries in .got.plt
 	     are reserved.  */
 	  if (!htab->is_vxworks)
-	    htab->sgotplt->size += 2 * MIPS_ELF_GOT_SIZE (dynobj);
+	    htab->sgotplt->size
+	      += get_elf_backend_data (dynobj)->got_header_size;
 
 	  /* On VxWorks, also allocate room for the header's
 	     .rela.plt.unloaded entries.  */
@@ -9321,6 +9325,55 @@ mips_elf_adjust_addend (bfd *output_bfd, struct bfd_link_info *info,
     }
 }
 
+/* Handle relocations against symbols from removed linkonce sections,
+   or sections discarded by a linker script.  We use this wrapper around
+   RELOC_AGAINST_DISCARDED_SECTION to handle triplets of compound relocs
+   on 64-bit ELF targets.  In this case for any relocation handled, which
+   always be the first in a triplet, the remaining two have to be processed
+   together with the first, even if they are R_MIPS_NONE.  It is the symbol
+   index referred by the first reloc that applies to all the three and the
+   remaining two never refer to an object symbol.  And it is the final
+   relocation (the last non-null one) that determines the output field of
+   the whole relocation so retrieve the corresponding howto structure for
+   the relocatable field to be cleared by RELOC_AGAINST_DISCARDED_SECTION.
+
+   Note that RELOC_AGAINST_DISCARDED_SECTION is a macro that uses "continue"
+   and therefore requires to be pasted in a loop.  It also defines a block
+   and does not protect any of its arguments, hence the extra brackets.  */
+
+static void
+mips_reloc_against_discarded_section (bfd *output_bfd,
+				      struct bfd_link_info *info,
+				      bfd *input_bfd, asection *input_section,
+				      Elf_Internal_Rela **rel,
+				      const Elf_Internal_Rela **relend,
+				      bfd_boolean rel_reloc,
+				      reloc_howto_type *howto,
+				      bfd_byte *contents)
+{
+  const struct elf_backend_data *bed = get_elf_backend_data (output_bfd);
+  int count = bed->s->int_rels_per_ext_rel;
+  unsigned int r_type;
+  int i;
+
+  for (i = count - 1; i > 0; i--)
+    {
+      r_type = ELF_R_TYPE (output_bfd, (*rel)[i].r_info);
+      if (r_type != R_MIPS_NONE)
+	{
+	  howto = MIPS_ELF_RTYPE_TO_HOWTO (input_bfd, r_type, !rel_reloc);
+	  break;
+	}
+    }
+  do
+    {
+       RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					(*rel), count, (*relend),
+					howto, i, contents);
+    }
+  while (0);
+}
+
 /* Relocate a MIPS ELF section.  */
 
 bfd_boolean
@@ -9386,9 +9439,13 @@ _bfd_mips_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	    sec = h->root.u.def.section;
 	}
 
-      if (sec != NULL && elf_discarded_section (sec))
-	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, relend, howto, contents);
+      if (sec != NULL && discarded_section (sec))
+	{
+	  mips_reloc_against_discarded_section (output_bfd, info, input_bfd,
+						input_section, &rel, &relend,
+						rel_reloc, howto, contents);
+	  continue;
+	}
 
       if (r_type == R_MIPS_64 && ! NEWABI_P (input_bfd))
 	{

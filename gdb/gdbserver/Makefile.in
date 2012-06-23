@@ -76,12 +76,13 @@ ustlibs = @ustlibs@
 ustinc = @ustinc@
 
 # gnulib
-GNULIB_INCLUDE_DIR = $(srcdir)/../gnulib
-GNULIB_LIB = gnulib/libgnu.a
+GNULIB_BUILDDIR = build-gnulib-gdbserver
+LIBGNU = $(GNULIB_BUILDDIR)/import/libgnu.a
+INCGNU = -I$(srcdir)/../gnulib/import -I$(GNULIB_BUILDDIR)/import
 
 # Generated headers in the gnulib directory.  These must be listed
 # so that they are generated before other files are compiled.
-GNULIB_H = gnulib/string.h @GNULIB_STDINT_H@
+GNULIB_H = $(GNULIB_BUILDDIR)/import/string.h @GNULIB_STDINT_H@
 
 # All the includes used for CFLAGS and for lint.
 # -I. for config files.
@@ -89,7 +90,7 @@ GNULIB_H = gnulib/string.h @GNULIB_STDINT_H@
 # -I$(srcdir)/../regformats for regdef.h.
 INCLUDE_CFLAGS = -I. -I${srcdir} -I$(srcdir)/../common \
 	-I$(srcdir)/../regformats -I$(INCLUDE_DIR) \
-	-I$(GNULIB_INCLUDE_DIR)
+	$(INCGNU)
 
 # M{H,T}_CFLAGS, if defined, has host- and target-dependent CFLAGS
 # from the config/ directory.
@@ -132,9 +133,11 @@ SFILES=	$(srcdir)/gdbreplay.c $(srcdir)/inferiors.c $(srcdir)/dll.c \
 	$(srcdir)/linux-sh-low.c $(srcdir)/linux-sparc-low.c \
 	$(srcdir)/linux-x86-low.c \
 	$(srcdir)/linux-xtensa-low.c \
+	$(srcdir)/linux-tile-low.c \
 	$(srcdir)/win32-arm-low.c $(srcdir)/win32-i386-low.c \
 	$(srcdir)/win32-low.c $(srcdir)/wincecompat.c \
 	$(srcdir)/hostio.c $(srcdir)/hostio-errno.c \
+	$(srcdir)/common/vec.c \
 	$(srcdir)/common/common-utils.c $(srcdir)/common/xml-utils.c \
 	$(srcdir)/common/linux-osdata.c $(srcdir)/common/ptid.c \
 	$(srcdir)/common/buffer.c
@@ -147,7 +150,7 @@ SOURCES = $(SFILES)
 TAGFILES = $(SOURCES) ${HFILES} ${ALLPARAM} ${POSSLIBS}
 
 OBS = agent.o ax.o inferiors.o regcache.o remote-utils.o server.o signals.o target.o \
-	utils.o version.o \
+	utils.o version.o vec.o \
 	mem-break.o hostio.o event-loop.o tracepoint.o \
 	xml-utils.o common-utils.o ptid.o buffer.o \
 	dll.o \
@@ -166,11 +169,18 @@ XML_BUILTIN = @srv_xmlbuiltin@
 IPA_DEPFILES = @IPA_DEPFILES@
 extra_libraries = @extra_libraries@
 
+SUBDIRS = $(GNULIB_BUILDDIR)
+CLEANDIRS = $(SUBDIRS)
+
+# List of subdirectories in the build tree that must exist.
+# This is used to force build failures in existing trees when
+# a new directory is added.
+# The format here is for the `case' shell command.
+REQUIRED_SUBDIRS = $(GNULIB_BUILDDIR)
+
 FLAGS_TO_PASS = \
 	"prefix=$(prefix)" \
 	"exec_prefix=$(exec_prefix)" \
-	"top_srcdir=$(abs_top_srcdir)/.." "srcdir=$(abs_srcdir)/../gnulib" \
-	"VPATH=$(abs_top_srcdir)/../gnulib:$(abs_top_srcdir)" \
 	"infodir=$(infodir)" \
 	"datarootdir=$(datarootdir)" \
 	"docdir=$(docdir)" \
@@ -200,13 +210,16 @@ FLAGS_TO_PASS = \
 	"RUNTEST=$(RUNTEST)" \
 	"RUNTESTFLAGS=$(RUNTESTFLAGS)"
 
+# All generated files which can be included by another file.
+generated_files = config.h $(GNULIB_H)
+
 # Prevent Sun make from putting in the machine type.  Setting
 # TARGET_ARCH to nothing works for SunOS 3, 4.0, but not for 4.1.
 .c.o:
 	${CC} -c ${INTERNAL_CFLAGS} $<
 
 all: gdbserver$(EXEEXT) gdbreplay$(EXEEXT) $(extra_libraries)
-	@cd gnulib; $(MAKE) $(FLAGS_TO_PASS) all
+	@$(MAKE) $(FLAGS_TO_PASS) DO=$@ "DODIRS=$(SUBDIRS)" subdir_do
 
 # Traditionally "install" depends on "all".  But it may be useful
 # not to; for example, if the user has made some trivial change to a
@@ -227,13 +240,13 @@ install-only:
 	$(INSTALL_PROGRAM) gdbserver$(EXEEXT) $(DESTDIR)$(bindir)/$$n$(EXEEXT); \
 	$(SHELL) $(srcdir)/../../mkinstalldirs $(DESTDIR)$(man1dir); \
 	$(INSTALL_DATA) $(srcdir)/gdbserver.1 $(DESTDIR)$(man1dir)/$$n.1
-	@cd gnulib; $(MAKE) $(FLAGS_TO_PASS) install
+	@$(MAKE) $(FLAGS_TO_PASS) DO=$@ "DODIRS=$(SUBDIRS)" subdir_do
 
 uninstall: force
 	n=`echo gdbserver | sed '$(program_transform_name)'`; \
 	if [ x$$n = x ]; then n=gdbserver; else true; fi; \
 	rm -f $(DESTDIR)/$(bindir)/$$n$(EXEEXT) $(DESTDIR)$(man1dir)/$$n.1
-	@cd gnulib; $(MAKE) $(FLAGS_TO_PASS) uninstall
+	@$(MAKE) $(FLAGS_TO_PASS) DO=$@ "DODIRS=$(SUBDIRS)" subdir_do
 
 installcheck:
 check:
@@ -243,17 +256,16 @@ install-pdf:
 html:
 install-html:
 clean-info: force
-	@cd gnulib; $(MAKE) $(FLAGS_TO_PASS) $@
+	@$(MAKE) $(FLAGS_TO_PASS) DO=$@ "DODIRS=$(SUBDIRS)" subdir_do
 
-gdbserver$(EXEEXT): $(OBS) ${ADD_DEPS} ${CDEPS} $(GNULIB_LIB)
+gdbserver$(EXEEXT): $(OBS) ${ADD_DEPS} ${CDEPS} $(LIBGNU)
 	rm -f gdbserver$(EXEEXT)
 	${CC-LD} $(INTERNAL_CFLAGS) $(INTERNAL_LDFLAGS) -o gdbserver$(EXEEXT) $(OBS) \
-	$(GNULIB_LIB) $(GDBSERVER_LIBS) $(XM_CLIBS)
+	$(LIBGNU) $(GDBSERVER_LIBS) $(XM_CLIBS)
 
-$(GNULIB_LIB) $(GNULIB_H): all-lib
-all-lib: gnulib/Makefile
-	@cd gnulib; $(MAKE) $(FLAGS_TO_PASS) all
-
+$(LIBGNU) $(GNULIB_H): all-lib
+all-lib: $(GNULIB_BUILDDIR)/Makefile
+	@$(MAKE) $(FLAGS_TO_PASS) DO=all DODIRS=$(GNULIB_BUILDDIR) subdir_do
 .PHONY: all-lib
 
 gdbreplay$(EXEEXT): $(GDBREPLAY_OBS)
@@ -308,12 +320,31 @@ clean:
 	rm -f i386-avx.c i386-avx-linux.c
 	rm -f amd64-avx.c amd64-avx-linux.c
 	rm -f i386-mmx.c i386-mmx-linux.c
-	@cd gnulib; $(MAKE) $(FLAGS_TO_PASS) clean
+	rm -f x32.c x32-linux.c
+	rm -f x32-avx.c x32-avx-linux.c
+	@$(MAKE) $(FLAGS_TO_PASS) DO=$@ "DODIRS=$(SUBDIRS)" subdir_do
 
 maintainer-clean realclean distclean: clean
-	rm -f nm.h tm.h xm.h config.status config.h stamp-h config.log
+	@$(MAKE) $(FLAGS_TO_PASS) DO=$@ "DODIRS=$(SUBDIRS)" subdir_do
+	rm -rf $(GNULIB_BUILDDIR)
+	rm -f Makefile config.status config.h stamp-h config.log
 	rm -f Makefile
-	@cd gnulib; $(MAKE) $(FLAGS_TO_PASS) $@
+
+subdir_do: force
+	@for i in $(DODIRS); do \
+		case $$i in \
+		$(REQUIRED_SUBDIRS)) \
+			if [ ! -f ./$$i/Makefile ] ; then \
+				echo "Missing $$i/Makefile" >&2 ; \
+				exit 1 ; \
+			fi ;; \
+		esac ; \
+		if [ -f ./$$i/Makefile ] ; then \
+			if (cd ./$$i; \
+				$(MAKE) $(FLAGS_TO_PASS) $(DO)) ; then true ; \
+			else exit 1 ; fi ; \
+		else true ; fi ; \
+	done
 
 config.h: stamp-h ; @true
 stamp-h: config.in config.status
@@ -322,11 +353,12 @@ stamp-h: config.in config.status
 Makefile: Makefile.in config.status
 	CONFIG_HEADERS="" $(SHELL) ./config.status
 
-gnulib/Makefile: $(srcdir)/../gnulib/Makefile.in config.status
+$(GNULIB_BUILDDIR)/Makefile: $(srcdir)/../gnulib/Makefile.in config.status
+	  @cd $(GNULIB_BUILDDIR); CONFIG_FILES="Makefile" \
 	  CONFIG_COMMANDS="depfiles" \
 	  CONFIG_HEADERS= \
 	  CONFIG_LINKS= \
-	  $(SHELL) config.status "gnulib/Makefile"
+	  $(SHELL) config.status
 
 config.status: configure configure.srv
 	$(SHELL) ./config.status --recheck
@@ -378,7 +410,10 @@ ptid_h = $(srcdir)/../common/ptid.h
 ax_h = $(srcdir)/ax.h
 agent_h = $(srcdir)/../common/agent.h
 linux_osdata_h = $(srcdir)/../common/linux-osdata.h
-server_h = $(srcdir)/server.h $(regcache_h) config.h $(srcdir)/target.h \
+vec_h = $(srcdir)/../common/vec.h
+# Since everything must include server.h, we make that depend on
+# generated files.
+server_h = $(srcdir)/server.h $(regcache_h) $(srcdir)/target.h \
 		$(srcdir)/mem-break.h $(srcdir)/../common/gdb_signals.h \
 		$(srcdir)/../common/common-utils.h \
 		$(srcdir)/../common/xml-utils.h \
@@ -386,9 +421,11 @@ server_h = $(srcdir)/server.h $(regcache_h) config.h $(srcdir)/target.h \
 		$(srcdir)/../common/gdb_assert.h \
 		$(srcdir)/../common/gdb_locale.h \
 		$(ptid_h) \
-		$(signals_h)
+		$(signals_h) \
+		$(generated_files)
 
-linux_low_h = $(srcdir)/linux-low.h
+gdbthread_h = $(srcdir)/gdbthread.h $(target_h) $(srcdir)/server.h
+linux_low_h = $(srcdir)/linux-low.h $(gdbthread_h)
 
 linux_ptrace_h = $(srcdir)/../common/linux-ptrace.h
 
@@ -434,16 +471,16 @@ ax.o: ax.c $(server_h) $(ax_h) $(srcdir)/../common/ax.def
 event-loop.o: event-loop.c $(server_h)
 hostio.o: hostio.c $(server_h)
 hostio-errno.o: hostio-errno.c $(server_h)
-inferiors.o: inferiors.c $(server_h)
+inferiors.o: inferiors.c $(server_h) $(gdbthread_h)
 mem-break.o: mem-break.c $(server_h) $(ax_h)
 proc-service.o: proc-service.c $(server_h) $(gdb_proc_service_h)
-regcache.o: regcache.c $(server_h) $(regdef_h)
-remote-utils.o: remote-utils.c terminal.h $(server_h)
-server.o: server.c $(server_h) $(agent_h)
-target.o: target.c $(server_h)
+regcache.o: regcache.c $(server_h) $(regdef_h) $(gdbthread_h)
+remote-utils.o: remote-utils.c terminal.h $(server_h) $(gdbthread_h)
+server.o: server.c $(server_h) $(agent_h) $(gdbthread_h)
+target.o: target.c $(server_h) 
 thread-db.o: thread-db.c $(server_h) $(linux_low_h) $(gdb_proc_service_h) \
 	$(gdb_thread_db_h)
-tracepoint.o: tracepoint.c $(server_h) $(ax_h) $(agent_h)
+tracepoint.o: tracepoint.c $(server_h) $(ax_h) $(agent_h) $(gdbthread_h)
 utils.o: utils.c $(server_h)
 gdbreplay.o: gdbreplay.c config.h
 dll.o: dll.c $(server_h)
@@ -458,6 +495,9 @@ linux-ptrace.o: ../common/linux-ptrace.c $(server_h)
 	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
 
 common-utils.o: ../common/common-utils.c $(server_h)
+	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
+
+vec.o: ../common/vec.c $(vec_h)
 	$(CC) -c $(CPPFLAGS) $(INTERNAL_CFLAGS) $< -DGDBSERVER
 
 xml-utils.o: ../common/xml-utils.c $(server_h)
@@ -510,15 +550,16 @@ linux-tic6x-low.o: linux-tic6x-low.c $(linux_low_h) $(server_h)
 linux-x86-low.o: linux-x86-low.c $(linux_low_h) $(server_h) \
 	$(gdb_proc_service_h) $(i386_low_h) $(agent_h)
 linux-xtensa-low.o: linux-xtensa-low.c xtensa-xtregs.c $(linux_low_h) $(server_h)
+linux-tile-low.o: linux-tile-low.c $(linux_low_h) $(server_h)
 
 lynx-low.o: lynx-low.c $(server_h) $(target_h) $(lynx_low_h)
 lynx-ppc-low.o: lynx-ppc-low.c $(server_h) $(lynx_low_h)
-nto-low.o: nto-low.c $(server_h) $(nto_low_h)
+nto-low.o: nto-low.c $(server_h) $(nto_low_h) $(gdbthread_h)
 nto-x86-low.o: nto-x86-low.c $(server_h) $(nto_low_h) $(regdef_h) $(regcache_h)
 
 win32_low_h = $(srcdir)/win32-low.h
 
-win32-low.o: win32-low.c $(win32_low_h) $(server_h) $(regdef_h) $(regcache_h)
+win32-low.o: win32-low.c $(win32_low_h) $(server_h) $(regdef_h) $(regcache_h) $(gdbthread_h)
 
 win32-arm-low.o: win32-arm-low.c $(win32_low_h) $(server_h)
 win32-i386-low.o: win32-i386-low.c $(win32_low_h) $(server_h) $(i386_low_h)
@@ -698,7 +739,22 @@ amd64-avx.c : $(srcdir)/../regformats/i386/amd64-avx.dat $(regdat_sh)
 amd64-avx-linux.o : amd64-avx-linux.c $(regdef_h)
 amd64-avx-linux.c : $(srcdir)/../regformats/i386/amd64-avx-linux.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/amd64-avx-linux.dat amd64-avx-linux.c
+x32.o : x32.c $(regdef_h)
+x32.c : $(srcdir)/../regformats/i386/x32.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/x32.dat x32.c
+x32-linux.o : x32-linux.c $(regdef_h)
+x32-linux.c : $(srcdir)/../regformats/i386/x32-linux.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/x32-linux.dat x32-linux.c
+x32-avx.o : x32-avx.c $(regdef_h)
+x32-avx.c : $(srcdir)/../regformats/i386/x32-avx.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/x32-avx.dat x32-avx.c
+x32-avx-linux.o : x32-avx-linux.c $(regdef_h)
+x32-avx-linux.c : $(srcdir)/../regformats/i386/x32-avx-linux.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/x32-avx-linux.dat x32-avx-linux.c
 reg-xtensa.o : reg-xtensa.c $(regdef_h)
 reg-xtensa.c : $(srcdir)/../regformats/reg-xtensa.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/reg-xtensa.dat reg-xtensa.c
+reg-tilegx.o : reg-tilegx.c $(regdef_h)
+reg-tilegx.c : $(srcdir)/../regformats/reg-tilegx.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/reg-tilegx.dat reg-tilegx.c
 # This is the end of "Makefile.in".

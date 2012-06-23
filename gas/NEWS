@@ -1,11 +1,19 @@
 -*- text -*-
 
+* Add support for S12X processor.
+
+* Add support for the VLE extension to the PowerPC architecture.
+
+* Add support for the Freescale XGATE architecture.
+
 * Add support for .bundle_align_mode, .bundle_lock, and .bundle_unlock
   directives.  These are currently available only for x86 and ARM targets.
 
 * Add support for the Renesas RL78 architecture.
 
 * Add support for the Adapteva EPIPHANY architecture.
+
+* For x86, allow 'rep bsf', 'rep bsr', and 'rep ret' syntax.
 
 Changes in 2.22:
 

@@ -23,6 +23,7 @@
 #define GDBTYPES_H 1
 
 #include "hashtab.h"
+#include "dwarf2expr.h"
 
 /* Forward declarations for prototypes.  */
 struct field;
@@ -351,6 +352,7 @@ enum type_instance_flag_value
 enum field_loc_kind
   {
     FIELD_LOC_KIND_BITPOS,	/* bitpos */
+    FIELD_LOC_KIND_ENUMVAL,	/* enumval */
     FIELD_LOC_KIND_PHYSADDR,	/* physaddr */
     FIELD_LOC_KIND_PHYSNAME,	/* physname */
     FIELD_LOC_KIND_DWARF_BLOCK	/* dwarf_block */
@@ -511,10 +513,12 @@ struct main_type
 	   containing structure.  For gdbarch_bits_big_endian=1
 	   targets, it is the bit offset to the MSB.  For
 	   gdbarch_bits_big_endian=0 targets, it is the bit offset to
-	   the LSB.  For a range bound or enum value, this is the
-	   value itself.  */
+	   the LSB.  */
 
 	int bitpos;
+
+	/* Enum value.  */
+	LONGEST enumval;
 
 	/* For a static field, if TYPE_FIELD_STATIC_HAS_ADDR then physaddr
 	   is the location (in the target) of the static field.
@@ -538,7 +542,7 @@ struct main_type
       unsigned int artificial : 1;
 
       /* Discriminant for union field_location.  */
-      ENUM_BITFIELD(field_loc_kind) loc_kind : 2;
+      ENUM_BITFIELD(field_loc_kind) loc_kind : 3;
 
       /* Size of this field, in bits, or zero if not packed.
 	 If non-zero in an array type, indicates the element size in
@@ -546,7 +550,7 @@ struct main_type
 	 For an unpacked field, the field's type's length
 	 says how many bytes the field occupies.  */
 
-      unsigned int bitsize : 29;
+      unsigned int bitsize : 28;
 
       /* In a struct or union type, type of this field.
 	 In a function or member type, type of this argument.
@@ -912,6 +916,20 @@ struct func_type
     struct call_site *tail_call_list;
   };
 
+/* struct call_site_parameter can be referenced in callees by several ways.  */
+
+enum call_site_parameter_kind
+{
+  /* Use field call_site_parameter.u.dwarf_reg.  */
+  CALL_SITE_PARAMETER_DWARF_REG,
+
+  /* Use field call_site_parameter.u.fb_offset.  */
+  CALL_SITE_PARAMETER_FB_OFFSET,
+
+  /* Use field call_site_parameter.u.param_offset.  */
+  CALL_SITE_PARAMETER_PARAM_OFFSET
+};
+
 /* A place where a function gets called from, represented by
    DW_TAG_GNU_call_site.  It can be looked up from symtab->call_site_htab.  */
 
@@ -931,7 +949,7 @@ struct call_site
 	union field_location loc;
 
 	/* Discriminant for union field_location.  */
-	ENUM_BITFIELD(field_loc_kind) loc_kind : 2;
+	ENUM_BITFIELD(field_loc_kind) loc_kind : 3;
       }
     target;
 
@@ -945,15 +963,24 @@ struct call_site
     /* Describe DW_TAG_GNU_call_site's DW_TAG_formal_parameter.  */
     struct call_site_parameter
       {
-	/* DW_TAG_formal_parameter's DW_AT_location's DW_OP_regX as DWARF
-	   register number, for register passed parameters.  If -1 then use
-	   fb_offset.  */
-	int dwarf_reg;
+	ENUM_BITFIELD (call_site_parameter_kind) kind : 2;
 
-	/* Offset from the callee's frame base, for stack passed parameters.
-	   This equals offset from the caller's stack pointer.  Valid only if
-	   DWARF_REGNUM is -1.  */
-	CORE_ADDR fb_offset;
+	union call_site_parameter_u
+	  {
+	    /* DW_TAG_formal_parameter's DW_AT_location's DW_OP_regX as DWARF
+	       register number, for register passed parameters.  */
+	    int dwarf_reg;
+
+	    /* Offset from the callee's frame base, for stack passed parameters.
+	       This equals offset from the caller's stack pointer.  */
+	    CORE_ADDR fb_offset;
+
+	    /* Offset relative to the start of this PER_CU to
+	       DW_TAG_formal_parameter which is referenced by both caller and
+	       the callee.  */
+	    cu_offset param_offset;
+	  }
+	u;
 
 	/* DW_TAG_formal_parameter's DW_AT_GNU_call_site_value.  It is never
 	   NULL.  */
@@ -1087,13 +1114,19 @@ extern void allocate_gnat_aux_type (struct type *);
 #define FIELD_TYPE(thisfld) ((thisfld).type)
 #define FIELD_NAME(thisfld) ((thisfld).name)
 #define FIELD_LOC_KIND(thisfld) ((thisfld).loc_kind)
-#define FIELD_BITPOS(thisfld) ((thisfld).loc.bitpos)
+#define FIELD_BITPOS_LVAL(thisfld) ((thisfld).loc.bitpos)
+#define FIELD_BITPOS(thisfld) (FIELD_BITPOS_LVAL (thisfld) + 0)
+#define FIELD_ENUMVAL_LVAL(thisfld) ((thisfld).loc.enumval)
+#define FIELD_ENUMVAL(thisfld) (FIELD_ENUMVAL_LVAL (thisfld) + 0)
 #define FIELD_STATIC_PHYSNAME(thisfld) ((thisfld).loc.physname)
 #define FIELD_STATIC_PHYSADDR(thisfld) ((thisfld).loc.physaddr)
 #define FIELD_DWARF_BLOCK(thisfld) ((thisfld).loc.dwarf_block)
 #define SET_FIELD_BITPOS(thisfld, bitpos)			\
   (FIELD_LOC_KIND (thisfld) = FIELD_LOC_KIND_BITPOS,		\
-   FIELD_BITPOS (thisfld) = (bitpos))
+   FIELD_BITPOS_LVAL (thisfld) = (bitpos))
+#define SET_FIELD_ENUMVAL(thisfld, enumval)			\
+  (FIELD_LOC_KIND (thisfld) = FIELD_LOC_KIND_ENUMVAL,		\
+   FIELD_ENUMVAL_LVAL (thisfld) = (enumval))
 #define SET_FIELD_PHYSNAME(thisfld, name)			\
   (FIELD_LOC_KIND (thisfld) = FIELD_LOC_KIND_PHYSNAME,		\
    FIELD_STATIC_PHYSNAME (thisfld) = (name))
@@ -1111,6 +1144,7 @@ extern void allocate_gnat_aux_type (struct type *);
 #define TYPE_FIELD_NAME(thistype, n) FIELD_NAME(TYPE_FIELD(thistype, n))
 #define TYPE_FIELD_LOC_KIND(thistype, n) FIELD_LOC_KIND (TYPE_FIELD (thistype, n))
 #define TYPE_FIELD_BITPOS(thistype, n) FIELD_BITPOS (TYPE_FIELD (thistype, n))
+#define TYPE_FIELD_ENUMVAL(thistype, n) FIELD_ENUMVAL (TYPE_FIELD (thistype, n))
 #define TYPE_FIELD_STATIC_PHYSNAME(thistype, n) FIELD_STATIC_PHYSNAME (TYPE_FIELD (thistype, n))
 #define TYPE_FIELD_STATIC_PHYSADDR(thistype, n) FIELD_STATIC_PHYSADDR (TYPE_FIELD (thistype, n))
 #define TYPE_FIELD_DWARF_BLOCK(thistype, n) FIELD_DWARF_BLOCK (TYPE_FIELD (thistype, n))

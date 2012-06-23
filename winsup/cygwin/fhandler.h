@@ -14,8 +14,8 @@ details. */
 
 #include "tty.h"
 /* fcntl flags used only internaly. */
-#define O_NOSYMLINK 0x080000
-#define O_DIROPEN   0x100000
+#define O_NOSYMLINK	0x080000
+#define O_DIROPEN	0x100000
 
 /* newlib used to define O_NDELAY differently from O_NONBLOCK.  Now it
    properly defines both to be the same.  Unfortunately, we have to
@@ -35,6 +35,10 @@ details. */
    atomic writes to a pipe.  It is a shame that we have to make this
    so small.  http://cygwin.com/ml/cygwin/2011-03/msg00541.html  */
 #define DEFAULT_PIPEBUFSIZE PREFERRED_IO_BLKSIZE
+
+/* Used for fhandler_pipe::create.  Use an available flag which will
+   never be used in Cygwin for this function. */
+#define PIPE_ADD_PID	FILE_FLAG_FIRST_PIPE_INSTANCE
 
 extern const char *windows_device_names[];
 extern struct __cygwin_perfile *perfile_table;
@@ -178,11 +182,8 @@ class fhandler_base
   HANDLE read_state;
 
  public:
-  long refcnt(long i = 0)
-  {
-    debug_only_printf ("%p, %s, i %d, refcnt %ld", this, get_name (), i, _refcnt + i);
-    return _refcnt += i;
-  }
+  long inc_refcnt () {return InterlockedIncrement (&_refcnt);}
+  long dec_refcnt () {return InterlockedDecrement (&_refcnt);} 
   class fhandler_base *archetype;
   int usecount;
 
@@ -241,19 +242,12 @@ class fhandler_base
 
   IMPLEMENT_STATUS_FLAG (bool, wbinset)
   IMPLEMENT_STATUS_FLAG (bool, rbinset)
+  IMPLEMENT_STATUS_FLAG (bool, nohandle)
   IMPLEMENT_STATUS_FLAG (bool, did_lseek)
   IMPLEMENT_STATUS_FLAG (query_state, query_open)
   IMPLEMENT_STATUS_FLAG (bool, close_on_exec)
   IMPLEMENT_STATUS_FLAG (bool, need_fork_fixup)
   IMPLEMENT_STATUS_FLAG (bool, isclosed)
-
-  bool nohandle () const {return !!status.nohandle;}
-  bool nohandle (bool val)
-  {
-    if ((status.nohandle = val))
-      io_handle = INVALID_HANDLE_VALUE;
-    return val;
-  }
 
   int get_default_fmode (int flags);
 
@@ -1295,6 +1289,9 @@ class dev_console
 
   bool insert_mode;
   int use_mouse;
+  bool ext_mouse_mode5;
+  bool ext_mouse_mode6;
+  bool ext_mouse_mode15;
   bool use_focus;
   bool raw_win32_keyboard_mode;
 
@@ -1377,6 +1374,7 @@ private:
   ssize_t __stdcall write (const void *ptr, size_t len);
   void doecho (const void *str, DWORD len) { (void) write (str, len); }
   int close ();
+  static bool exists () {return !!GetConsoleCP ();}
 
   int tcflush (int);
   int tcsetattr (int a, const struct termios *t);

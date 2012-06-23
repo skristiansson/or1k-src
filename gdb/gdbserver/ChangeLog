@@ -1,3 +1,299 @@
+2012-06-13  Yao Qi  <yao@codesourcery.com>
+
+	* server.c (start_inferior): Remove duplicated writes to fields
+	'last_resume_kind' and 'last_status' of 'current_inferior'.
+
+2012-06-12  Yao Qi  <yao@codesourcery.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (linux_set_resume_request): Simplify predicate.  Add
+	comment.
+	* server.c (handle_v_cont): Extend comment.
+
+2012-06-11  Yao Qi  <yao@codesourcery.com>
+
+	* linux-low.c (linux_attach): Add 'static'.
+
+2012-06-06  Yao Qi  <yao@codesourcery.com>
+
+	* ax.c (gdb_eval_agent_expr): Print `top' in hex.
+
+2012-06-01  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix gcc -flto compilation warning.
+	* server.c (main): Make variable multi_mode and attach volatile.
+
+2012-05-30  Thiago Jung Bauermann  <thiago.bauermann@linaro.org>
+
+	* linux-low.c (get_r_debug): Disable code using DT_MIPS_RLD_MAP
+	if the platform doesn't know about it.
+
+2012-05-30  Jeff Kenton  <jkenton@tilera.com>
+
+	* Makefile.in (SFILES): Add linux-tile-low.c.
+	(linux-tile-low.o, reg-tilegx.o, reg-tilegx.c): New rules.
+	* configure.srv: Handle tilegx-*-linux*.
+	* linux-tile-low.c: New file.
+
+2012-05-28  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* linux-low.c (linux_qxfer_libraries_svr4): Return -1 if R_DEBUG is -1.
+
+2012-05-24  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/7205
+
+        Replace TARGET_SIGNAL_ with GDB_SIGNAL_ throughout.
+
+2012-05-24  Pedro Alves  <palves@redhat.com>
+
+	PR gdb/7205
+
+	Replace target_signal with gdb_signal throughout.
+
+2012-05-22  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* linux-low.c (linux_store_registers): Avoid the copying sequence
+	when no data has been retrieved by ptrace.
+
+2012-05-22  Will Deacon  <will.deacon@arm.com>
+
+	* linux-low (__UCLIBC__ && !(__UCLIBC_HAS_MMU__ || __ARCH_HAS_MMU__)):
+	Include asm/ptrace.h.
+	(PT_TEXT_ADDR, PT_DATA_ADDR, PT_TEXT_END_ADDR): Define only if not
+	already defined.
+
+2012-05-21  Maciej W. Rozycki  <macro@codesourcery.com>
+
+	* linux-low.c (linux_store_registers): Don't re-retrieve data
+	with ptrace that has already been obtained from /proc.  Always
+	copy any data retrieved with ptrace to the buffer supplied.
+
+2012-05-11  Yao Qi  <yao@codesourcery.com>
+	    Pedro Alves  <palves@redhat.com>
+
+	* linux-low.c (enum stopping_threads_kind): New.
+	(stopping_threads): Change type to `enum stopping_threads_kind'.
+	(handle_extended_wait): If stopping and suspending threads, leave
+	the new_lwp suspended too.
+	(linux_wait_for_event): Adjust.
+	(stop_all_lwps): Set `stopping_threads' to
+	STOPPING_AND_SUSPENDING_THREADS or STOPPING_THREADS depending on
+	whether we're suspending threads or just stopping them.  Assert no
+	recursion happens.
+
+2012-04-29  Yao Qi  <yao@codesourcery.com>
+
+	* server.h: Move some code to ...
+	* gdbthread.h: ... here.  New.
+	* Makefile.in (inferiors.o, regcache.o): Depends on gdbthread.h
+	(remote-utils.o, server.o, target.o tracepoint.o): Likewise.
+	(nto-low.o, win32-low.o): Likewise.
+	* inferiors.c, linux-low.h, nto-low.c: Include gdbthread.h.
+	* regcache.c, remote-utils.c, server.c: Likewise.
+	* target.c, tracepoint.c, win32-low.c: Likewise.
+
+2012-04-24  Thiago Jung Bauermann  <thiago.bauermann@linaro.org>
+
+	* linux-low.h (PTRACE_ARG3_TYPE): Move macro from linux-low.c.
+	(PTRACE_ARG4_TYPE): Likewise.
+	(PTRACE_XFER_TYPE): Likewise.
+	* linux-arm-low.c (arm_prepare_to_resume): Cast third argument of
+	ptrace to PTRACE_ARG3_TYPE.
+	* linux-low.c (PTRACE_ARG3_TYPE): Move macro to linux-low.h.
+	(PTRACE_ARG4_TYPE): Likewise.
+	(PTRACE_XFER_TYPE): Likewise.
+	(linux_detach_one_lwp): Cast fourth argument of
+	ptrace to long then PTRACE_ARG4_TYPE.
+	(regsets_fetch_inferior_registers): Cast third argument of
+	ptrace to long then PTRACE_ARG3_TYPE.
+	(regsets_store_inferior_registers): Likewise.
+
+2012-04-20  Pedro Alves  <palves@redhat.com>
+
+	* configure: Regenerate.
+
+2012-04-19  Pedro Alves  <palves@redhat.com>
+
+        * Makefile.in (GNULIB_BUILDDIR): New.
+	(LIBGNU, INCGNU, GNULIB_H): Adjust.
+        (SUBDIRS, CLEANDIRS, REQUIRED_SUBDIRS): New.
+        (all, install-only, uninstall, clean-info, all-lib, clean): No
+        longer pass GNULIB_FLAGS_TO_PASS.  Use subdir_do.
+        (maintainer-clean realclean distclean): Use subdir_do.
+        (subdir_do): New.
+        (gnulib/import/Makefile): Adjust.  Replace gnulib/import with
+	$(GNULIB_BUILDDIR).  Don't pass argument to config.status.
+        * acinclude.m4: Include acx_configure_dir.m4.
+        * configure.ac: Remove gl_EARLY, gl_INIT, and AM_INIT_AUTOMAKE
+        calls.  Call AC_PROG_RANLIB.  Configure gnulib using
+        ACX_CONFIGURE_DIR.
+        (GNULIB): New.
+        (GNULIB_STDINT_H): Adjust.
+        (AC_OUTPUT): Don't output gnulib/Makefile anymore.
+        * gdbreplay.c: Include build-gnulib/config.h.
+        * server.h: Likewise.
+        * aclocal.m4: Regenerate.
+        * config.in: Regenerate.
+        * configure: Regenerate.
+
+2012-04-19  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (LIBGNU, INCGNU): Adjust.
+	(GNULIB_FLAGS_TO_PASS, GNULIB_H): Adjust.
+	(all, install-only, uninstall, clean-info, all-lib, clean)
+	(maintainer-clean, Makefile, gnulib/Makefile): Adjust.
+	* configure.ac: Adjust AC_OUTPUT output.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2012-04-19  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (generated_files): New.
+	(server_h): Remove the explicit dependency on config.h, and depend
+	on $generated_files.
+
+2012-04-19  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (INCGNU): Add -Ignulib.
+
+2012-04-19  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (GNULIB_INCLUDE_DIR): Rename to ...
+	(INCGNU): ... this, and spell out -I here.
+	(GNULIB_LIB): Rename to ...
+	(LIBGNU): ... this.
+	(INCLUDE_CFLAGS, gdbserver$(EXEEXT), $(GNULIB_LIB) rule): Adjust.
+
+2012-04-19  Pedro Alves  <palves@redhat.com>
+
+	* config.in: Regenerate.
+
+2012-04-19  Pedro Alves  <palves@redhat.com>
+
+	* configure.ac: Remove AC_CHECK_DECLS check for memmem.
+	* server.h (memmem): Remove declaration.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2012-04-19  Yao Qi  <yao@codesourcery.com>
+
+	* Makefile.in (SFILES): Add common/vec.c.
+	(OBS): Add vec.o.
+	(vec.o): New rule.
+
+2012-04-19  Yao Qi  <yao@codesourcery.com>
+
+	* remote-utils.c (prepare_resume_reply): Replace with macro
+	target_core_of_thread.
+	* server.c (handle_qxfer_threads_proper): Likewise.
+	* target.h (traget_core_of_thread): New macro.
+
+2012-04-18  Pedro Alves  <palves@redhat.com>
+
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2012-04-16  Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c (cmd_qtstart): Download tracepoints even when they are
+	duplicated on address.
+
+2012-04-16  Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c (COPY_FIELD_TO_BUF): New macro.
+	(struct tracepoint_action_ops) <send>: New field.
+	(m_tracepoint_action_send, r_tracepoint_action_send): New.
+	(agent_expr_send, x_tracepoint_action_send): New.
+	(l_tracepoint_action_send): New.
+	(cmd_qtdp): Download and install tracepoint
+	according to `use_agent'.
+	(run_inferior_command): Add one more parameter `len'.
+	Update callers.
+	(tracepoint_send_agent): New.
+	(cmd_qtdp, cmd_qtstart): Call tracepoint_send_agent.
+
+2012-04-16  Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c (download_tracepoints): Moved to ...
+	(cmd_qtstart): ... here.
+
+2012-04-14  Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c: Include inttypes.h.
+	(struct collect_memory_action): Use sized types.
+	(struct tracepoint): Likewise.
+	(cmd_qtdp, stop_tracing): Update print specifiers.
+	(cmd_qtp, response_tracepoint): Likewise.
+	(collect_data_at_tracepoint): Likewise.
+	(collect_data_at_step): Likewise.
+
+2012-04-14  Yao Qi  <yao@codesourcery.com>
+
+	Import gnulib module inttypes.
+	* aclocal.m4, config.in, configure: Regenerated.
+
+2012-04-14  Yao Qi  <yao@codesourcery.com>
+
+	* Makefile.in (maintainer-clean, realclean, distclean): Remove
+	Makefile and config.status at last.
+
+2012-04-13  Yao Qi  <yao@codesourcery.com>
+
+	* tracepoint.c: Include stdint.h unconditionally.
+
+2012-04-13  Thiago Jung Bauermann  <thiago.bauermann@linaro.org>
+
+	* acinclude.m4 (GDBSERVER_HAVE_THREAD_DB_TYPE): New macro based
+	on BFD_HAVE_SYS_PROCFS_TYPE.
+	* configure.ac: Look for lwpid_t and psaddr_t in libthread_db.h.
+	* configure: Regenerate.
+	* config.in: Likewise.
+
+2012-04-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* Makefile.in (clean): Also remove x32.c x32-linux.c
+	x32-avx.c x32-avx-linux.c.
+	(x32.o): New target.
+	(x32.c): Likewise.
+	(x32-linux.o): Likewise.
+	(x32-linux.c): Likewise.
+	(x32-avx.o): Likewise.
+	(x32-avx.c): Likewise.
+	(x32-avx-linux.o): Likewise.
+	(x32-avx-linux.c): Likewise.
+
+	* configure.srv (srv_amd64_regobj): Add x32.o x32-avx.o.
+	(srv_amd64_linux_regobj): Add x32-linux.o x32-avx-linux.o.
+	(srv_i386_64bit_xmlfiles): Add i386/x32-core.xml.
+	(srv_amd64_xmlfiles): Add i386/x32.xml i386/x32-avx.xml.
+	(srv_amd64_linux_xmlfiles): Add i386/x32-linux.xml
+	i386/x32-avx-linux.xml.
+
+	* linux-x86-low.c (init_registers_x32_linux): New prototype.
+	(init_registers_x32_avx_linux): Likwise.
+	(x86_linux_update_xmltarget): Call init_registers_x32_linux
+	or init_registers_x32_avx_linux if linux_is_elf64 is false.
+
+2012-04-13  Pedro Alves  <palves@redhat.com>
+
+	* Makefile.in (GNULIB_FLAGS_TO_PASS): New.
+	(FLAGS_TO_PASS): Don't change or set $top_srcdir, $srcdir and VPATH.
+	(all, uninstall, clean-info, all-lib, clean, maintainer-clean)
+	(realclean, distclean): Explicitly pass $GNULIB_FLAGS_TO_PASS to
+	the sub-make.
+
+2012-04-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* linux-x86-low.c (compat_x32_clock_t): New.
+	(compat_x32_siginfo_t): Likewise.
+	(compat_x32_siginfo_from_siginfo): Likewise.
+	(siginfo_from_compat_x32_siginfo): Likewise.
+	(linux_is_elf64): Likewise.
+	(x86_siginfo_fixup): Call compat_x32_siginfo_from_siginfo
+	and siginfo_from_compat_x32_siginfo for x32.
+	(x86_arch_setup): Set linux_is_elf64.
+
 2012-04-12  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR gdb/13969

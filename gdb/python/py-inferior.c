@@ -81,7 +81,7 @@ static void
 python_on_normal_stop (struct bpstats *bs, int print_frame)
 {
   struct cleanup *cleanup;
-  enum target_signal stop_signal;
+  enum gdb_signal stop_signal;
 
   if (!find_thread_ptid (inferior_ptid))
       return;
@@ -180,7 +180,6 @@ inferior_to_inferior_object (struct inferior *inferior)
 PyObject *
 find_inferior_object (int pid)
 {
-  struct inflist_entry *p;
   struct inferior *inf = find_inferior_pid (pid);
 
   if (inf)
@@ -257,7 +256,6 @@ delete_thread_object (struct thread_info *tp, int ignore)
 {
   struct cleanup *cleanup;
   inferior_object *inf_obj;
-  thread_object *thread_obj;
   struct threadlist_entry **entry, *tmp;
   
   cleanup = ensure_python_env (python_gdbarch, python_language);
@@ -394,7 +392,7 @@ gdbpy_inferiors (PyObject *unused, PyObject *unused2)
 
 /* Membuf and memory manipulation.  */
 
-/* Implementation of gdb.read_memory (address, length).
+/* Implementation of Inferior.read_memory (address, length).
    Returns a Python buffer object with LENGTH bytes of the inferior's
    memory at ADDRESS.  Both arguments are integers.  Returns NULL on error,
    with a python exception set.  */
@@ -457,7 +455,7 @@ infpy_read_memory (PyObject *self, PyObject *args, PyObject *kw)
   return result;
 }
 
-/* Implementation of gdb.write_memory (address, buffer [, length]).
+/* Implementation of Inferior.write_memory (address, buffer [, length]).
    Writes the contents of BUFFER (a Python object supporting the read
    buffer protocol) at ADDRESS in the inferior's memory.  Write LENGTH
    bytes from BUFFER, or its entire contents if the argument is not

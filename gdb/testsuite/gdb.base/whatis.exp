@@ -36,7 +36,7 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable $exe
 
 # Create and source the file that provides information about the compiler
 # used to compile the test case.
-if [get_compiler_info ${binfile}] {
+if [get_compiler_info] {
     return -1;
 }
 
@@ -465,3 +465,17 @@ gdb_test "whatis char_addr" \
 gdb_test "whatis a_char_addr" \
     "type = char_addr" \
     "whatis applied to variable defined by typedef"
+
+# Regression tests for PR 9514.
+
+gdb_test "whatis void (**)()" \
+  "type = void \\(\\*\\*\\)\\(\\)" \
+  "whatis applied to pointer to pointer to function"
+
+gdb_test "whatis void (** const)()" \
+  "type = void \\(\\*\\* const\\)\\(\\)" \
+  "whatis applied to const pointer to pointer to function"
+
+gdb_test "whatis void (* const *)()" \
+  "type = void \\(\\* const \\*\\)\\(\\)" \
+  "whatis applied to pointer to const pointer to function"

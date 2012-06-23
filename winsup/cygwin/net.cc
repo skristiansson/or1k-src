@@ -712,7 +712,11 @@ cygwin_recvfrom (int fd, void *buf, size_t len, int flags,
   myfault efault;
   if (efault.faulted (EFAULT) || !fh)
     res = -1;
-  else if ((res = len) != 0)
+  else
+    /* Originally we shortcircuited here if res == 0.
+       Allow 0 bytes buffer.  This is valid in POSIX and handled in
+       fhandler_socket::recv_internal.  If we shortcircuit, we fail
+       to deliver valid error conditions and peer address. */
     res = fh->recvfrom (buf, len, flags, from, fromlen);
 
   syscall_printf ("%R = recvfrom(%d, %p, %d, %x, %p, %p)",
@@ -1465,7 +1469,11 @@ cygwin_recv (int fd, void *buf, size_t len, int flags)
   myfault efault;
   if (efault.faulted (EFAULT) || !fh)
     res = -1;
-  else if ((res = len) != 0)
+  else
+    /* Originally we shortcircuited here if res == 0.
+       Allow 0 bytes buffer.  This is valid in POSIX and handled in
+       fhandler_socket::recv_internal.  If we shortcircuit, we fail
+       to deliver valid error conditions. */
     res = fh->recvfrom (buf, len, flags, NULL, NULL);
 
   syscall_printf ("%R = recv(%d, %p, %d, %x)", res, fd, buf, len, flags);
@@ -1695,13 +1703,17 @@ get_adapters_addresses (PIP_ADAPTER_ADDRESSES *pa_ret, ULONG family)
   DWORD ret;
   gaa_wa param = { family, pa_ret ?: NULL };
 
-  if ((uintptr_t) &param >= (uintptr_t) 0x80000000L)
+  if ((uintptr_t) &param >= (uintptr_t) 0x80000000L
+      && wincap.has_gaa_largeaddress_bug ())
     {
-      /* Starting with Windows Vista, GetAdaptersAddresses fails with error 998,
+      /* In Windows Vista and Windows 7 under WOW64, GetAdaptersAddresses fails
 	 if it's running in a thread with a stack located in the large address
 	 area.  So, if we're running in a pthread with such a stack, we call
-	 GetAdaptersAddresses in a child thread with an OS-allocated stack,
-	 which is guaranteed to be located in the lower address area. */
+	 GetAdaptersAddresses in a child thread with an OS-allocated stack.
+	 The OS allocates stacks bottom up, so chances are good that the new
+	 stack will be located in the lower address area.
+	 FIXME: The problem is fixed in W8CP, but needs testing before W8 goes
+		gold. */
       HANDLE thr = CreateThread (NULL, 0, call_gaa, &param, 0, NULL);
       if (!thr)
 	{
@@ -2861,7 +2873,11 @@ cygwin_recvmsg (int fd, struct msghdr *msg, int flags)
   else
     {
       res = check_iovec_for_read (msg->msg_iov, msg->msg_iovlen);
-      if (res > 0)
+      /* Originally we shortcircuited here if res == 0.
+	 Allow 0 bytes buffer.  This is valid in POSIX and handled in
+	 fhandler_socket::recv_internal.  If we shortcircuit, we fail
+	 to deliver valid error conditions and peer address. */
+      if (res >= 0)
 	res = fh->recvmsg (msg, flags);
     }
 

@@ -91,6 +91,7 @@
 #define ARCH_w65
 #define ARCH_xstormy16
 #define ARCH_xc16x
+#define ARCH_xgate
 #define ARCH_xtensa
 #define ARCH_z80
 #define ARCH_z8k
@@ -247,12 +248,19 @@ disassembler (abfd)
       disassemble = print_insn_m32r;
       break;
 #endif
-#if defined(ARCH_m68hc11) || defined(ARCH_m68hc12)
+#if defined(ARCH_m68hc11) || defined(ARCH_m68hc12) \
+    || defined(ARCH_9s12x) || defined(ARCH_m9s12xg)
     case bfd_arch_m68hc11:
       disassemble = print_insn_m68hc11;
       break;
     case bfd_arch_m68hc12:
       disassemble = print_insn_m68hc12;
+      break;
+    case bfd_arch_m9s12x:
+      disassemble = print_insn_m9s12x;
+      break;
+    case bfd_arch_m9s12xg:
+      disassemble = print_insn_m9s12xg;
       break;
 #endif
 #ifdef ARCH_m68k
@@ -428,6 +436,11 @@ disassembler (abfd)
 #ifdef ARCH_w65
     case bfd_arch_w65:
       disassemble = print_insn_w65;
+      break;
+#endif
+#ifdef ARCH_xgate
+    case bfd_arch_xgate:
+      disassemble = print_insn_xgate;
       break;
 #endif
 #ifdef ARCH_xstormy16

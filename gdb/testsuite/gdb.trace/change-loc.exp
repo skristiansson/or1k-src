@@ -31,7 +31,7 @@ set lib_sl2 $objdir/$subdir/$libfile2.sl
 
 set lib_opts debug
 
-if [get_compiler_info ${binfile}] {
+if [get_compiler_info] {
     return -1
 }
 
@@ -275,7 +275,7 @@ tracepoint_change_loc_1 "trace"
 tracepoint_change_loc_2 "trace"
 
 # Re-compile test case with IPA.
-set libipa $objdir/../gdbserver/libinproctrace.so
+set libipa [get_in_proc_agent]
 gdb_load_shlibs $libipa
 
 if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile executable \

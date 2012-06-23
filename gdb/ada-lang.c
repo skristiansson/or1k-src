@@ -690,7 +690,7 @@ ada_discrete_type_high_bound (struct type *type)
     case TYPE_CODE_RANGE:
       return TYPE_HIGH_BOUND (type);
     case TYPE_CODE_ENUM:
-      return TYPE_FIELD_BITPOS (type, TYPE_NFIELDS (type) - 1);
+      return TYPE_FIELD_ENUMVAL (type, TYPE_NFIELDS (type) - 1);
     case TYPE_CODE_BOOL:
       return 1;
     case TYPE_CODE_CHAR:
@@ -701,7 +701,7 @@ ada_discrete_type_high_bound (struct type *type)
     }
 }
 
-/* The largest value in the domain of TYPE, a discrete type, as an integer.  */
+/* The smallest value in the domain of TYPE, a discrete type, as an integer.  */
 LONGEST
 ada_discrete_type_low_bound (struct type *type)
 {
@@ -710,7 +710,7 @@ ada_discrete_type_low_bound (struct type *type)
     case TYPE_CODE_RANGE:
       return TYPE_LOW_BOUND (type);
     case TYPE_CODE_ENUM:
-      return TYPE_FIELD_BITPOS (type, 0);
+      return TYPE_FIELD_ENUMVAL (type, 0);
     case TYPE_CODE_BOOL:
       return 0;
     case TYPE_CODE_CHAR:
@@ -4139,7 +4139,7 @@ ada_convert_actual (struct value *actual, struct type *formal_type0)
         }
       else
 	return actual;
-      return value_cast_pointers (formal_type, result);
+      return value_cast_pointers (formal_type, result, 0);
     }
   else if (TYPE_CODE (actual_type) == TYPE_CODE_PTR)
     return ada_value_ind (actual);
@@ -4256,7 +4256,8 @@ static struct symbol *
 standard_lookup (const char *name, const struct block *block,
                  domain_enum domain)
 {
-  struct symbol *sym;
+  /* Initialize it just to avoid a GCC false warning.  */
+  struct symbol *sym = NULL;
 
   if (lookup_cached_symbol (name, domain, &sym, NULL))
     return sym;
@@ -4479,7 +4480,7 @@ ada_identical_enum_types_p (struct type *type1, struct type *type2)
 
   /* All enums in the type should have an identical underlying value.  */
   for (i = 0; i < TYPE_NFIELDS (type1); i++)
-    if (TYPE_FIELD_BITPOS (type1, i) != TYPE_FIELD_BITPOS (type2, i))
+    if (TYPE_FIELD_ENUMVAL (type1, i) != TYPE_FIELD_ENUMVAL (type2, i))
       return 0;
 
   /* All enumerals should also have the same name (modulo any numerical
@@ -5470,7 +5471,7 @@ advance_wild_match (const char **namep, const char *name0, int target0)
 static int
 wild_match (const char *name, const char *patn)
 {
-  const char *p, *n;
+  const char *p;
   const char *name0 = name;
 
   while (1)
@@ -5515,7 +5516,7 @@ ada_add_block_symbols (struct obstack *obstackp,
                        domain_enum domain, struct objfile *objfile,
                        int wild)
 {
-  struct dict_iterator iter;
+  struct block_iterator iter;
   int name_len = strlen (name);
   /* A matching argument symbol, if any.  */
   struct symbol *arg_sym;
@@ -5527,9 +5528,8 @@ ada_add_block_symbols (struct obstack *obstackp,
   found_sym = 0;
   if (wild)
     {
-      for (sym = dict_iter_match_first (BLOCK_DICT (block), name,
-					wild_match, &iter);
-	   sym != NULL; sym = dict_iter_match_next (name, wild_match, &iter))
+      for (sym = block_iter_match_first (block, name, wild_match, &iter);
+	   sym != NULL; sym = block_iter_match_next (name, wild_match, &iter))
       {
         if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
                                    SYMBOL_DOMAIN (sym), domain)
@@ -5551,9 +5551,8 @@ ada_add_block_symbols (struct obstack *obstackp,
     }
   else
     {
-     for (sym = dict_iter_match_first (BLOCK_DICT (block), name,
-				       full_match, &iter);
-	   sym != NULL; sym = dict_iter_match_next (name, full_match, &iter))
+     for (sym = block_iter_match_first (block, name, full_match, &iter);
+	  sym != NULL; sym = block_iter_match_next (name, full_match, &iter))
       {
         if (symbol_matches_domain (SYMBOL_LANGUAGE (sym),
                                    SYMBOL_DOMAIN (sym), domain))
@@ -5798,11 +5797,10 @@ ada_expand_partial_symbol_name (const char *name, void *user_data)
                                   data->wild_match, data->encoded) != NULL;
 }
 
-/* Return a list of possible symbol names completing TEXT0.  The list
-   is NULL terminated.  WORD is the entire command on which completion
-   is made.  */
+/* Return a list of possible symbol names completing TEXT0.  WORD is
+   the entire command on which completion is made.  */
 
-static char **
+static VEC (char_ptr) *
 ada_make_symbol_completion_list (char *text0, char *word)
 {
   char *text;
@@ -5816,7 +5814,7 @@ ada_make_symbol_completion_list (char *text0, char *word)
   struct objfile *objfile;
   struct block *b, *surrounding_static_block = 0;
   int i;
-  struct dict_iterator iter;
+  struct block_iterator iter;
 
   if (text0[0] == '<')
     {
@@ -5915,24 +5913,7 @@ ada_make_symbol_completion_list (char *text0, char *word)
     }
   }
 
-  /* Append the closing NULL entry.  */
-  VEC_safe_push (char_ptr, completions, NULL);
-
-  /* Make a copy of the COMPLETIONS VEC before we free it, and then
-     return the copy.  It's unfortunate that we have to make a copy
-     of an array that we're about to destroy, but there is nothing much
-     we can do about it.  Fortunately, it's typically not a very large
-     array.  */
-  {
-    const size_t completions_size = 
-      VEC_length (char_ptr, completions) * sizeof (char *);
-    char **result = xmalloc (completions_size);
-    
-    memcpy (result, VEC_address (char_ptr, completions), completions_size);
-
-    VEC_free (char_ptr, completions);
-    return result;
-  }
+  return completions;
 }
 
                                 /* Field Access */
@@ -7445,7 +7426,7 @@ ada_template_to_fixed_record_type_1 (struct type *type,
     {
       off = align_value (off, field_alignment (type, f))
 	+ TYPE_FIELD_BITPOS (type, f);
-      TYPE_FIELD_BITPOS (rtype, f) = off;
+      SET_FIELD_BITPOS (TYPE_FIELD (rtype, f), off);
       TYPE_FIELD_BITSIZE (rtype, f) = 0;
 
       if (ada_is_variant_part (type, f))
@@ -8298,7 +8279,7 @@ pos_atr (struct value *arg)
 
       for (i = 0; i < TYPE_NFIELDS (type); i += 1)
         {
-          if (v == TYPE_FIELD_BITPOS (type, i))
+          if (v == TYPE_FIELD_ENUMVAL (type, i))
             return i;
         }
       error (_("enumeration value is invalid: can't find 'POS"));
@@ -8329,7 +8310,7 @@ value_val_atr (struct type *type, struct value *arg)
 
       if (pos < 0 || pos >= TYPE_NFIELDS (type))
         error (_("argument to 'VAL out of range"));
-      return value_from_longest (type, TYPE_FIELD_BITPOS (type, pos));
+      return value_from_longest (type, TYPE_FIELD_ENUMVAL (type, pos));
     }
   else
     return value_from_longest (type, value_as_long (arg));
@@ -9717,8 +9698,25 @@ ada_evaluate_subexp (struct type *expect_type, struct expression *exp,
         {
         case TYPE_CODE_FUNC:
           if (noside == EVAL_AVOID_SIDE_EFFECTS)
-            return allocate_value (TYPE_TARGET_TYPE (type));
+	    {
+	      struct type *rtype = TYPE_TARGET_TYPE (type);
+
+	      if (TYPE_GNU_IFUNC (type))
+		return allocate_value (TYPE_TARGET_TYPE (rtype));
+	      return allocate_value (rtype);
+	    }
           return call_function_by_hand (argvec[0], nargs, argvec + 1);
+	case TYPE_CODE_INTERNAL_FUNCTION:
+	  if (noside == EVAL_AVOID_SIDE_EFFECTS)
+	    /* We don't know anything about what the internal
+	       function might return, but we have to return
+	       something.  */
+	    return value_zero (builtin_type (exp->gdbarch)->builtin_int,
+			       not_lval);
+	  else
+	    return call_internal_function (exp->gdbarch, exp->language_defn,
+					   argvec[0], nargs, argvec + 1);
+
         case TYPE_CODE_STRUCT:
           {
             int arity;
@@ -10804,7 +10802,6 @@ static void
 ada_exception_support_info_sniffer (void)
 {
   struct ada_inferior_data *data = get_ada_inferior_data (current_inferior ());
-  struct symbol *sym;
 
   /* If the exception info is already known, then no need to recompute it.  */
   if (data->exception_info != NULL)

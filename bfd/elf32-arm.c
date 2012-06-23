@@ -3258,7 +3258,7 @@ create_ifunc_sections (struct bfd_link_info *info)
       s = bfd_make_section_with_flags (dynobj, ".iplt",
 				       flags | SEC_READONLY | SEC_CODE);
       if (s == NULL
-	  || !bfd_set_section_alignment (abfd, s, bed->plt_alignment))
+	  || !bfd_set_section_alignment (dynobj, s, bed->plt_alignment))
 	return FALSE;
       htab->root.iplt = s;
     }
@@ -3268,7 +3268,7 @@ create_ifunc_sections (struct bfd_link_info *info)
       s = bfd_make_section_with_flags (dynobj, RELOC_SECTION (htab, ".iplt"),
 				       flags | SEC_READONLY);
       if (s == NULL
-	  || !bfd_set_section_alignment (abfd, s, bed->s->log_file_align))
+	  || !bfd_set_section_alignment (dynobj, s, bed->s->log_file_align))
 	return FALSE;
       htab->root.irelplt = s;
     }
@@ -4611,7 +4611,7 @@ cortex_a8_erratum_scan (bfd *input_bfd,
       if (elf_section_type (section) != SHT_PROGBITS
           || (elf_section_flags (section) & SHF_EXECINSTR) == 0
           || (section->flags & SEC_EXCLUDE) != 0
-          || (section->sec_info_type == ELF_INFO_TYPE_JUST_SYMS)
+          || (section->sec_info_type == SEC_INFO_TYPE_JUST_SYMS)
           || (section->output_section == bfd_abs_section_ptr))
         continue;
 
@@ -6682,7 +6682,7 @@ bfd_elf32_arm_vfp11_erratum_scan (bfd *abfd, struct bfd_link_info *link_info)
       if (elf_section_type (sec) != SHT_PROGBITS
           || (elf_section_flags (sec) & SHF_EXECINSTR) == 0
           || (sec->flags & SEC_EXCLUDE) != 0
-	  || sec->sec_info_type == ELF_INFO_TYPE_JUST_SYMS
+	  || sec->sec_info_type == SEC_INFO_TYPE_JUST_SYMS
 	  || sec->output_section == bfd_abs_section_ptr
           || strcmp (sec->name, VFP11_ERRATUM_VENEER_SECTION_NAME) == 0)
         continue;
@@ -9664,7 +9664,7 @@ elf32_arm_final_link_relocate (reloc_howto_type *           howto,
 	    (_("%B(%A+0x%lx): R_ARM_TLS_LE32 relocation not permitted in shared object"),
 	     input_bfd, input_section,
 	     (long) rel->r_offset, howto->name);
-	  return (bfd_reloc_status_type) FALSE;
+	  return bfd_reloc_notsupported;
 	}
       else
 	value = tpoff (info, value);
@@ -10481,9 +10481,9 @@ elf32_arm_relocate_section (bfd *                  output_bfd,
 	  sym_type = h->type;
 	}
 
-      if (sec != NULL && elf_discarded_section (sec))
+      if (sec != NULL && discarded_section (sec))
 	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
-					 rel, relend, howto, contents);
+					 rel, 1, relend, howto, 0, contents);
 
       if (info->relocatable)
 	{
@@ -10956,6 +10956,43 @@ elf32_arm_final_link (bfd *abfd, struct bfd_link_info *info)
   return TRUE;
 }
 
+/* Return a best guess for the machine number based on the attributes.  */
+
+static unsigned int
+bfd_arm_get_mach_from_attributes (bfd * abfd)
+{
+  int arch = bfd_elf_get_obj_attr_int (abfd, OBJ_ATTR_PROC, Tag_CPU_arch);
+
+  switch (arch)
+    {
+    case TAG_CPU_ARCH_V4: return bfd_mach_arm_4;
+    case TAG_CPU_ARCH_V4T: return bfd_mach_arm_4T;
+    case TAG_CPU_ARCH_V5T: return bfd_mach_arm_5T;
+
+    case TAG_CPU_ARCH_V5TE:
+      {
+	char * name;
+
+	BFD_ASSERT (Tag_CPU_name < NUM_KNOWN_OBJ_ATTRIBUTES);
+	name = elf_known_obj_attributes (abfd) [OBJ_ATTR_PROC][Tag_CPU_name].s;
+
+	if (name)
+	  {
+	    if (strcmp (name, "IWMMXT2") == 0)
+	      return bfd_mach_arm_iWMMXt2;
+
+	    if (strcmp (name, "IWMMXT") == 0)
+	      return bfd_mach_arm_iWMMXt;	
+	  }
+
+	return bfd_mach_arm_5TE;
+      }
+
+    default:
+      return bfd_mach_arm_unknown;
+    }
+}
+
 /* Set the right machine number.  */
 
 static bfd_boolean
@@ -10965,15 +11002,15 @@ elf32_arm_object_p (bfd *abfd)
 
   mach = bfd_arm_get_mach_from_notes (abfd, ARM_NOTE_SECTION);
 
-  if (mach != bfd_mach_arm_unknown)
-    bfd_default_set_arch_mach (abfd, bfd_arch_arm, mach);
+  if (mach == bfd_mach_arm_unknown)
+    {
+      if (elf_elfheader (abfd)->e_flags & EF_ARM_MAVERICK_FLOAT)
+	mach = bfd_mach_arm_ep9312;
+      else
+	mach = bfd_arm_get_mach_from_attributes (abfd);
+    }
 
-  else if (elf_elfheader (abfd)->e_flags & EF_ARM_MAVERICK_FLOAT)
-    bfd_default_set_arch_mach (abfd, bfd_arch_arm, bfd_mach_arm_ep9312);
-
-  else
-    bfd_default_set_arch_mach (abfd, bfd_arch_arm, mach);
-
+  bfd_default_set_arch_mach (abfd, bfd_arch_arm, mach);
   return TRUE;
 }
 
@@ -12256,8 +12293,19 @@ elf32_arm_gc_sweep_hook (bfd *                     abfd,
       if (may_need_local_target_p
 	  && elf32_arm_get_plt_info (abfd, eh, r_symndx, &root_plt, &arm_plt))
 	{
-	  BFD_ASSERT (root_plt->refcount > 0);
-	  root_plt->refcount -= 1;
+	  /* If PLT refcount book-keeping is wrong and too low, we'll
+	     see a zero value (going to -1) for the root PLT reference
+	     count.  */
+	  if (root_plt->refcount >= 0)
+	    {
+	      BFD_ASSERT (root_plt->refcount != 0);
+	      root_plt->refcount -= 1;
+	    }
+	  else
+	    /* A value of -1 means the symbol has become local, forced
+	       or seeing a hidden definition.  Any other negative value
+	       is an error.  */
+	    BFD_ASSERT (root_plt->refcount == -1);
 
 	  if (!call_reloc_p)
 	    arm_plt->noncall_refcount--;
@@ -14429,7 +14477,7 @@ get_arm_elf_section_data (asection * sec)
 
 typedef struct
 {
-  void *finfo;
+  void *flaginfo;
   struct bfd_link_info *info;
   asection *sec;
   int sec_shndx;
@@ -14464,7 +14512,7 @@ elf32_arm_output_map_sym (output_arch_syminfo *osi,
   sym.st_shndx = osi->sec_shndx;
   sym.st_target_internal = 0;
   elf32_arm_section_map_add (osi->sec, names[type][1], offset);
-  return osi->func (osi->finfo, names[type], &sym, osi->sec, NULL) == 1;
+  return osi->func (osi->flaginfo, names[type], &sym, osi->sec, NULL) == 1;
 }
 
 /* Output mapping symbols for the PLT entry described by ROOT_PLT and ARM_PLT.
@@ -14591,7 +14639,7 @@ elf32_arm_output_stub_sym (output_arch_syminfo *osi, const char *name,
   sym.st_info = ELF_ST_INFO (STB_LOCAL, STT_FUNC);
   sym.st_shndx = osi->sec_shndx;
   sym.st_target_internal = 0;
-  return osi->func (osi->finfo, name, &sym, osi->sec, NULL) == 1;
+  return osi->func (osi->flaginfo, name, &sym, osi->sec, NULL) == 1;
 }
 
 static bfd_boolean
@@ -14703,7 +14751,7 @@ arm_map_one_stub (struct bfd_hash_entry * gen_entry,
 static bfd_boolean
 elf32_arm_output_arch_local_syms (bfd *output_bfd,
 				  struct bfd_link_info *info,
-				  void *finfo,
+				  void *flaginfo,
 				  int (*func) (void *, const char *,
 					       Elf_Internal_Sym *,
 					       asection *,
@@ -14721,7 +14769,7 @@ elf32_arm_output_arch_local_syms (bfd *output_bfd,
 
   check_use_blx (htab);
 
-  osi.finfo = finfo;
+  osi.flaginfo = flaginfo;
   osi.info = info;
   osi.func = func;
 

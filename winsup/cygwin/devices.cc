@@ -6,7 +6,10 @@
 #include "tty.h"
 #include "pinfo.h"
 #include "shared_info.h"
+#include "path.h"
+#include "fhandler.h"
 #include "ntdll.h"
+
 typedef const device *KR_device_t;
 
 
@@ -67,18 +70,16 @@ exists_ntdev_silent (const device& dev)
 static int
 exists_console (const device& dev)
 {
-  if (!iscons_dev (myself->ctty))
-    return false;
   int devn = *const_cast<device *> (&dev);
   switch (devn)
     {
     case FH_CONSOLE:
     case FH_CONIN:
     case FH_CONOUT:
-      return true;
+      return fhandler_console::exists ();
     default:
       /* Only show my own console device (for now?) */
-      return myself->ctty == devn;
+      return iscons_dev (myself->ctty) && myself->ctty == devn;
     }
 }
 
@@ -243,7 +244,7 @@ const _RDATA device dev_storage[] =
   {"/dev/fd14", BRACK(FHDEV(DEV_FLOPPY_MAJOR, 14)), "\\Device\\Floppy14", exists_ntdev, S_IFBLK, true},
   {"/dev/fd15", BRACK(FHDEV(DEV_FLOPPY_MAJOR, 15)), "\\Device\\Floppy15", exists_ntdev, S_IFBLK, true},
   {"/dev/full", BRACK(FH_FULL), "/dev/full", exists, S_IFCHR, true},
-  {"/dev/kmem", BRACK(FH_KMEM), "/dev/mem", exists, S_IFCHR, true},
+  {"/dev/kmem", BRACK(FH_KMEM), "/dev/kmem", exists, S_IFCHR, true},
   {"/dev/kmsg", BRACK(FH_KMSG), "\\Device\\MailSlot\\cygwin\\dev\\kmsg", exists_ntdev, S_IFCHR, true},
   {"/dev/mem", BRACK(FH_MEM), "/dev/mem", exists, S_IFCHR, true},
   {"/dev/nst0", BRACK(FHDEV(DEV_TAPE_MAJOR, 128)), "\\Device\\Tape0", exists_ntdev, S_IFBLK, true},

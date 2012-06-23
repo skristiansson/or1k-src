@@ -3528,13 +3528,13 @@ skip:
       as_warn (_("use .code16 to ensure correct addressing mode"));
     }
 
-  /* Check for rep/repne without a string instruction.  */
+  /* Check for rep/repne without a string (or other allowed) instruction.  */
   if (expecting_string_instruction)
     {
       static templates override;
 
       for (t = current_templates->start; t < current_templates->end; ++t)
-	if (t->opcode_modifier.isstring)
+	if (t->opcode_modifier.repprefixok)
 	  break;
       if (t >= current_templates->end)
 	{
@@ -3543,7 +3543,7 @@ skip:
 	  return NULL;
 	}
       for (override.start = t; t < current_templates->end; ++t)
-	if (!t->opcode_modifier.isstring)
+	if (!t->opcode_modifier.repprefixok)
 	  break;
       override.end = t;
       current_templates = &override;
@@ -4353,8 +4353,9 @@ check_reverse:
 	  err_msg = _("unsupported syntax");
 	  break;
 	case unsupported:
-	  err_msg = _("unsupported");
-	  break;
+	  as_bad (_("unsupported instruction `%s'"),
+		  current_templates->start->name);
+	  return NULL;
 	case invalid_vsib_address:
 	  err_msg = _("invalid VSIB address");
 	  break;
@@ -6217,7 +6218,7 @@ output_insn (void)
       unsigned int prefix;
 
       /* Since the VEX prefix contains the implicit prefix, we don't
-	  need the explicit prefix.  */
+	 need the explicit prefix.  */
       if (!i.tm.opcode_modifier.vex)
 	{
 	  switch (i.tm.opcode_length)
@@ -6256,8 +6257,7 @@ check_prefix:
 	    if (*q)
 	      FRAG_APPEND_1_CHAR (*q);
 	}
-
-      if (i.tm.opcode_modifier.vex)
+      else
 	{
 	  for (j = 0, q = i.prefix; j < ARRAY_SIZE (i.prefix); j++, q++)
 	    if (*q)
@@ -6617,6 +6617,17 @@ x86_cons_fix_new (fragS *frag, unsigned int off, unsigned int len,
 #endif
 
   fix_new_exp (frag, off, len, exp, 0, r);
+}
+
+/* Export the ABI address size for use by TC_ADDRESS_BYTES for the
+   purpose of the `.dc.a' internal pseudo-op.  */
+
+int
+x86_address_bytes (void)
+{
+  if ((stdoutput->arch_info->mach & bfd_mach_x64_32))
+    return 4;
+  return stdoutput->arch_info->bits_per_address / 8;
 }
 
 #if !(defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF) || defined (OBJ_MACH_O)) \

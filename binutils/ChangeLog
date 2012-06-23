@@ -1,3 +1,223 @@
+2012-06-12  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf-mode.el: Add final comment.  Bump version.
+	(dwarf-insert-substructure-button): Use string-to-number.
+	(dwarf-browse): Fix autoload cookie.
+
+2012-06-08  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf.c (read_and_display_attr_value): Handle
+	DW_FORM_GNU_ref_alt and DW_FORM_GNU_strp_alt.
+	(display_debug_macro): Handle DW_MACRO_GNU_define_indirect_alt,
+	DW_MACRO_GNU_undef_indirect_alt and
+	DW_MACRO_GNU_transparent_include_alt.
+
+2012-06-01  Alan Modra  <amodra@gmail.com>
+
+	* addr2line.c (translate_addresses): Truncate input addresses to
+	arch_size bits.  Avoid undefined shift.  Print '?' for zero line.
+
+2012-05-30  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c (process_section_headers): Correct bug in previous
+	delta - display full section type in wide mode.
+
+2012-05-28  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c (print_symbol): Display multibyte characters in symbol
+	names.
+	(process_section_headers): Use print_symbol.
+
+2012-05-18  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* Makefile.in: Regenerate.
+
+2012-05-17  Daniel Richard G.  <skunk@iskunk.org>
+	    Nick Clifton  <nickc@redhat.com>
+
+	PR 14072
+	* configure.in: Add check that sysdep.h has been included before
+	any system header files.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* unwind-ia64.h: Include config.h.
+
+2012-05-17  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (process_debug_info): Display abbrev offset in hex.
+	(display_debug_abbrev): Show offset of abbrev.
+
+2012-05-17  Alan Modra  <amodra@gmail.com>
+
+	* dwarf.c (display_debug_ranges): Don't report more than one use
+	of the same range set as an overlap.
+
+2012-05-16  Daniel Richard G.  <skunk@iskunk.org>
+
+	PR binutils/13558
+	* Makefile.am (CFILES): Add syslex_wrap.c.
+	(sysinfo): Depend upon syslex_wrap.o.
+	(syslex_wrap.o): New rule.
+	(syslex.o): Delete rule.
+	* syslex_wrap.c: New file.
+	* Makefile.in: Regenerate.
+
+2012-05-15  James Murray <jsm@jsm-net.demon.co.uk>
+
+	* readelf.c (get_machine_name): Update m68hc12 entry.
+
+2012-05-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* objdump.c (disassemble_bytes): Print addend as signed.
+	(dump_reloc_set): Likewise.
+
+2012-05-04  Sterling Augustine  <saugustine@google.com>
+	    Cary Coutant  <ccoutant@google.com>
+
+	* doc/binutils.texi: Add --dwarf-check option.
+	* dwarf.c (dwarf_check): New global flag.
+	(fetch_indexed_string): New function.
+	(fetch_indexed_value): New function.
+	(get_FORM_name): Add DW_FORM_GNU_str_index and DW_FORM_GNU_addr_index.
+	(decode_location_expression): Add DW_OP_GNU_addr_index.
+	(read_and_display_attr_value): Add DW_FORM_GNU_str_index,
+	DW_FORM_GNU_addr_index, DW_AT_GNU_addr_base, and DW_AT_GNU_ranges_base.
+	(get_AT_name): Add new attributes for Fission.
+	(process_debug_info): Load new debug sections for Fission.
+	(load_debug_info): Check for .debug_info.dwo section.
+	(display_loc_list, display_loc_list_dwo): New functions.
+	(display_debug_loc): Move logic to above two functions.
+	(display_debug_info): Choose abbrev section based on info section.
+	(display_debug_types): Likewise.
+	(display_trace_info): Likewise.
+	(comp_addr_base): New function.
+	(display_debug_addr): New function.
+	(display_debug_str_offsets): New function.
+	(display_debug_ranges): Allow missing range lists.  Suppress
+	diagnostics if dwarf_check not set.
+	(debug_displays): Add column to select abbrev section.
+	* dwarf.h (enum dwarf_section_display_enum): Add new debug sections
+	for Fission.
+	(struct dwarf_section): Add abbrev_sec field.
+	(struct dwarf_section_display): New type.
+	(debug_info): Add addr_base, ranges_base fields.
+	(dwarf_check): New global variable.
+	* objdump.c (usage): Add --dwarf-check option.
+	(enum option_values): Add OPTION_DWARF_CHECK.
+	(long_options): Add --dwarf-check.
+	(main): Likewise.
+	* readelf.c (OPTION_DWARF_CHECK): New macro.
+	(options): Add --dwarf-check.
+	(parse_args): Likewise.
+	(process_section_headers): Use const_strneq instead of
+	streq.
+
+2012-05-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/14088
+	* readelf.c (dump_relocations): Always display addend as
+	signed hex number.
+
+2012-05-11  Daniel Richard G.  <skunk@iskunk.org>
+
+	PR binutils/14028
+	* configure.in: Invoke ACX_HEADER_STRING.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* sysdep.h: If STRINGS_WITH_STRING is defined then include both
+	string.h and strings.h.
+
+2012-05-10  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf.c (read_and_display_attr_value): Don't look up tag from
+	abbrev for DW_FORM_ref_addr.
+
+2012-05-08  Sean Keys  <skeys@ipdatasys.com>
+
+	* binutils/MAINTAINERS: Added my entry to the maintainers secion.
+
+2012-05-08  Cary Coutant  <ccoutant@google.com>
+
+	* doc/binutils.texi (objcopy): Add --strip-dwo, --extract-dwo options.
+	(strip): Add --strip-dwo option.
+	* objcopy.c (enum strip_action): Add STRIP_DWO, STRIP_NONDWO.
+	(enum command_line_switch): Add OPTION_EXTRACT_DWO, OPTION_STRIP_DWO.
+	(strip_options): Add --strip-dwo option.
+	(copy_options): Add --extract-dwo, --strip-dwo options.
+	(copy_usage): Likewise.
+	(strip_usage): Add --strip-dwo option.
+	(is_dwo_section): New function.
+	(is_strip_section_1): Check for DWO sections.
+	(copy_object): Check for --strip-dwo, --extract-dwo options.
+	(copy_relocations_in_section): Discard relocations for DWO sections.
+	Discard entire relocation section when no relocations.
+	(strip_main): Add --strip-dwo option.
+	(copy_main): Add --strip-dwo, --extract-dwo options.
+
+2012-05-08  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.am (check_DEJAGNU): Export LC_ALL=C in place of other
+	LC and LANG environment vars.
+	* Makefile.in: Regenerate.
+
+2012-05-07  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf.c (get_TAG_name): Use get_DW_TAG_name.
+	(get_FORM_name): Use get_DW_FORM_name.
+	(get_AT_name): Use get_DW_AT_name.
+
+2012-05-07  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.am (check-DEJAGNU): Clear LC_COLLATE, LC_ALL and LANG.
+	* Makefile.in: Regenerate.
+
+2012-05-05  Alan Modra  <amodra@gmail.com>
+
+	* dlltool.c (make_one_lib_file): Use bfd_und_section_ptr.
+
+2012-05-03  Sean Keys  <skeys@ipdatasys.com>
+
+	* readelf.c: Add support for XGATE.
+
+2012-05-02  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: Updated Vietnamese translation.
+	* po/it.po: New Italian translation.
+	* configure.in (ALL_LINGUAS): Add it.
+	* configure: Regenerate.
+
+2012-05-01  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/13121
+	* rescoff.c: Rename 'finfo' to 'flaginfo' to avoid conflicts with
+	AIX system headers.
+
+2012-04-25  Cary Coutant  <ccoutant@google.com>
+
+	* doc/binutils.texi: Add -D/--enable-deterministic-archives option
+	to strip and objcopy.
+	* objcopy.c (deterministic): New global variable.
+	(strip_options): Add --enable-deterministic-archives.
+	(copy_options): Likewise.
+	(copy_usage): Likewise.
+	(strip_usage): Likewise.
+	(copy_archive): When stripping all, don't add archive map; set
+	deterministic output when requested.
+	(strip_main): Add -D/--enable-deterministic-archives option.
+	(copy_main): Likewise.
+
+2012-04-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/13947
+	* objcopy.c (copy_object): Call copy_relocations_in_section
+	before copy_section.
+	(skip_section): New.
+	(copy_relocations_in_section): Likewise.
+	(copy_section): Use skip_section.  Don't copy relocations here.
+
 2012-04-11  Ryan Mansfield  <rmansfield@qnx.com>
 
         * objdump.c (dump_bfd): If defaulting to dwarf call

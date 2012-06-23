@@ -1,12 +1,12 @@
-/ChangeLog/1.8/Fri Mar  2 20:07:13 2007//
-/Makefile.am/1.3/Sat Aug  4 11:37:13 2001//
-/Makefile.in/1.4/Sat Jun  4 03:23:11 2005//
-/README/1.1/Thu Dec  7 19:31:05 2000//
-/aclocal.m4/1.4/Sat Jun  4 03:23:11 2005//
-/arm.cxx/1.1/Thu Dec  7 19:31:05 2000//
-/arm7t-timer.h/1.5/Fri Mar  2 20:07:13 2007//
-/configure/1.5/Sat Jun  4 03:23:11 2005//
-/configure.in/1.2/Sat Aug  4 11:37:14 2001//
-/hw-timer-arm_ref.txt/1.2/Fri Aug  3 01:30:22 2001//
-/hw-timer-arm_ref.xml/1.1/Fri Aug  3 01:47:54 2001//
+/ChangeLog/1.8/Mon May  7 21:35:09 2012//
+/Makefile.am/1.3/Mon May  7 21:35:09 2012//
+/Makefile.in/1.4/Mon May  7 21:35:09 2012//
+/README/1.1/Mon May  7 21:35:09 2012//
+/aclocal.m4/1.4/Mon May  7 21:35:09 2012//
+/arm.cxx/1.1/Mon May  7 21:35:09 2012//
+/arm7t-timer.h/1.5/Mon May  7 21:35:09 2012//
+/configure/1.5/Mon May  7 21:35:09 2012//
+/configure.in/1.2/Mon May  7 21:35:09 2012//
+/hw-timer-arm_ref.txt/1.2/Mon May  7 21:35:09 2012//
+/hw-timer-arm_ref.xml/1.1/Mon May  7 21:35:09 2012//
 D

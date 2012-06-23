@@ -86,6 +86,7 @@ case ${cpu} in
   tilegx*)		cpu_type=tilegx endian=little ;;
   v850*)		cpu_type=v850 ;;
   x86_64*)		cpu_type=i386 arch=x86_64;;
+  xgate)		cpu_type=xgate ;;
   xtensa*)		cpu_type=xtensa arch=xtensa ;;
   *)			cpu_type=${cpu} ;;
 esac
@@ -204,7 +205,10 @@ case ${generic_target} in
   i386-*-linux*aout*)			fmt=aout em=linux ;;
   i386-*-linux*oldld)			fmt=aout em=linux ;;
   i386-*-linux*coff*)			fmt=coff em=linux ;;
-  i386-*-linux-*)			fmt=elf em=linux ;;
+  i386-*-linux-*)			fmt=elf em=linux
+    case ${cpu}-${os} in
+      x86_64*-linux-gnux32)		arch=x86_64:32 ;;
+    esac ;;
   i386-*-lynxos*)			fmt=elf em=lynx ;;
   i386-*-sysv[45]*)			fmt=elf ;;
   i386-*-solaris*)			fmt=elf em=solaris ;;
@@ -418,6 +422,8 @@ case ${generic_target} in
   vax-*-linux-*)			fmt=elf em=linux ;;
 
   xstormy16-*-*)			fmt=elf ;;
+  
+  xgate-*-*)    			fmt=elf ;;
 
   xtensa*-*-*)				fmt=elf ;;
 
