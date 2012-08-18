@@ -1059,10 +1059,6 @@ const CGEN_OPERAND or1k_cgen_operand_table[] =
   { "mac-maclo", OR1K_OPERAND_MAC_MACLO, HW_H_MAC_MACLO, 0, 0,
     { 0, { (const PTR) 0 } }, 
     { 0|A(SEM_ONLY), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
-/* disp26: pc-rel 26 bit */
-  { "disp26", OR1K_OPERAND_DISP26, HW_H_IADDR, 25, 26,
-    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_DISP26] } }, 
-    { 0|A(PCREL_ADDR), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
 /* uimm6: uimm6 */
   { "uimm6", OR1K_OPERAND_UIMM6, HW_H_UIMM6, 5, 6,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_UIMM6] } }, 
@@ -1079,6 +1075,10 @@ const CGEN_OPERAND or1k_cgen_operand_table[] =
   { "rB", OR1K_OPERAND_RB, HW_H_GPR, 15, 5,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_R3] } }, 
     { 0, { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
+/* disp26: pc-rel 26 bit */
+  { "disp26", OR1K_OPERAND_DISP26, HW_H_IADDR, 25, 26,
+    { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_DISP26] } }, 
+    { 0|A(PCREL_ADDR), { { { (1<<MACH_OR32)|(1<<MACH_OR32ND)|(1<<MACH_OR64)|(1<<MACH_OR64ND), 0 } } } }  },
 /* simm16: 16-bit signed immediate */
   { "simm16", OR1K_OPERAND_SIMM16, HW_H_SIMM16, 15, 16,
     { 0, { (const PTR) &or1k_cgen_ifld_table[OR1K_F_SIMM16] } }, 

@@ -273,12 +273,20 @@
 (dnop mac-machi         "MAC HI result register"           ((MACH ORBIS-MACHS) SEM-ONLY) h-mac-machi         f-nil)
 (dnop mac-maclo         "MAC LO result register"           ((MACH ORBIS-MACHS) SEM-ONLY) h-mac-maclo         f-nil)
 
-(dnop disp26            "pc-rel 26 bit"                    ((MACH ORBIS-MACHS))          h-iaddr             f-disp26)
 (dnop uimm6             "uimm6"                            ((MACH ORBIS-MACHS))          h-uimm6             f-uimm6)
 
 (dnop rD                "destination register"             ((MACH ORBIS-MACHS))          h-gpr               f-r1)
 (dnop rA                "source register A"                ((MACH ORBIS-MACHS))          h-gpr               f-r2)
 (dnop rB                "source register B"                ((MACH ORBIS-MACHS))          h-gpr               f-r3)
+
+(define-operand
+  (name disp26)
+  (comment "pc-rel 26 bit")
+  (attrs (MACH ORBIS-MACHS))
+  (type h-iaddr)
+  (index f-disp26)
+  (handlers (parse "disp26"))
+  )
 
 (define-operand
   (name simm16)

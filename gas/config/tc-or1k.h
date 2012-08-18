@@ -50,8 +50,6 @@ extern const char or1k_comment_chars [];
 extern bfd_boolean or1k_fix_adjustable (struct fix *);
 #define tc_fix_adjustable(FIX) or1k_fix_adjustable (FIX)
 
-#define tc_gen_reloc gas_cgen_tc_gen_reloc
-
 /* Call md_pcrel_from_section(), not md_pcrel_from().  */
 extern long md_pcrel_from_section (struct fix *, segT);
 #define MD_PCREL_FROM_SECTION(FIX, SEC) md_pcrel_from_section (FIX, SEC)

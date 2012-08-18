@@ -56,6 +56,36 @@ static const char * MISSING_CLOSING_PARENTHESIS = N_("missing `)'");
 #define CGEN_VERBOSE_ASSEMBLER_ERRORS
 
 static const char *
+parse_disp26 (CGEN_CPU_DESC cd,
+              const char ** strp,
+              int opindex,
+              int opinfo,
+              enum cgen_parse_operand_result * resultp,
+              bfd_vma * valuep)
+{
+  const char *errmsg = NULL;
+  enum cgen_parse_operand_result result_type;
+
+  if (strncasecmp (*strp, "plt(", 4) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 4;
+      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_OR1K_PLT26,
+                                   & result_type, & value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value = (value >> 2) & 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  return cgen_parse_address (cd, strp, opindex, opinfo, resultp, valuep);
+}
+
+static const char *
 parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
 {
   const char *errmsg;
@@ -103,6 +133,93 @@ parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
         ret = (ret ^ 0x8000) - 0x8000;
       }
       
+    }
+  else if (strncasecmp (*strp, "got(", 4) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 4;
+      errmsg = cgen_parse_address (cd, strp, opindex, BFD_RELOC_OR1K_GOT16,
+                                   & result_type, & value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value &= 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  /* FIXME: figure this out from the _GLOBAL_OFFSET_TABLE_
+   * instead, so it's possible to do hi/lo(_GLOBAL_OFFSET_TABLE_+offs) */
+  else if (strncasecmp (*strp, "gotpchi(", 8) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 8;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_GOTPC_HI16,
+                                   & result_type, & value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value = (value >> 16) & 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "gotpclo(", 8) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 8;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_GOTPC_LO16,
+                                   &result_type, &value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value &= 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "gotoffhi(", 9) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 9;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_GOTOFF_HI16,
+                                   & result_type, & value);
+
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value = (value >> 16) & 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "gotofflo(", 9) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 9;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_GOTOFF_LO16,
+                                   &result_type, &value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value &= 0xffff;
+      *valuep = value;
+      return errmsg;
     }
   else
     {
@@ -162,7 +279,7 @@ or1k_cgen_parse_operand (CGEN_CPU_DESC cd,
     case OR1K_OPERAND_DISP26 :
       {
         bfd_vma value = 0;
-        errmsg = cgen_parse_address (cd, strp, OR1K_OPERAND_DISP26, 0, NULL,  & value);
+        errmsg = parse_disp26 (cd, strp, OR1K_OPERAND_DISP26, 0, NULL,  & value);
         fields->f_disp26 = value;
       }
       break;
