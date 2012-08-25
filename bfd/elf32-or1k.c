@@ -440,7 +440,8 @@ struct elf_or1k_link_hash_table
   asection *sdynbss;
   asection *srelbss;
 
-  int relocs32;
+  /* Small local sym to section mapping cache.  */
+  struct sym_cache sym_sec;
 };
 
 /* Get the ELF linker hash table from a link_info structure.  */
@@ -510,7 +511,6 @@ or1k_elf_link_hash_table_create (bfd *abfd)
   ret->srelplt = NULL;
   ret->sdynbss = NULL;
   ret->srelbss = NULL;
-  ret->relocs32 = 0;
 
   return &ret->root.root;
 }
@@ -606,6 +606,7 @@ or1k_elf_relocate_section (bfd *output_bfd,
   Elf_Internal_Rela *relend;
   struct elf_or1k_link_hash_table *htab = or1k_elf_hash_table (info);
   bfd *dynobj;
+  asection *sreloc;
   bfd_vma *local_got_offsets;
   asection *sgot;
 
@@ -614,6 +615,8 @@ or1k_elf_relocate_section (bfd *output_bfd,
 
   dynobj = htab->root.dynobj;
   local_got_offsets = elf_local_got_offsets (input_bfd);
+
+  sreloc = elf_section_data (input_section)->sreloc;
 
   sgot = htab->sgot;
 
@@ -798,6 +801,94 @@ or1k_elf_relocate_section (bfd *output_bfd,
           relocation -= sgot->output_section->vma;
           break;
 
+	case R_OR1K_INSN_REL_26:
+	case R_OR1K_32:
+	  /*
+	  R_OR1K_16? */
+	  {
+	    /* r_symndx will be STN_UNDEF (zero) only for relocs against symbols
+	       from removed linkonce sections, or sections discarded by
+	       a linker script.  */
+	    if (r_symndx == STN_UNDEF
+		|| (input_section->flags & SEC_ALLOC) == 0)
+	      break;
+
+	    if ((info->shared
+		 && (h == NULL
+		     || ELF_ST_VISIBILITY (h->other) == STV_DEFAULT
+		     || h->root.type != bfd_link_hash_undefweak)
+		 && (!howto->pc_relative
+		     || (h != NULL
+			 && h->dynindx != -1
+			 && (!info->symbolic
+			     || !h->def_regular))))
+		|| (!info->shared
+		    && h != NULL
+		    && h->dynindx != -1
+		    && !h->non_got_ref
+		    && ((h->def_dynamic
+			 && !h->def_regular)
+			|| h->root.type == bfd_link_hash_undefweak
+			|| h->root.type == bfd_link_hash_undefined)))
+	      {
+		Elf_Internal_Rela outrel;
+		bfd_byte *loc;
+		bfd_boolean skip;
+
+		/* When generating a shared object, these relocations
+		   are copied into the output file to be resolved at run
+		   time.  */
+
+		BFD_ASSERT (sreloc != NULL);
+
+		skip = FALSE;
+
+		outrel.r_offset =
+		  _bfd_elf_section_offset (output_bfd, info, input_section,
+					   rel->r_offset);
+		if (outrel.r_offset == (bfd_vma) -1)
+		  skip = TRUE;
+		else if (outrel.r_offset == (bfd_vma) -2)
+		  skip = TRUE;
+		outrel.r_offset += (input_section->output_section->vma
+				    + input_section->output_offset);
+
+		if (skip)
+		  memset (&outrel, 0, sizeof outrel);
+		/* h->dynindx may be -1 if the symbol was marked to
+		   become local.  */
+		else if (h != NULL
+			 && ((! info->symbolic && h->dynindx != -1)
+			     || !h->def_regular))
+		  {
+		    BFD_ASSERT (h->dynindx != -1);
+		    outrel.r_info = ELF32_R_INFO (h->dynindx, r_type);
+		    outrel.r_addend = rel->r_addend;
+		  }
+		else
+		  {
+		    if (r_type == R_OR1K_32)
+		      {
+			outrel.r_info = ELF32_R_INFO (0, R_OR1K_RELATIVE);
+			outrel.r_addend = relocation + rel->r_addend;
+		      }
+		    else
+		      {
+			BFD_FAIL ();
+			(*_bfd_error_handler)
+			  (_("%B: probably compiled without -fPIC?"),
+			   input_bfd);
+			bfd_set_error (bfd_error_bad_value);
+			return FALSE;
+		      }
+		  }
+
+		loc = sreloc->contents;
+		loc += sreloc->reloc_count++ * sizeof (Elf32_External_Rela);
+		bfd_elf32_swap_reloca_out (output_bfd, &outrel, loc);
+		break;
+	      }
+	  }
         default:
           break;
         }
@@ -980,6 +1071,7 @@ or1k_elf_check_relocs (bfd *abfd,
   const Elf_Internal_Rela *rel_end;
   struct elf_or1k_link_hash_table *htab;
   bfd *dynobj;
+  asection *sreloc = NULL;
 
   if (info->relocatable)
     return TRUE;
@@ -1072,7 +1164,155 @@ or1k_elf_check_relocs (bfd *abfd,
                 }
             }
           break;
-        }
+
+	case R_OR1K_INSN_REL_26:
+	case R_OR1K_32:
+	  /* R_OR1K_16? */
+          {
+            if (h != NULL && !info->shared)
+	      {
+		/* we may need a copy reloc.  */
+		h->non_got_ref = 1;
+
+		/* we may also need a .plt entry.  */
+		h->plt.refcount += 1;
+		if (ELF32_R_TYPE (rel->r_info) != R_OR1K_INSN_REL_26)
+		  h->pointer_equality_needed = 1;
+	      }
+
+
+	    /* If we are creating a shared library, and this is a reloc
+	       against a global symbol, or a non PC relative reloc
+	       against a local symbol, then we need to copy the reloc
+	       into the shared library.  However, if we are linking with
+	       -Bsymbolic, we do not need to copy a reloc against a
+	       global symbol which is defined in an object we are
+	       including in the link (i.e., DEF_REGULAR is set).  At
+	       this point we have not seen all the input files, so it is
+	       possible that DEF_REGULAR is not set now but will be set
+	       later (it is never cleared).  In case of a weak definition,
+	       DEF_REGULAR may be cleared later by a strong definition in
+	       a shared library.  We account for that possibility below by
+	       storing information in the relocs_copied field of the hash
+	       table entry.  A similar situation occurs when creating
+	       shared libraries and symbol visibility changes render the
+	       symbol local.
+
+	       If on the other hand, we are creating an executable, we
+	       may need to keep relocations for symbols satisfied by a
+	       dynamic library if we manage to avoid copy relocs for the
+	       symbol.  */
+
+            if ((info->shared
+                 && (sec->flags & SEC_ALLOC) != 0
+                 && (ELF32_R_TYPE (rel->r_info) != R_OR1K_INSN_REL_26
+		     || (h != NULL
+			 && (! info->symbolic
+			     || h->root.type == bfd_link_hash_defweak
+			     || !h->def_regular))))
+                || (!info->shared
+                    && (sec->flags & SEC_ALLOC) != 0
+                    && h != NULL
+                    && (h->root.type == bfd_link_hash_defweak
+                        || !h->def_regular)))
+              {
+                struct elf_or1k_dyn_relocs *p;
+                struct elf_or1k_dyn_relocs **head;
+
+                /* When creating a shared object, we must copy these
+                   relocs into the output file.  We create a reloc
+                   section in dynobj and make room for the reloc.  */
+
+		if (sreloc == NULL)
+		  {
+		    const char *name;
+		    unsigned int strndx = elf_elfheader (abfd)->e_shstrndx;
+		    unsigned int shnam = _bfd_elf_single_rel_hdr (sec)->sh_name;
+
+		    name = bfd_elf_string_from_elf_section (abfd, strndx, shnam);
+		    if (name == NULL)
+		      return FALSE;
+
+		    if (strncmp (name, ".rela", 5) != 0
+			|| strcmp (bfd_get_section_name (abfd, sec),
+				   name + 5) != 0)
+		      {
+			(*_bfd_error_handler)
+			  (_("%B: bad relocation section name `%s\'"),
+			   abfd, name);
+		      }
+
+		    if (htab->root.dynobj == NULL)
+		      htab->root.dynobj = abfd;
+		    dynobj = htab->root.dynobj;
+
+		    sreloc = bfd_get_section_by_name (dynobj, name);
+		    if (sreloc == NULL)
+		      {
+			flagword flags;
+
+			sreloc = bfd_make_section (dynobj, name);
+			flags = (SEC_HAS_CONTENTS | SEC_READONLY
+				 | SEC_IN_MEMORY | SEC_LINKER_CREATED);
+			if ((sec->flags & SEC_ALLOC) != 0)
+			  flags |= SEC_ALLOC | SEC_LOAD;
+			if (sreloc == NULL
+			    || ! bfd_set_section_flags (dynobj, sreloc, flags)
+			    || ! bfd_set_section_alignment (dynobj, sreloc, 2))
+			  return FALSE;
+		      }
+		    elf_section_data (sec)->sreloc = sreloc;
+		  }
+
+		/* If this is a global symbol, we count the number of
+		   relocations we need for this symbol.  */
+		if (h != NULL)
+		  head = &((struct elf_or1k_link_hash_entry *) h)->dyn_relocs;
+		else
+		  {
+		    /* Track dynamic relocs needed for local syms too.
+		       We really need local syms available to do this
+		       easily.  Oh well.  */
+
+		    asection *s;
+		    Elf_Internal_Sym *isym;
+		    void *vpp;
+
+		    isym = bfd_sym_from_r_symndx (&htab->sym_sec,
+						  abfd, r_symndx);
+		    if (isym == NULL)
+		      return FALSE;
+
+		    s = bfd_section_from_elf_index (abfd, isym->st_shndx);
+		    if (s == NULL)
+		      return FALSE;
+
+		    vpp = &elf_section_data (s)->local_dynrel;
+		    head = (struct elf_or1k_dyn_relocs **) vpp;
+		  }
+
+		p = *head;
+		if (p == NULL || p->sec != sec)
+		  {
+		    bfd_size_type amt = sizeof *p;
+		    p = ((struct elf_or1k_dyn_relocs *)
+			 bfd_alloc (htab->root.dynobj, amt));
+		    if (p == NULL)
+		      return FALSE;
+		    p->next = *head;
+		    *head = p;
+		    p->sec = sec;
+		    p->count = 0;
+		    p->pc_count = 0;
+		  }
+
+		p->count += 1;
+		if (ELF32_R_TYPE (rel->r_info) == R_OR1K_INSN_REL_26)
+		  p->pc_count += 1;
+	      }
+          }
+          break;
+	}
     }
 
   return TRUE;
