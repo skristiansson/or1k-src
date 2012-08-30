@@ -29,17 +29,29 @@
 
 #define PLT_ENTRY_SIZE 20
 
-#define PLT_ENTRY_WORD0  0x19e00000 /* l.movhi r15, 0 */
-#define PLT_ENTRY_WORD1  0x85e00000 /* l.lwz r15, 0(r0) */
-#define PLT_ENTRY_WORD2  0x44007800 /* l.jr r15 */
-#define PLT_ENTRY_WORD3  0x15000000 /* l.nop */
-#define PLT_ENTRY_WORD4  0x15000000 /* l.nop */
+#define PLT0_ENTRY_WORD0 0x19800000 /* l.movhi r12, 0 <- hi(.got+4) */
+#define PLT0_ENTRY_WORD1 0xa98c0000 /* l.ori r12, r12, 0 <- lo(.got+4) */
+#define PLT0_ENTRY_WORD2 0x85ec0004 /* l.lwz r15, 4(r12) <- *(.got+8)*/
+#define PLT0_ENTRY_WORD3 0x44007800 /* l.jr r15 */
+#define PLT0_ENTRY_WORD4 0x858c0000 /* l.lwz r12, 0(r12) */
 
-#define PLT_PIC_ENTRY_WORD0  0x19e00000 /* l.movhi r15, 0 */
-#define PLT_PIC_ENTRY_WORD1  0x85f00000 /* l.lwz r15, 0(r16) */
-#define PLT_PIC_ENTRY_WORD2  0x44007800 /* l.jr r15 */
-#define PLT_PIC_ENTRY_WORD3  0x15000000 /* l.nop */
-#define PLT_PIC_ENTRY_WORD4  0x15000000 /* l.nop */
+#define PLT0_PIC_ENTRY_WORD0 0x85900004 /* l.lwz r12, 4(r16) */
+#define PLT0_PIC_ENTRY_WORD1 0x85f00008 /* l.lwz r15, 8(r16) */
+#define PLT0_PIC_ENTRY_WORD2 0x44007800 /* l.jr r15 */
+#define PLT0_PIC_ENTRY_WORD3 0x15000000 /* l.nop */
+#define PLT0_PIC_ENTRY_WORD4 0x15000000 /* l.nop */
+
+#define PLT_ENTRY_WORD0 0x19800000 /* l.movhi r12, 0 <- hi(got idx addr) */
+#define PLT_ENTRY_WORD1 0xa98c0000 /* l.ori r12, r12, 0 <- lo(got idx addr) */
+#define PLT_ENTRY_WORD2 0x858c0000 /* l.lwz r12, 0(r12) */
+#define PLT_ENTRY_WORD3 0x44006000 /* l.jr r12 */
+#define PLT_ENTRY_WORD4 0xa9600000 /* l.ori r11, r0, 0 <- reloc offset */
+
+#define PLT_PIC_ENTRY_WORD0 0x85900000 /* l.lwz r12, 0(r16) <- index in got */
+#define PLT_PIC_ENTRY_WORD1 0xa9600000 /* l.ori r11, r0, 0 <- reloc offset */
+#define PLT_PIC_ENTRY_WORD2 0x44006000 /* l.jr r12 */
+#define PLT_PIC_ENTRY_WORD3 0x15000000 /* l.nop */
+#define PLT_PIC_ENTRY_WORD4 0x15000000 /* l.nop */
 
 #define ELF_DYNAMIC_INTERPRETER "/usr/lib/ld.so.1"
 
@@ -1334,6 +1346,7 @@ or1k_elf_finish_dynamic_sections (bfd *output_bfd,
 
   dynobj = htab->root.dynobj;
 
+  sgot = htab->sgotplt;
   sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
 
   if (htab->root.dynamic_sections_created)
@@ -1341,62 +1354,101 @@ or1k_elf_finish_dynamic_sections (bfd *output_bfd,
       asection *splt;
       Elf32_External_Dyn *dyncon, *dynconend;
 
-      splt = bfd_get_section_by_name (dynobj, ".plt");
-      BFD_ASSERT (splt != NULL && sdyn != NULL);
+      BFD_ASSERT (sgot != NULL && sdyn != NULL);
 
       dyncon = (Elf32_External_Dyn *) sdyn->contents;
       dynconend = (Elf32_External_Dyn *) (sdyn->contents + sdyn->size);
+
       for (; dyncon < dynconend; dyncon++)
 	{
 	  Elf_Internal_Dyn dyn;
-          const char *name;
-	  bfd_boolean size;
+          asection *s;
 
 	  bfd_elf32_swap_dyn_in (dynobj, dyncon, &dyn);
 
 	  switch (dyn.d_tag)
 	    {
-	    case DT_PLTGOT:   name = ".got.plt"; size = FALSE; break;
-	    case DT_PLTRELSZ: name = ".rela.plt"; size = TRUE; break;
-	    case DT_JMPREL:   name = ".rela.plt"; size = FALSE; break;
-	    case DT_RELA:     name = ".rela.dyn"; size = FALSE; break;
-	    case DT_RELASZ:   name = ".rela.dyn"; size = TRUE; break;
-	    default:	  name = NULL; size = FALSE; break;
-	    }
+	    default:
+	      continue;
 
-	  if (name != NULL)
-	    {
-	      asection *s;
+	    case DT_PLTGOT:
+	      s = htab->sgot->output_section;
+	      BFD_ASSERT (s != NULL);
+	      dyn.d_un.d_ptr = s->vma;
+	      break;
 
-	      s = bfd_get_section_by_name (output_bfd, name);
-	      if (s == NULL)
-		dyn.d_un.d_val = 0;
-	      else
+	    case DT_JMPREL:
+	      s = htab->srelplt->output_section;
+	      BFD_ASSERT (s != NULL);
+	      dyn.d_un.d_ptr = s->vma;
+	      break;
+
+	    case DT_PLTRELSZ:
+	      s = htab->srelplt->output_section;
+	      BFD_ASSERT (s != NULL);
+	      dyn.d_un.d_val = s->size;
+	      break;
+
+	    case DT_RELASZ:
+	      /* My reading of the SVR4 ABI indicates that the
+		 procedure linkage table relocs (DT_JMPREL) should be
+		 included in the overall relocs (DT_RELA).  This is
+		 what Solaris does.  However, UnixWare can not handle
+		 that case.  Therefore, we override the DT_RELASZ entry
+		 here to make it not include the JMPREL relocs.  Since
+		 the linker script arranges for .rela.plt to follow all
+		 other relocation sections, we don't have to worry
+		 about changing the DT_RELA entry.  */
+	      if (htab->srelplt != NULL)
 		{
-		  if (! size)
-		    dyn.d_un.d_ptr = s->vma;
-		  else
-		    dyn.d_un.d_val = s->size;
+		  s = htab->srelplt->output_section;
+		  dyn.d_un.d_val -= s->size;
 		}
-	      bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
+	      break;
 	    }
+	  bfd_elf32_swap_dyn_out (output_bfd, &dyn, dyncon);
 	}
 
-      /* Clear the first entry in the procedure linkage table,
-	 and put a nop in the last four bytes.  */
-      if (splt->size > 0)
+
+      /* Fill in the first entry in the procedure linkage table.  */
+      splt = htab->splt;
+      if (splt && splt->size > 0)
 	{
-	  memset (splt->contents, 0, PLT_ENTRY_SIZE);
-	  bfd_put_32 (output_bfd, (bfd_vma) 0x15000000 /* nop.  */,
-		      splt->contents + splt->size - 4);
-	}
+	  if (info->shared)
+	    {
+	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD0,
+			  splt->contents);
+	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD1,
+			  splt->contents + 4);
+	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD2,
+			  splt->contents + 8);
+	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD3,
+			  splt->contents + 12);
+	      bfd_put_32 (output_bfd, PLT0_PIC_ENTRY_WORD4,
+			  splt->contents + 16);
+	    }
+	  else
+	    {
+	      unsigned long addr;
+	      /* addr = .got + 4 */
+	      addr = sgot->output_section->vma + sgot->output_offset + 4;
+	      bfd_put_32 (output_bfd,
+			  PLT0_ENTRY_WORD0 | ((addr >> 16) & 0xffff),
+			  splt->contents);
+	      bfd_put_32 (output_bfd,
+			  PLT0_ENTRY_WORD1 | (addr & 0xffff),
+			  splt->contents + 4);
+	      bfd_put_32 (output_bfd, PLT0_ENTRY_WORD2, splt->contents + 8);
+	      bfd_put_32 (output_bfd, PLT0_ENTRY_WORD3, splt->contents + 12);
+	      bfd_put_32 (output_bfd, PLT0_ENTRY_WORD4, splt->contents + 16);
+	    }
 
-      elf_section_data (splt->output_section)->this_hdr.sh_entsize = 4;
+	  elf_section_data (splt->output_section)->this_hdr.sh_entsize = 4;
+	}
     }
 
   /* Set the first entry in the global offset table to the address of
      the dynamic section.  */
-  sgot = bfd_get_section_by_name (dynobj, ".got.plt");
   if (sgot && sgot->size > 0)
     {
       if (sdyn == NULL)
@@ -1475,17 +1527,18 @@ or1k_elf_finish_dynamic_symbol (bfd *output_bfd,
 		      splt->contents + h->plt.offset + 8);
 	  bfd_put_32 (output_bfd, (bfd_vma) PLT_ENTRY_WORD3,
 		      splt->contents + h->plt.offset + 12);
-	  bfd_put_32 (output_bfd, (bfd_vma) PLT_ENTRY_WORD4,
+	  bfd_put_32 (output_bfd, PLT_ENTRY_WORD4
+		      | plt_index * sizeof (Elf32_External_Rela),
 		      splt->contents + h->plt.offset + 16);
 	}
       else
 	{
-	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD0
-		      | ((got_addr >> 16) & 0xffff),
+	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD0 | (got_addr & 0xffff),
 		      splt->contents + h->plt.offset);
-	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD1 | (got_addr & 0xffff),
+	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD1,
 		      splt->contents + h->plt.offset + 4);
-	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD2,
+	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD2
+		      | plt_index * sizeof (Elf32_External_Rela),
 		      splt->contents + h->plt.offset + 8);
 	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD3,
 		      splt->contents + h->plt.offset + 12);
