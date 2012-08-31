@@ -1549,9 +1549,7 @@ or1k_elf_finish_dynamic_symbol (bfd *output_bfd,
       /* Fill in the entry in the global offset table.  */
       bfd_put_32 (output_bfd,
 		  (splt->output_section->vma
-		   + splt->output_offset
-		   + h->plt.offset
-		   + 12), /* same offset */
+		   + splt->output_offset), /* same offset */
 		  sgot->contents + got_offset);
 
       /* Fill in the entry in the .rela.plt section.  */
