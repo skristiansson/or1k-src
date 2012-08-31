@@ -1535,10 +1535,10 @@ or1k_elf_finish_dynamic_symbol (bfd *output_bfd,
 	{
 	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD0 | (got_addr & 0xffff),
 		      splt->contents + h->plt.offset);
-	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD1,
-		      splt->contents + h->plt.offset + 4);
-	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD2
+	  bfd_put_32 (output_bfd, PLT_PIC_ENTRY_WORD1
 		      | plt_index * sizeof (Elf32_External_Rela),
+		      splt->contents + h->plt.offset + 4);
+	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD2,
 		      splt->contents + h->plt.offset + 8);
 	  bfd_put_32 (output_bfd, (bfd_vma) PLT_PIC_ENTRY_WORD3,
 		      splt->contents + h->plt.offset + 12);
