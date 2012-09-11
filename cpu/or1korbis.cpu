@@ -56,7 +56,7 @@
     25
     26
     INT
-    ((value pc) (sra IAI (sub IAI value pc) (const 2)))
+    ((value pc) (sra SI (sub IAI value pc) (const 2)))
     ((value pc) (add IAI (sll IAI value (const 2)) pc))
     )
 
