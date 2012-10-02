@@ -1,5 +1,11 @@
 2012-10-02  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
 
+	* or1k/Makefile.in: add atlys and de0_nano to BOARDS
+	* or1k/atlys.S: new file
+	* or1k/de0_nano.S: ditto
+
+2012-10-02  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
 	* or1k/ml501.S: make board globals weak
 	* or1k/or1ksim-uart.S: ditto
 	* or1k/or1ksim.S: ditto
