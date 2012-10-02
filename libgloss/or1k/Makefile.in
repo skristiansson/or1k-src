@@ -73,7 +73,14 @@ OBJCOPY = `if [ -f ${objroot}/../binutils/objcopy ] ; \
 CFLAGS =  -g
 
 # List new boards here - should be accompanied by own <board>.[cS]
-BOARDS   = or1ksim or1ksim-uart orpsocrefdesign ordb1a3pe1500 ml501 ordb2a
+BOARDS = 	or1ksim		\
+		or1ksim-uart	\
+		orpsocrefdesign	\
+		ordb1a3pe1500	\
+		ml501		\
+		ordb2a		\
+		atlys		\
+		de0_nano
 
 BOARD_OBJS = $(addsuffix .o,$(BOARDS))
 BOARD_LIBS = $(addsuffix .a,$(BOARDS))
