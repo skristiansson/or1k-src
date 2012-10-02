@@ -1,3 +1,12 @@
+2012-10-02  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* or1k/ml501.S: make board globals weak
+	* or1k/or1ksim-uart.S: ditto
+	* or1k/or1ksim.S: ditto
+	* or1k/ordb1a3pe1500.S: ditto
+	* or1k/ordb2a.S: ditto
+	* or1k/orpsocrefdesign.S: ditto
+
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
 	make each board use its own exit routine
