@@ -310,21 +310,10 @@ tc_gen_reloc (asection *sec, fixS *fx)
   bfd_reloc_code_real_type code = fx->fx_r_type;
 
   if (fx->fx_addsy != NULL
-      && strcmp (S_GET_NAME (fx->fx_addsy), GOT_NAME) == 0)
+      && strcmp (S_GET_NAME (fx->fx_addsy), GOT_NAME) == 0
+      && (code == BFD_RELOC_OR1K_GOTPC_HI16
+	  || code == BFD_RELOC_OR1K_GOTPC_LO16))
     {
-      switch (code)
-        {
-        case BFD_RELOC_OR1K_GOTPC_HI16:
-        case BFD_RELOC_HI16:
-          code = BFD_RELOC_OR1K_GOTPC_HI16;
-          break;
-        case BFD_RELOC_OR1K_GOTPC_LO16:
-        case BFD_RELOC_LO16:
-          code = BFD_RELOC_OR1K_GOTPC_LO16;
-          break;
-        default:
-          return gas_cgen_tc_gen_reloc (sec, fx);
-        }
       arelent * reloc;
 
       reloc = xmalloc (sizeof (* reloc));

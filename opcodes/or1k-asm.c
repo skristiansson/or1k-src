@@ -150,8 +150,6 @@ parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
       *valuep = value;
       return errmsg;
     }
-  /* FIXME: figure this out from the _GLOBAL_OFFSET_TABLE_
-   * instead, so it's possible to do hi/lo(_GLOBAL_OFFSET_TABLE_+offs) */
   else if (strncasecmp (*strp, "gotpchi(", 8) == 0)
     {
       bfd_vma value;
