@@ -1,3 +1,7 @@
+2012-09-12  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* or1k-ibld.c: regenerate
+
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
 	* or1k-desc.h: ditto

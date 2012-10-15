@@ -1,3 +1,10 @@
+2012-09-11  Stefan Kristiansson <stefan.kristiansson@saunalahti.fi>
+
+	fix regression on 32-bit machines
+	* or1korbis.cpu:
+	(f-disp26) implicitly use SI to cast the result of the
+	subtraction, regardless of the value of cpu:word-bitsize
+
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
 	fix some carry/overflow flag problems, fix mac problems
