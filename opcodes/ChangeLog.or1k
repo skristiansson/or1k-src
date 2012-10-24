@@ -1,3 +1,9 @@
+2012-10-24  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* or1k-asm.c: Regenerate.
+	* or1k-desc.c: Likewise.
+	* or1k-desc.h: Likewise.
+
 2012-09-12  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
 
 	* or1k-ibld.c: regenerate
