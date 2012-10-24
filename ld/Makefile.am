@@ -242,6 +242,7 @@ ALL_EMULATION_SOURCES = \
 	eelf32moxie.c \
 	eelf32mt.c \
 	eelf32or1k.c \
+	eelf32or1k_linux.c \
 	eelf32ppc.c \
 	eelf32ppc_fbsd.c \
 	eelf32ppclinux.c \
@@ -1125,6 +1126,9 @@ eelf32mt.c: $(srcdir)/emulparams/elf32mt.sh \
 eelf32or1k.c: $(srcdir)/emulparams/elf32or1k.sh \
   $(ELF_GEN_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32or1k "$(tdir_elf32or1k)"
+eelf32or1k_linux.c: $(srcdir)/emulparams/elf32or1k_linux.sh \
+  $(ELF_GEN_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} elf32or1k_linux "$(tdir_elf32or1k_linux)"
 eelf32ppc.c: $(srcdir)/emulparams/elf32ppc.sh \
   $(srcdir)/emulparams/elf32ppccommon.sh $(srcdir)/emultempl/ppc32elf.em \
   ldemul-list.h \
