@@ -1,3 +1,9 @@
+2012-10-24  Stefan Kristiansson <stefan.kristiansson@saunalahti.fi>
+
+	* or1k.opc (parse_disp26): New function. Parsing for plt().
+	(parse_simm16): Add parsing for got(), gotoffhi() and gotofflo().
+	* or1korbis.cpu (disp26): Use custom handler.
+
 2012-09-11  Stefan Kristiansson <stefan.kristiansson@saunalahti.fi>
 
 	fix regression on 32-bit machines
