@@ -3,6 +3,9 @@
    Free Software Foundation, Inc.
    Contributed by Johan Rydberg, jrydberg@opencores.org
 
+   PIC parts added by Stefan Kristiansson, stefan.kristiansson@saunalahti.fi,
+   largely based on elf32-m32r.c and elf32-microblaze.c.
+
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
@@ -369,8 +372,6 @@ static reloc_howto_type or1k_elf_howto_table[] =
 	 0xffffffff,		/* src_mask */
 	 0xffffffff,		/* dst_mask */
 	 FALSE),		/* pcrel_offset */
-
-
 };
 
 /* Map BFD reloc types to Or1k ELF reloc types.  */
@@ -657,8 +658,8 @@ or1k_elf_relocate_section (bfd *output_bfd,
 
       if (r_type < 0 || r_type >= (int) R_OR1K_max)
         {
-	  bfd_set_error (bfd_error_bad_value);
-	  return FALSE;
+          bfd_set_error (bfd_error_bad_value);
+          return FALSE;
         }
 
       howto = or1k_elf_howto_table + ELF32_R_TYPE (rel->r_info);
@@ -907,7 +908,7 @@ or1k_elf_relocate_section (bfd *output_bfd,
 	  break;
 	}
       r = _bfd_final_link_relocate (howto, input_bfd, input_section, contents,
-				    rel->r_offset, relocation, rel->r_addend);
+                                    rel->r_offset, relocation, rel->r_addend);
 
       if (r != bfd_reloc_ok)
 	{

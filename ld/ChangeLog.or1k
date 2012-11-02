@@ -1,3 +1,11 @@
+2012-10-24  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* emulparams/elf32or1k_linux.sh: New file.
+	* Makefile.am (ALL_EMULATION_SOURCES): Add eelf32or1k_linux.c
+	(eelf32or1k_linux.c): New rule.
+	* Makefile.in: Regenerate.
+	* configure.tgt: Use elf32or1k_linux for or1k(nd)-*-linux.
+
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
 	* configure.tgt: add or1knd targets

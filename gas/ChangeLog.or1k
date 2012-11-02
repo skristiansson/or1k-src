@@ -1,3 +1,10 @@
+2012-10-24  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* config/tc-or1k.c (tc_gen_reloc): New function. Handle
+	BFD_RELOC_OR1K_GOTPC_HI16 and BFD_RELOC_OR1K_GOTPC_LO16 relocations
+	to _GLOBAL_OFFSET_TABLE_
+	* config/tc-or1k.h (tc_gen_reloc): Remove define.
+
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
 	* config/tc-or1k.h:

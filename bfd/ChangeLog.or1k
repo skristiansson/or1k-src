@@ -1,3 +1,48 @@
+2012-10-24  Stefan Kristiansson <stefan.kristiansson@saunalahti.fi>
+
+	* elf-bfd.h (elf_target_id): Add OR1K_ELF_DATA.
+	* elf32-or1k.c (or1k_elf_howto_table): Add R_OR1K_GOTPC_HI16,
+	R_OR1K_GOTPC_LO16, R_OR1K_GOT16, R_OR1K_PLT26, R_OR1K_GOTOFF_HI16,
+	R_OR1K_GOTOFF_LO16, R_OR1K_COPY, R_OR1K_GLOB_DAT, R_OR1K_JMP_SLOT and
+	R_OR1K_RELATIVE.
+	(or1k_reloc_map): Add BFD_RELOC_OR1K_GOTPC_HI16,
+	BFD_RELOC_OR1K_GOTPC_LO16, BFD_RELOC_OR1K_GOT16,
+	BFD_RELOC_OR1K_PLT26, BFD_RELOC_OR1K_GOTOFF_HI16,
+	BFD_RELOC_OR1K_GOTOFF_LO16, BFD_RELOC_OR1K_GLOB_DAT,
+	BFD_RELOC_OR1K_COPY, BFD_RELOC_OR1K_JMP_SLOT and
+	BFD_RELOC_OR1K_RELATIVE.
+	(struct elf_or1k_dyn_relocs): New declaration.
+	(struct elf_or1k_link_hash_entry): Likewise.
+	(struct elf_or1k_link_hash_table): Likewise.
+	(or1k_elf_link_hash_newfunc): New function.
+	(or1k_elf_link_hash_table_create): Likewise.
+	(or1k_elf_gc_sweep_hook): Likewise.
+	(create_got_section): Likewise.
+	(or1k_elf_finish_dynamic_sections): Likewise.
+	(or1k_elf_finish_dynamic_symbol): Likewise.
+	(or1k_elf_reloc_type_class): Likewise.
+	(or1k_elf_adjust_dynamic_symbol): Likewise.
+	(allocate_dynrelocs): Likewise.
+	(readonly_dynrelocs): Likewise.
+	(or1k_elf_size_dynamic_sections): Likewise.
+	(or1k_elf_create_dynamic_sections): Likewise.
+	(or1k_reloc_type_lookup): Add handling for R_OR1K_PLT26,
+	R_OR1K_GOT16, R_OR1K_GOTOFF_LO16, R_OR1K_GOTOFF_HI16,
+	R_OR1K_INSN_REL_26, R_OR1K_HI_16_IN_INSN, R_OR1K_LO_16_IN_INSN and
+	R_OR1K_32.
+	(or1k_elf_check_relocs): Likewise.
+	* reloc.c (BFD_RELOC_OR1K_GOTPC_HI16): New relocation.
+	(BFD_RELOC_OR1K_GOTPC_LO16): Likewise.
+	(BFD_RELOC_OR1K_GOT16): Likewise.
+	(BFD_RELOC_OR1K_PLT26): Likewise.
+	(BFD_RELOC_OR1K_GOTOFF_HI16): Likewise.
+	(BFD_RELOC_OR1K_GOTOFF_LO16): Likewise.
+	(BFD_RELOC_OR1K_COPY): Likewise.
+	(BFD_RELOC_OR1K_GLOB_DAT): Likewise.
+	(BFD_RELOC_OR1K_JMP_SLOT): Likewise.
+	(BFD_RELOC_OR1K_RELATIVE): Likewise.
+	* bfd-in2.h: regenerate
+
 2012-05-13  Peter Gavin  <pgavin@gmail.com>
 
 	* config.bfd: add or1knd target
