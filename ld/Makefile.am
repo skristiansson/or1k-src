@@ -237,6 +237,7 @@ ALL_EMULATION_SOURCES = \
 	eelf32mb_linux.c \
 	eelf32mcore.c \
 	eelf32mep.c \
+	eelf32microblazeel.c \
 	eelf32microblaze.c \
 	eelf32mipswindiss.c \
 	eelf32moxie.c \
@@ -452,6 +453,7 @@ ALL_EMULATION_SOURCES = \
 	etic54xcoff.c \
 	etic80coff.c \
 	ev850.c \
+	ev850_rh850.c \
 	evanilla.c \
 	evax.c \
 	evaxnbsd.c \
@@ -465,6 +467,10 @@ ALL_EMULATION_SOURCES = \
 ALL_EMULATIONS = $(ALL_EMULATION_SOURCES:.c=.@OBJEXT@)
 
 ALL_64_EMULATION_SOURCES = \
+	eaarch64elf.c \
+	eaarch64elfb.c \
+	eaarch64linux.c \
+	eaarch64linuxb.c \
 	eelf32_x86_64.c \
 	eelf32_x86_64_nacl.c \
 	eelf64_aix.c \
@@ -1103,6 +1109,9 @@ eelf32m32c.c: $(srcdir)/emulparams/elf32m32c.sh \
   $(ELF_DEPS) $(srcdir)/emultempl/needrelax.em \
   $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32m32c "$(tdir_m32c)"
+eelf32mbel_linux.c: $(srcdir)/emulparams/elf32mbel_linux.sh \
+  $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} elf32mbel_linux "$(tdir_microblazeel)"
 eelf32mb_linux.c: $(srcdir)/emulparams/elf32mb_linux.sh \
   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32mb_linux "$(tdir_microblaze)"
@@ -1112,6 +1121,9 @@ eelf32mcore.c: $(srcdir)/emulparams/elf32mcore.sh \
 eelf32mep.c: $(srcdir)/emulparams/elf32mep.sh \
   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/mep.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32mep "$(tdir_mep)"
+eelf32microblazeel.c: $(srcdir)/emulparams/elf32microblazeel.sh \
+  $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elfmicroblaze.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} elf32microblazeel "$(tdir_microblazeel)"
 eelf32microblaze.c: $(srcdir)/emulparams/elf32microblaze.sh \
   $(srcdir)/emultempl/elf32.em $(srcdir)/scripttempl/elfmicroblaze.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} elf32microblaze "$(tdir_microblaze)"
@@ -1719,6 +1731,22 @@ ens32knbsd.c:	$(srcdir)/emulparams/ns32knbsd.sh \
   $(srcdir)/emultempl/generic.em $(srcdir)/emultempl/netbsd.em \
   $(srcdir)/scripttempl/aout.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} ns32knbsd "$(tdir_ns32knbsd)"
+eaarch64elf.c: $(srcdir)/emulparams/aarch64elf.sh \
+  $(ELF_DEPS) $(srcdir)/emultempl/aarch64elf.em \
+  $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} aarch64elf "$(tdir_aarch64elf)"
+eaarch64elfb.c: $(srcdir)/emulparams/aarch64elfb.sh $(srcdir)/emulparams/aarch64elf.sh \
+  $(ELF_DEPS) $(srcdir)/emultempl/aarch64elf.em \
+  $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} aarch64elfb "$(tdir_aarch64elfb)"
+eaarch64linux.c: $(srcdir)/emulparams/aarch64linux.sh \
+  $(ELF_DEPS) $(srcdir)/emultempl/aarch64elf.em \
+  $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} aarch64linux "$(tdir_aarch64linux)"
+eaarch64linuxb.c: $(srcdir)/emulparams/aarch64linuxb.sh $(srcdir)/emulparams/aarch64linux.sh \
+  $(ELF_DEPS) $(srcdir)/emultempl/aarch64elf.em \
+  $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} aarch64linuxb "$(tdir_aarch64linuxb)"
 eor32.c: $(srcdir)/emulparams/or32.sh \
   $(srcdir)/emultempl/generic.em $(srcdir)/scripttempl/or32.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} or32 "$(tdir_or32)"
@@ -1897,6 +1925,9 @@ etic80coff.c: $(srcdir)/emulparams/tic80coff.sh \
 ev850.c: $(srcdir)/emulparams/v850.sh \
   $(ELF_DEPS) $(srcdir)/scripttempl/v850.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} v850 "$(tdir_v850)"
+ev850_rh850.c: $(srcdir)/emulparams/v850_rh850.sh \
+  $(ELF_DEPS) $(srcdir)/scripttempl/v850_rh850.sc ${GEN_DEPENDS}
+	${GENSCRIPTS} v850_rh850 "$(tdir_v850_rh850)"
 evanilla.c: $(srcdir)/emulparams/vanilla.sh \
   $(srcdir)/emultempl/vanilla.em $(srcdir)/scripttempl/vanilla.sc ${GEN_DEPENDS}
 	${GENSCRIPTS} vanilla "$(tdir_vanilla)"
