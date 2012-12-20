@@ -1,3 +1,7 @@
+2012-12-20  Christian Svensson  <blue@cmd.nu>
+	* ld/emulparams/elf32or1k.sh (COMMONPAGESIZE): Define (to fix ld -z
+	relro support).
+
 2012-10-24  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
 
 	* emulparams/elf32or1k_linux.sh: New file.
