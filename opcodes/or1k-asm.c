@@ -219,6 +219,181 @@ parse_simm16 (CGEN_CPU_DESC cd, const char ** strp, int opindex, long * valuep)
       *valuep = value;
       return errmsg;
     }
+  else if (strncasecmp (*strp, "tlsgdhi(", 8) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 8;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_GD_HI16,
+                                   & result_type, & value);
+
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value = (value >> 16) & 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "tlsgdlo(", 8) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 8;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_GD_LO16,
+                                   &result_type, &value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value &= 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "tlsldmhi(", 9) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 9;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_LDM_HI16,
+                                   & result_type, & value);
+
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value = (value >> 16) & 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "tlsldmlo(", 9) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 9;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_LDM_LO16,
+                                   &result_type, &value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value &= 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "dtpoffhi(", 9) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 9;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_LDO_HI16,
+                                   & result_type, & value);
+
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value = (value >> 16) & 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "dtpofflo(", 9) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 9;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_LDO_LO16,
+                                   &result_type, &value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value &= 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "gottpoffhi(", 11) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 11;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_IE_HI16,
+                                   & result_type, & value);
+
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value = (value >> 16) & 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "gottpofflo(", 11) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 11;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_IE_LO16,
+                                   &result_type, &value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value &= 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "tpoffhi(", 8) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 8;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_LE_HI16,
+                                   & result_type, & value);
+
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value = (value >> 16) & 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
+  else if (strncasecmp (*strp, "tpofflo(", 8) == 0)
+    {
+      bfd_vma value;
+
+      *strp += 8;
+      errmsg = cgen_parse_address (cd, strp, opindex,
+                                   BFD_RELOC_OR1K_TLS_LE_LO16,
+                                   &result_type, &value);
+      if (**strp != ')')
+        return MISSING_CLOSING_PARENTHESIS;
+      ++*strp;
+      if (errmsg == NULL
+          && result_type == CGEN_PARSE_OPERAND_RESULT_NUMBER)
+        value &= 0xffff;
+      *valuep = value;
+      return errmsg;
+    }
   else
     {
       long value;

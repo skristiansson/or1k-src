@@ -1,3 +1,36 @@
+2013-02-12  Christian Svensson  <blue@cmd.nu>
+
+	* reloc.c: Add R_OR1K_TLS_GD_HI16,
+	R_OR1K_TLS_GD_LO16, R_OR1K_TLS_LDM_HI16, R_OR1K_TLS_LDM_HI16,
+	R_OR1K_TLS_LDM_LO16, R_OR1K_TLS_LDO_HI16, R_OR1K_TLS_LDO_LO16,
+	R_OR1K_TLS_IE_HI16, R_OR1K_TLS_IE_LO16, R_OR1K_TLS_LE_HI16,
+	R_OR1K_TLS_LE_LO16, R_OR1K_TLS_TPOFF, R_OR1K_TLS_DTPOFF,
+	R_OR1K_TLS_DTPMOD.
+	* elf32-or1k.c (or1k_elf_howto_table): Add R_OR1K_TLS_GD_HI16,
+	R_OR1K_TLS_GD_LO16, R_OR1K_TLS_LDM_HI16, R_OR1K_TLS_LDM_HI16,
+	R_OR1K_TLS_LDM_LO16, R_OR1K_TLS_LDO_HI16, R_OR1K_TLS_LDO_LO16,
+	R_OR1K_TLS_IE_HI16, R_OR1K_TLS_IE_LO16, R_OR1K_TLS_LE_HI16,
+	R_OR1K_TLS_LE_LO16.
+	(or1k_reloc_map): Likewise.
+	(TLS_*): Defined TLS type macros.
+	(elf_or1k_link_hash_entry): Added tls_type.
+	(elf_or1k_obj_tdata): New.
+	(elf_or1k_tdata): New.
+	(elf_or1k_local_tls_type): New.
+	(elf_or1k_mkobject): New.
+	(or1k_elf_link_hash_newfunc): Set default TLS type to UNKNOWN.
+	(tpoff): New.
+	(or1k_elf_relocate_section): Relocation logic for TLS.
+	(or1k_elf_check_relocs): Likewise.
+	(or1k_elf_check_relocs): Fixed combreloc bug by using
+	_bfd_elf_make_dynamic_reloc_section instead of bfd_make_section.
+	(or1k_elf_finish_dynamic_symbol): Do not handle TLS symbols.
+	(allocate_dynrelocs): Handle TLS types which needs more GOT / reloc
+	space.
+	(or1k_elf_size_dynamic_sections): Likewise.
+	* bfd-in2.h: Regenerate.
+	* libbfd.h: Likewise.
+
 2012-10-24  Stefan Kristiansson <stefan.kristiansson@saunalahti.fi>
 
 	* elf-bfd.h (elf_target_id): Add OR1K_ELF_DATA.

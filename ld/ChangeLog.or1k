@@ -1,4 +1,11 @@
+2013-02-12  Christian Svensson  <blue@cmd.nu>
+
+	* ld/emulparams/elf32or1k_linux.sh (GENERATE_COMBRELOC_SCRIPT): Define
+	to yes.
+	* ld/scripttempl/or1k.sc: Delete unused file.
+
 2012-12-20  Christian Svensson  <blue@cmd.nu>
+
 	* ld/emulparams/elf32or1k.sh (COMMONPAGESIZE): Define (to fix ld -z
 	relro support).
 

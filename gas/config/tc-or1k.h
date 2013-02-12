@@ -45,7 +45,8 @@ extern const char or1k_comment_chars [];
 /* Values passed to md_apply_fix don't include the symbol value.  */
 #define MD_APPLY_SYM_VALUE(FIX) 0
 
-#define md_apply_fix gas_cgen_md_apply_fix
+#define md_apply_fix or1k_apply_fix
+extern void or1k_apply_fix (struct fix *, valueT *, segT);
 
 extern bfd_boolean or1k_fix_adjustable (struct fix *);
 #define tc_fix_adjustable(FIX) or1k_fix_adjustable (FIX)

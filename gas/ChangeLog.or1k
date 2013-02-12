@@ -1,3 +1,8 @@
+2013-02-12  Christian Svensson  <blue@cmd.nu>
+
+	* config/tc-or1k.c (or1k_apply_fix): Mark TLS related symbols as TLS.
+	* tc-or1k.h: Hook for or1k_apply_fix.
+
 2013-01-22  Christian Svensson  <blue@cmd.nu>
 
 	* config/tc-or1k.h:

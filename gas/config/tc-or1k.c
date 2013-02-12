@@ -328,6 +328,30 @@ tc_gen_reloc (asection *sec, fixS *fx)
 
   return gas_cgen_tc_gen_reloc (sec, fx);
 }
+
+void
+or1k_apply_fix (struct fix *f, valueT *t, segT s)
+{
+  gas_cgen_md_apply_fix (f, t, s);
+  switch(f->fx_r_type)
+  {
+    case BFD_RELOC_OR1K_TLS_GD_HI16:
+    case BFD_RELOC_OR1K_TLS_GD_LO16:
+    case BFD_RELOC_OR1K_TLS_LDM_HI16:
+    case BFD_RELOC_OR1K_TLS_LDM_LO16:
+    case BFD_RELOC_OR1K_TLS_LDO_HI16:
+    case BFD_RELOC_OR1K_TLS_LDO_LO16:
+    case BFD_RELOC_OR1K_TLS_IE_HI16:
+    case BFD_RELOC_OR1K_TLS_IE_LO16:
+    case BFD_RELOC_OR1K_TLS_LE_HI16:
+    case BFD_RELOC_OR1K_TLS_LE_LO16:
+      S_SET_THREAD_LOCAL (f->fx_addsy);
+      break;
+    default:
+      break;
+  }
+}
+
 void
 or1k_elf_final_processing (void)
 {
