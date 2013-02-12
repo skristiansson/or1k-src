@@ -1,3 +1,8 @@
+2013-02-12  Franck Jullien  <franck.jullien@gmail.com>
+
+	* or1k-tdep.c (or1k_skip_prologue): Add a check for NULL
+	pointer while comparing debugformat to "dwarf".
+
 2013-01-30  Franck Jullien  <franck.jullien@gmail.com>
 
 	* configure.ac : add choice between or1ksim or CGEN sim
