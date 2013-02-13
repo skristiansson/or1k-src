@@ -1,3 +1,9 @@
+2013-02-13  Franck Jullien  <franck.jullien@gmail.com>
+
+	* or1k-tdep.c (or1k_push_dummy_code): New function.
+	(or1k_gdbarch_init): Override default behavior and call dummy
+	from the stack. Set the push_dummy_code handler to or1k_push_dummy_code.
+
 2013-02-12  Franck Jullien  <franck.jullien@gmail.com>
 
 	* or1k-tdep.c (or1k_skip_prologue): Add a check for NULL
