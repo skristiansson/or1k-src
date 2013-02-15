@@ -1,3 +1,10 @@
+2013-02-15  Franck Jullien  <franck.jullien@gmail.com>
+
+	* target-descriptor.h (tdesc_find_register_name): Declare.
+	(tdesc_find_register_group_name): Declare.
+	* target-descriptor.c (tdesc_find_register_name): New function.
+	(tdesc_find_register_group_name): New function.
+
 2013-02-13  Franck Jullien  <franck.jullien@gmail.com>
 
 	* or1k-tdep.c (or1k_push_dummy_code): New function.
