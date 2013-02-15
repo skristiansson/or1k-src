@@ -1,5 +1,11 @@
 2013-02-15  Franck Jullien  <franck.jullien@gmail.com>
 
+	* or1k-tdep.h : Include SPR registers in GDB registers list.
+	* or1k-tdep.c : Make adjustments regarding registers definition
+	changes.
+
+2013-02-15  Franck Jullien  <franck.jullien@gmail.com>
+
 	* target-descriptor.c (tdesc_register_in_reggroup_p): Allow
 	usage of arbitrary groups.
 
