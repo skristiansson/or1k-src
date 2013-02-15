@@ -1,5 +1,10 @@
 2013-02-15  Franck Jullien  <franck.jullien@gmail.com>
 
+	* target-descriptor.c (tdesc_register_in_reggroup_p): Allow
+	usage of arbitrary groups.
+
+2013-02-15  Franck Jullien  <franck.jullien@gmail.com>
+
 	* target-descriptor.h (tdesc_find_register_name): Declare.
 	(tdesc_find_register_group_name): Declare.
 	* target-descriptor.c (tdesc_find_register_name): New function.
