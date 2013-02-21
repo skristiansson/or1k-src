@@ -1,3 +1,8 @@
+2013-02-21  Franck Jullien  <franck.jullien@gmail.com>
+
+	* or1k-tdep.c (or1k_push_dummy_code) : Use or1k_frame_align to
+	align the stack pointer.
+
 2013-02-16  Franck Jullien  <franck.jullien@gmail.com>
 
 	* or1k-tdep.c : Add target description file support. Tested
