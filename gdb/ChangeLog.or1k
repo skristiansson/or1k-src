@@ -1,3 +1,8 @@
+2013-03-15  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* or1k-tdep.c (or1k_regset_from_core_section) : Silence gcc warning
+	by using %z format for size_t.
+
 2013-02-21  Franck Jullien  <franck.jullien@gmail.com>
 
 	* or1k-tdep.c (or1k_push_dummy_code) : Use or1k_frame_align to
