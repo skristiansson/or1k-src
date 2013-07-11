@@ -292,12 +292,12 @@ _start:
 	OR1K_DELAYED_NOP(OR1K_INST(l.jal	__impure_init))
 
 	/* Call global and static constructors */
-	OR1K_DELAYED_NOP(OR1K_INST(l.jal	__init))
+	OR1K_DELAYED_NOP(OR1K_INST(l.jal	_init))
 	
 	/* Set up destructors to be called from exit if main ever returns */
-	l.movhi	r3,hi(__fini)
+	l.movhi	r3,hi(_fini)
         OR1K_DELAYED(
-	OR1K_INST(l.ori	r3,r3,lo(__fini)),
+	OR1K_INST(l.ori	r3,r3,lo(_fini)),
 	OR1K_INST(l.jal	atexit)
         )
 

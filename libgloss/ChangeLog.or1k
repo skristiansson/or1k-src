@@ -1,3 +1,7 @@
+2013-07-10  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* or1k/crt0.S: Rename __init/__fini to _init/_fini
+
 2012-10-02  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
 
 	* or1k/Makefile.in: add atlys and de0_nano to BOARDS
