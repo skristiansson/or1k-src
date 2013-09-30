@@ -1,4 +1,4 @@
-#   Copyright 1997, 1999, 2007-2012 Free Software Foundation, Inc.
+#   Copyright 1997-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,12 +23,11 @@ if {![istarget "hppa*-hp-hpux*"] && ![istarget "*-linux*"]} then {
     continue
 }
 
-set testfile "foll-exec"
+standard_testfile foll-exec.c
+
 set testfile2 "execd-prog"
-set srcfile ${testfile}.c
 set srcfile2 ${testfile2}.c
-set binfile ${objdir}/${subdir}/${testfile}
-set binfile2 ${objdir}/${subdir}/${testfile2}
+set binfile2 [standard_output_file ${testfile2}]
 
 # build the first test case
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile2}" "${binfile2}" executable {debug}] != "" } {

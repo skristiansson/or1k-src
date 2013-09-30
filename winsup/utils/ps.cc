@@ -1,7 +1,7 @@
 /* ps.cc
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2008, 2009, 2010, 2011 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -149,7 +149,8 @@ int
 main (int argc, char *argv[])
 {
   external_pinfo *p;
-  int aflag, lflag, fflag, sflag, uid, proc_id;
+  int aflag, lflag, fflag, sflag, proc_id;
+  uid_t uid;
   bool found_proc_id = true;
   DWORD proc_access = PROCESS_QUERY_LIMITED_INFORMATION;
   cygwin_getinfo_types query = CW_GETPINFO;
@@ -294,7 +295,7 @@ main (int argc, char *argv[])
 	/* nothing to do */;
       else if (p->version >= EXTERNAL_PINFO_VERSION_32_BIT)
 	{
-	  if (p->uid32 != (__uid32_t) uid)
+	  if (p->uid32 != uid)
 	    continue;
 	}
       else if (p->uid != uid)

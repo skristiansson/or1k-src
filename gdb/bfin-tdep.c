@@ -1,6 +1,6 @@
 /* Target-dependent code for Analog Devices Blackfin processor, for GDB.
 
-   Copyright (C) 2005-2012 Free Software Foundation, Inc.
+   Copyright (C) 2005-2013 Free Software Foundation, Inc.
 
    Contributed by Analog Devices, Inc.
 
@@ -503,7 +503,7 @@ bfin_push_dummy_call (struct gdbarch *gdbarch,
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
-  char buf[4];
+  gdb_byte buf[4];
   int i;
   long reg_r0, reg_r1, reg_r2;
   int total_len = 0;
@@ -574,11 +574,11 @@ bfin_reg_to_regnum (struct gdbarch *gdbarch, int reg)
   return map_gcc_gdb[reg];
 }
 
-/* This function implements the BREAKPOINT_FROM_PC macro.  It returns
-   a pointer to a string of bytes that encode a breakpoint instruction,
-   stores the length of the string to *lenptr, and adjusts the program
-   counter (if necessary) to point to the actual memory location where
-   the breakpoint should be inserted.  */
+/* This function implements the 'breakpoint_from_pc' gdbarch method.
+   It returns a pointer to a string of bytes that encode a breakpoint
+   instruction, stores the length of the string to *lenptr, and
+   adjusts the program counter (if necessary) to point to the actual
+   memory location where the breakpoint should be inserted.  */
 
 static const unsigned char *
 bfin_breakpoint_from_pc (struct gdbarch *gdbarch,

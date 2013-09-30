@@ -1,7 +1,6 @@
 /* Top level stuff for GDB, the GNU debugger.
 
-   Copyright (C) 1999-2002, 2004-2005, 2007-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1999-2013 Free Software Foundation, Inc.
 
    Written by Elena Zannoni <ezannoni@cygnus.com> of Cygnus Solutions.
 
@@ -36,6 +35,8 @@
 #include "observer.h"
 #include "continuations.h"
 #include "gdbcmd.h"		/* for dont_repeat() */
+#include "annotate.h"
+#include "maint.h"
 
 /* readline include files.  */
 #include "readline/readline.h"
@@ -166,9 +167,11 @@ rl_callback_read_char_wrapper (gdb_client_data client_data)
 }
 
 /* Initialize all the necessary variables, start the event loop,
-   register readline, and stdin, start the loop.  */
+   register readline, and stdin, start the loop.  The DATA is the
+   interpreter data cookie, ignored for now.  */
+
 void
-cli_command_loop (void)
+cli_command_loop (void *data)
 {
   display_gdb_prompt (0);
 
@@ -232,6 +235,8 @@ display_gdb_prompt (char *new_prompt)
   char *actual_gdb_prompt = NULL;
   struct cleanup *old_chain;
 
+  annotate_display_prompt ();
+
   /* Reset the nesting depth used when trace-commands is set.  */
   reset_command_nest_depth ();
 
@@ -266,6 +271,7 @@ display_gdb_prompt (char *new_prompt)
 	     rl_callback_handler_remove(), does the job.  */
 
 	  rl_callback_handler_remove ();
+	  do_cleanups (old_chain);
 	  return;
 	}
       else
@@ -451,8 +457,6 @@ command_line_handler (char *rl)
   char *p;
   char *p1;
   char *nline;
-  char got_eof = 0;
-
   int repeat = (instream == stdin);
 
   if (annotation_level > 1 && instream == stdin)
@@ -497,7 +501,6 @@ command_line_handler (char *rl)
      and exit from gdb.  */
   if (!rl || rl == (char *) EOF)
     {
-      got_eof = 1;
       command_handler (0);
       return;			/* Lint.  */
     }
@@ -868,7 +871,7 @@ async_disconnect (gdb_client_data arg)
 
   TRY_CATCH (exception, RETURN_MASK_ALL)
     {
-      pop_all_targets (1);
+      pop_all_targets ();
     }
 
   signal (SIGHUP, SIG_DFL);	/*FIXME: ???????????  */
@@ -954,7 +957,7 @@ gdb_setup_readline (void)
      time.  */
   if (!batch_silent)
     gdb_stdout = stdio_fileopen (stdout);
-  gdb_stderr = stdio_fileopen (stderr);
+  gdb_stderr = stderr_fileopen ();
   gdb_stdlog = gdb_stderr;  /* for moment */
   gdb_stdtarg = gdb_stderr; /* for moment */
   gdb_stdtargerr = gdb_stderr; /* for moment */

@@ -1,7 +1,7 @@
 /* strace.cc: system/windows tracing
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -37,7 +37,7 @@ strace::activate (bool isfork)
   if (!_active && being_debugged ())
     {
       char buf[30];
-      __small_sprintf (buf, "cYg%8x %x %d", _STRACE_INTERFACE_ACTIVATE_ADDR, &_active, isfork);
+      __small_sprintf (buf, "cYg%8x %lx %d", _STRACE_INTERFACE_ACTIVATE_ADDR, &_active, isfork);
       OutputDebugString (buf);
       if (_active)
 	{
@@ -223,7 +223,7 @@ strace::write (unsigned category, const char *buf, int count)
 }
 
 void
-strace::write_childpid (DWORD pid)
+strace::write_childpid (pid_t pid)
 {
   char buf[30];
 

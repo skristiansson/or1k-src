@@ -61,6 +61,7 @@ class Output_data_got_base;
 class Output_section;
 class Input_objects;
 class Task;
+struct Symbol_location;
 
 // The abstract class for target specific handling.
 
@@ -240,6 +241,12 @@ class Target
   adjust_elf_header(unsigned char* view, int len) const
   { return this->do_adjust_elf_header(view, len); }
 
+  // Return address and size to plug into eh_frame FDEs associated with a PLT.
+  void
+  plt_fde_location(const Output_data* plt, unsigned char* oview,
+		   uint64_t* address, off_t* len) const
+  { return this->do_plt_fde_location(plt, oview, address, len); }
+
   // Return whether NAME is a local label name.  This is used to implement the
   // --discard-locals options.
   bool
@@ -279,6 +286,12 @@ class Target
   int64_t
   tls_offset_for_global(Symbol* gsym, unsigned int got_indx) const
   { return do_tls_offset_for_global(gsym, got_indx); }
+
+  // For targets that use function descriptors, if LOC is the location
+  // of a function, modify it to point at the function entry location.
+  void
+  function_location(Symbol_location* loc) const
+  { return do_function_location(loc); }
 
   // Return whether this target can use relocation types to determine
   // if a function's address is taken.
@@ -436,6 +449,11 @@ class Target
   gc_mark_symbol(Symbol_table* symtab, Symbol* sym) const
   { this->do_gc_mark_symbol(symtab, sym); }
 
+  // Return the name of the entry point symbol.
+  const char*
+  entry_symbol_name() const
+  { return this->pti_->entry_symbol_name; }
+
  protected:
   // This struct holds the constant information for a child class.  We
   // use a struct to avoid the overhead of virtual function calls for
@@ -489,6 +507,8 @@ class Target
     const char* attributes_section;
     // Vendor name of vendor attributes.
     const char* attributes_vendor;
+    // Name of the main entry point to the program.
+    const char* entry_symbol_name;
   };
 
   Target(const Target_info* pti)
@@ -530,6 +550,11 @@ class Target
   virtual void
   do_adjust_elf_header(unsigned char*, int) const = 0;
 
+  // Return address and size to plug into eh_frame FDEs associated with a PLT.
+  virtual void
+  do_plt_fde_location(const Output_data* plt, unsigned char* oview,
+		      uint64_t* address, off_t* len) const;
+
   // Virtual function which may be overridden by the child class.
   virtual bool
   do_is_local_label_name(const char*) const;
@@ -563,6 +588,9 @@ class Target
   virtual int64_t
   do_tls_offset_for_global(Symbol*, unsigned int) const
   { gold_unreachable(); }
+
+  virtual void
+  do_function_location(Symbol_location*) const = 0;
 
   // Virtual function which may be overriden by the child class.
   virtual bool
@@ -997,6 +1025,10 @@ class Sized_target : public Target
   do_gc_add_reference(Symbol_table*, Object*, unsigned int,
 		      Object*, unsigned int,
 		      typename elfcpp::Elf_types<size>::Elf_Addr) const
+  { }
+
+  virtual void
+  do_function_location(Symbol_location*) const
   { }
 };
 

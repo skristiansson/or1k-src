@@ -1,6 +1,6 @@
 /* Handle PA64 shared libraries for GDB, the GNU Debugger.
 
-   Copyright (C) 2004, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2004-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -298,7 +298,6 @@ pa64_solib_create_inferior_hook (int from_tty)
   struct minimal_symbol *msymbol;
   unsigned int dld_flags, status;
   asection *shlib_info, *interp_sect;
-  char buf[4];
   struct objfile *objfile;
   CORE_ADDR anaddr;
 
@@ -488,7 +487,6 @@ static int
 pa64_open_symbol_file_object (void *from_ttyp)
 {
   int from_tty = *(int *)from_ttyp;
-  char buf[4];
   struct load_module_desc dll_desc;
   char *dll_path;
 

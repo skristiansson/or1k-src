@@ -1,6 +1,6 @@
 /* GNU/Linux native-dependent code for debugging multiple forks.
 
-   Copyright 2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2005-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -25,6 +25,3 @@ extern void linux_fork_mourn_inferior (void);
 extern void linux_fork_detach (char *, int);
 extern int forks_exist_p (void);
 extern int linux_fork_checkpointing_p (int);
-
-extern int detach_fork;
-

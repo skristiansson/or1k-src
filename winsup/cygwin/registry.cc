@@ -1,7 +1,7 @@
 /* registry.cc: registry interface
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -238,7 +238,7 @@ get_registry_hive_path (PCWSTR name, PWCHAR path)
 				   NULL, NULL);
   if (!NT_SUCCESS (status) || buf.Length == 0)
     {
-      debug_printf ("ProfileImagePath for %W not found, status %p", name,
+      debug_printf ("ProfileImagePath for %W not found, status %y", name,
 		    status);
       return NULL;
     }
@@ -280,11 +280,11 @@ load_registry_hive (PCWSTR name)
   status = NtLoadKey (&key_attr, &path_attr);
   if (!NT_SUCCESS (status))
     {
-      debug_printf ("Loading user registry hive %S into %S failed: %p",
+      debug_printf ("Loading user registry hive %S into %S failed: %y",
 		    &upath, &ukey, status);
       return;
     }
-  debug_printf ("Loading user registry hive %S into %S SUCCEEDED: %p",
+  debug_printf ("Loading user registry hive %S into %S SUCCEEDED: %y",
 		&upath, &ukey, status);
   /* If loading the normal hive worked, try to load the classes hive into
      the sibling *_Classes subkey, which is what the user is supposed to
@@ -300,9 +300,9 @@ load_registry_hive (PCWSTR name)
   /* Load UsrClass.dat file into key. */
   status = NtLoadKey (&key_attr, &path_attr);
   if (!NT_SUCCESS (status))
-    debug_printf ("Loading user classes hive %S into %S failed: %p",
+    debug_printf ("Loading user classes hive %S into %S failed: %y",
 		  &upath, &ukey, status);
   else
-    debug_printf ("Loading user classes hive %S into %S SUCCEEDED: %p",
+    debug_printf ("Loading user classes hive %S into %S SUCCEEDED: %y",
 		  &upath, &ukey, status);
 }

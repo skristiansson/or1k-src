@@ -1,5 +1,5 @@
 /* Helper routines for C++ support in GDB.
-   Copyright (C) 2002-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
 
@@ -37,8 +37,6 @@
 #include "cp-abi.h"
 
 #include "safe-ctype.h"
-
-#include "psymtab.h"
 
 #define d_left(dc) (dc)->u.s_binary.left
 #define d_right(dc) (dc)->u.s_binary.right
@@ -635,7 +633,7 @@ mangled_name_to_comp (const char *mangled_name, int options,
 
   /* If it doesn't, or if that failed, then try to demangle the
      name.  */
-  demangled_name = cplus_demangle (mangled_name, options);
+  demangled_name = gdb_demangle (mangled_name, options);
   if (demangled_name == NULL)
    return NULL;
   
@@ -1474,6 +1472,14 @@ cp_lookup_rtti_type (const char *name, struct block *block)
     }
 
   return rtti_type;
+}
+
+/* A wrapper for bfd_demangle.  */
+
+char *
+gdb_demangle (const char *name, int options)
+{
+  return bfd_demangle (NULL, name, options);
 }
 
 /* Don't allow just "maintenance cplus".  */

@@ -6,10 +6,8 @@ D/lib////
 D/m32r-elf////
 D/mips64el-elf////
 D/sim////
-/.gitignore/1.1/Sat Oct 27 22:59:31 2012//
-/ChangeLog/1.75/Sat Oct 27 22:59:31 2012/-ko/
-/Makefile.in/1.9/Sat Oct 27 22:59:31 2012/-ko/
-/configure/1.11/Thu Nov 29 07:49:09 2012/-ko/
-/configure.ac/1.2/Sat Oct 27 22:59:31 2012//
-D/d30v-elf////
-D/fr30-elf////
+/.gitignore/1.1/Sat Aug 18 05:48:02 2012//
+/configure.ac/1.2/Sat Aug 18 05:48:02 2012//
+/ChangeLog/1.76/Mon Sep 30 18:36:13 2013/-ko/
+/Makefile.in/1.10/Mon Sep 30 18:36:13 2013/-ko/
+/configure/1.12/Mon Sep 30 19:47:47 2013/-ko/

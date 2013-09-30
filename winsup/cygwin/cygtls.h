@@ -1,6 +1,7 @@
 /* cygtls.h
 
-   Copyright 2003, 2004, 2005, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
+   Red Hat, Inc.
 
 This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
@@ -38,7 +39,11 @@ details. */
 #include "thread.h"
 #endif
 
+#ifdef __x86_64__
+#pragma pack(push,8)
+#else
 #pragma pack(push,4)
+#endif
 /* Defined here to support auto rebuild of tlsoffsets.h. */
 class tls_pathbuf
 {
@@ -77,8 +82,6 @@ struct _local_storage
   /*
      Needed for the group functions
    */
-  struct __group16 grp;
-  char *namearray[2];
   int grp_pos;
 
   /* dlfcn.cc */
@@ -156,15 +159,13 @@ typedef struct struct_waitq
 */
 
 /*gentls_offsets*/
-#include "cygerrno.h"
-#include "security.h"
 
 extern "C" int __sjfault (jmp_buf);
 extern "C" int __ljfault (jmp_buf, int);
 
 /*gentls_offsets*/
 
-typedef __uint32_t __stack_t;
+typedef uintptr_t __stack_t;
 
 class _cygtls
 {
@@ -177,7 +178,7 @@ public:
     char __dontuse[8 * ((sizeof(struct _reent) + 4) / 8)];
   };
   /**/
-  void (*func) /*gentls_offsets*/(int)/*gentls_offsets*/;
+  void (*func) /*gentls_offsets*/(int, siginfo_t *, void *)/*gentls_offsets*/;
   int saved_errno;
   int sa_flags;
   sigset_t oldmask;
@@ -187,7 +188,7 @@ public:
   sigset_t sigwait_mask;
   siginfo_t *sigwait_info;
   HANDLE signal_arrived;
-  bool signal_waiting;
+  bool will_wait_for_signal;
   struct ucontext thread_context;
   DWORD thread_id;
   siginfo_t infodata;
@@ -208,65 +209,86 @@ public:
   static void call (DWORD (*) (void *, void *), void *);
   void remove (DWORD);
   void push (__stack_t addr) {*stackptr++ = (__stack_t) addr;}
-  __stack_t pop () __attribute__ ((regparm (1)));
+  __stack_t __reg1 pop ();
   __stack_t retaddr () {return stackptr[-1];}
   bool isinitialized () const
   {
     return initialized == CYGTLS_INITIALIZED;
   }
-  bool interrupt_now (CONTEXT *, siginfo_t&, void *, struct sigaction&)
-    __attribute__((regparm(3)));
-  void __stdcall interrupt_setup (siginfo_t&, void *, struct sigaction&)
-    __attribute__((regparm(3)));
+  bool __reg3 interrupt_now (CONTEXT *, siginfo_t&, void *, struct sigaction&);
+  void __reg3 interrupt_setup (siginfo_t&, void *, struct sigaction&);
 
   bool inside_kernel (CONTEXT *);
-  void signal_exit (int) __attribute__ ((noreturn, regparm(2)));
-  void copy_context (CONTEXT *) __attribute__ ((regparm(2)));
-  void signal_debugger (int) __attribute__ ((regparm(2)));
+  void __reg2 signal_debugger (siginfo_t&);
 
 #ifdef CYGTLS_HANDLE
   operator HANDLE () const {return tid ? tid->win32_obj_id : NULL;}
 #endif
-  int call_signal_handler () __attribute__ ((regparm (1)));
-  void remove_wq (DWORD) __attribute__ ((regparm (1)));
-  void fixup_after_fork () __attribute__ ((regparm (1)));
-  void lock () __attribute__ ((regparm (1)));
-  void unlock () __attribute__ ((regparm (1)));
-  bool locked () __attribute__ ((regparm (1)));
-  void create_signal_arrived ()
+  int __reg1 call_signal_handler ();
+  void __reg1 remove_wq (DWORD);
+  void __reg1 fixup_after_fork ();
+  void __reg1 lock ();
+  void __reg1 unlock ();
+  bool __reg1 locked ();
+  HANDLE get_signal_arrived (bool wait_for_lock = true)
   {
-    signal_arrived = CreateEvent (&sec_none_nih, false, false, NULL);
+    if (!signal_arrived)
+      {
+	if (wait_for_lock)
+	  lock ();
+	if (!signal_arrived)
+	  signal_arrived = CreateEvent (NULL, false, false, NULL);
+	if (wait_for_lock)
+	  unlock ();
+      }
+    return signal_arrived;
   }
   void set_signal_arrived (bool setit, HANDLE& h)
   {
     if (!setit)
-      signal_waiting = false;
+      will_wait_for_signal = false;
     else
       {
-	if (!signal_arrived)
-	  {
-	    lock ();
-	    create_signal_arrived ();
-	    unlock ();
-	  }
-	h = signal_arrived;
-	signal_waiting = true;
+	h = get_signal_arrived ();
+	will_wait_for_signal = true;
       }
   }
-  void reset_signal_arrived () { signal_waiting = false; }
+  void reset_signal_arrived ()
+  {
+    if (signal_arrived)
+      ResetEvent (signal_arrived);
+    will_wait_for_signal = false;
+  }
+  void handle_SIGCONT ();
 private:
-  void call2 (DWORD (*) (void *, void *), void *, void *) __attribute__ ((regparm (3)));
+  void __reg3 call2 (DWORD (*) (void *, void *), void *, void *);
   /*gentls_offsets*/
 };
 #pragma pack(pop)
 
-const int CYGTLS_PADSIZE = 12700;	/* FIXME: Find some way to autogenerate
-					   this value */
+/* FIXME: Find some way to autogenerate this value */
+#ifdef __x86_64__
+const int CYGTLS_PADSIZE = 12800;	/* Must be 16-byte aligned */
+#else
+const int CYGTLS_PADSIZE = 12700;
+#endif
+
 /*gentls_offsets*/
 
-extern char *_tlsbase __asm__ ("%fs:4");
-extern char *_tlstop __asm__ ("%fs:8");
-#define _my_tls (*((_cygtls *) (_tlsbase - CYGTLS_PADSIZE)))
+#include "cygerrno.h"
+#include "ntdll.h"
+
+#ifdef __x86_64__
+/* When just using a "gs:X" asm for the x86_64 code, gcc wrongly creates
+   pc-relative instructions.  However, NtCurrentTeb() is inline assembler
+   anyway, so using it here should be fast enough on x86_64. */
+#define _tlsbase (NtCurrentTeb()->Tib.StackBase)
+#define _tlstop (NtCurrentTeb()->Tib.StackLimit)
+#else
+extern PVOID _tlsbase __asm__ ("%fs:4");
+extern PVOID _tlstop __asm__ ("%fs:8");
+#endif
+#define _my_tls (*((_cygtls *) ((char *)_tlsbase - CYGTLS_PADSIZE)))
 extern _cygtls *_main_tls;
 extern _cygtls *_sig_tls;
 
@@ -327,7 +349,7 @@ public:
   set_signal_arrived (bool setit, HANDLE& h) { _my_tls.set_signal_arrived (setit, h); }
   set_signal_arrived (HANDLE& h) { _my_tls.set_signal_arrived (true, h); }
 
-  operator int () const {return _my_tls.signal_waiting;}
+  operator int () const {return _my_tls.will_wait_for_signal;}
   ~set_signal_arrived () { _my_tls.reset_signal_arrived (); }
 };
 

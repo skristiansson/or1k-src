@@ -1,8 +1,7 @@
 /* Variables that describe the inferior process running under GDB:
    Where it is, why it stopped, and how to step it.
 
-   Copyright (C) 1986, 1988-1996, 1998-2001, 2003-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -91,7 +90,7 @@ extern void set_inferior_io_terminal (const char *terminal_name);
 extern const char *get_inferior_io_terminal (void);
 
 /* Collected pid, tid, etc. of the debugged inferior.  When there's
-   no inferior, PIDGET (inferior_ptid) will be 0.  */
+   no inferior, ptid_get_pid (inferior_ptid) will be 0.  */
 
 extern ptid_t inferior_ptid;
 
@@ -119,11 +118,6 @@ extern int step_stop_if_no_debug;
    events stop only the thread that had the event -- the other threads
    are kept running freely.  */
 extern int non_stop;
-
-/* If set (default), when following a fork, GDB will detach from one
-   the fork branches, child or parent.  Exactly which branch is
-   detached depends on 'set follow-fork-mode' setting.  */
-extern int detach_fork;
 
 /* When set (default), the target should attempt to disable the operating
    system's address space randomization feature when starting an inferior.  */
@@ -176,7 +170,7 @@ extern void default_print_registers_info (struct gdbarch *gdbarch,
 					  struct frame_info *frame,
 					  int regnum, int all);
 
-extern void child_terminal_info (char *, int);
+extern void child_terminal_info (const char *, int);
 
 extern void term_info (char *, int);
 
@@ -228,12 +222,6 @@ extern void get_last_target_status(ptid_t *ptid,
 
 extern void follow_inferior_reset_breakpoints (void);
 
-/* Throw an error indicating the current thread is running.  */
-extern void error_is_running (void);
-
-/* Calls error_is_running if the current thread is running.  */
-extern void ensure_not_running (void);
-
 void set_step_info (struct frame_info *frame, struct symtab_and_line sal);
 
 /* From infcmd.c */
@@ -248,19 +236,9 @@ extern void set_inferior_args (char *);
 
 extern void set_inferior_args_vector (int, char **);
 
-extern void all_registers_info (char *, int);
-
 extern void registers_info (char *, int);
 
-extern void nexti_command (char *, int);
-
-extern void stepi_command (char *, int);
-
 extern void continue_1 (int all_threads);
-
-extern void continue_command (char *, int);
-
-extern void interrupt_target_command (char *args, int from_tty);
 
 extern void interrupt_target_1 (int all_threads);
 
@@ -648,6 +626,8 @@ extern struct inferior *add_inferior_with_spaces (void);
 extern void update_observer_mode (void);
 
 extern void update_signals_program_target (void);
+
+extern void signal_catch_update (const unsigned int *);
 
 /* In some circumstances we allow a command to specify a numeric
    signal.  The idea is to keep these circumstances limited so that

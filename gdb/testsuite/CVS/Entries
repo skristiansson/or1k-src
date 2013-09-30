@@ -30,14 +30,11 @@ D/gdb.threads////
 D/gdb.trace////
 D/gdb.xml////
 D/lib////
-/ChangeLog/1.3466/Thu Nov 29 07:46:19 2012/-ko/
-/Makefile.in/1.43/Sat Oct 27 22:59:28 2012/-ko/
-/TODO/1.1.1.1/Sat Oct 27 22:59:28 2012/-ko/
-/aclocal.m4/1.4/Sat Oct 27 22:59:28 2012/-ko/
-/configure/1.39/Sat Oct 27 22:59:28 2012/-ko/
-/configure.ac/1.23/Sat Oct 27 22:59:28 2012//
-/dg-extract-results.sh/1.5/Sat Oct 27 22:59:28 2012//
-D/gdb.c++////
-D/gdb.chill////
-D/gdb.gdbserver////
-D/gdb.twreverse////
+/TODO/1.1.1.1/Sat Aug 18 05:47:59 2012/-ko/
+/aclocal.m4/1.4/Sat Aug 18 05:47:59 2012/-ko/
+/ChangeLog/1.3819/Mon Sep 30 18:36:13 2013/-ko/
+/Makefile.in/1.46/Mon Sep 30 18:36:13 2013/-ko/
+/README/1.1/Mon Sep 30 18:36:13 2013//
+/configure/1.40/Mon Sep 30 18:36:13 2013/-ko/
+/configure.ac/1.25/Mon Sep 30 18:36:13 2013//
+/dg-extract-results.sh/1.8/Mon Sep 30 18:36:13 2013//

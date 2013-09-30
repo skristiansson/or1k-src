@@ -1,6 +1,6 @@
 /* GDB routines for supporting auto-loaded scripts.
 
-   Copyright (C) 2012 Free Software Foundation, Inc.
+   Copyright (C) 2012-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -38,6 +38,7 @@
 #include "observer.h"
 #include "fnmatch.h"
 #include "top.h"
+#include "filestuff.h"
 
 /* The suffix of per-objfile scripts to auto-load as non-Python command files.
    E.g. When the program loads libfoo.so, look for libfoo-gdb.gdb.  */
@@ -178,7 +179,6 @@ auto_load_expand_dir_vars (const char *string)
 static void
 auto_load_safe_path_vec_update (void)
 {
-  VEC (char_ptr) *dir_vec = NULL;
   unsigned len;
   int ix;
 
@@ -516,7 +516,7 @@ source_gdb_script_for_objfile (struct objfile *objfile, FILE *file,
   is_safe = file_is_auto_load_safe (filename, _("auto-load: Loading canned "
 						"sequences of commands script "
 						"\"%s\" for objfile \"%s\".\n"),
-				    filename, objfile->name);
+				    filename, objfile_name (objfile));
 
   /* Add this script to the hash table too so "info auto-load gdb-scripts"
      can print it.  */
@@ -739,7 +739,7 @@ auto_load_objfile_script_1 (struct objfile *objfile, const char *realname,
 
   cleanups = make_cleanup (xfree, filename);
 
-  input = fopen (filename, "r");
+  input = gdb_fopen_cloexec (filename, "r");
   debugfile = filename;
   if (debug_auto_load)
     fprintf_unfiltered (gdb_stdlog, _("auto-load: Attempted file \"%s\" %s.\n"),
@@ -771,7 +771,7 @@ auto_load_objfile_script_1 (struct objfile *objfile, const char *realname,
 	  strcat (debugfile, filename);
 
 	  make_cleanup (xfree, debugfile);
-	  input = fopen (debugfile, "r");
+	  input = gdb_fopen_cloexec (debugfile, "r");
 	  if (debug_auto_load)
 	    fprintf_unfiltered (gdb_stdlog, _("auto-load: Attempted file "
 					      "\"%s\" %s.\n"),
@@ -809,7 +809,7 @@ void
 auto_load_objfile_script (struct objfile *objfile,
 			  const struct script_language *language)
 {
-  char *realname = gdb_realpath (objfile->name);
+  char *realname = gdb_realpath (objfile_name (objfile));
   struct cleanup *cleanups = make_cleanup (xfree, realname);
 
   if (!auto_load_objfile_script_1 (objfile, realname, language))

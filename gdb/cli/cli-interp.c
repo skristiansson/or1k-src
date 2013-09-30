@@ -1,6 +1,6 @@
 /* CLI Definitions for GDB, the GNU debugger.
 
-   Copyright (c) 2002-2003, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -151,7 +151,9 @@ _initialize_cli_interp (void)
     cli_interpreter_suspend,	/* suspend_proc */
     cli_interpreter_exec,	/* exec_proc */
     cli_interpreter_display_prompt_p,	/* prompt_proc_p */
-    cli_ui_out			/* ui_out_proc */
+    cli_ui_out,			/* ui_out_proc */
+    NULL,                       /* set_logging_proc */
+    cli_command_loop            /* command_loop_proc */
   };
   struct interp *cli_interp;
 

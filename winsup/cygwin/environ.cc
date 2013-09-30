@@ -1,8 +1,8 @@
 /* environ.cc: Cygwin-adopted functions from newlib to manipulate
    process's environment.
 
-   Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
+   2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
@@ -77,15 +77,28 @@ set_proc_retry (const char *buf)
 }
 
 static void
-tty_is_gone (const char *buf)
+set_winsymlinks (const char *buf)
 {
-  if (!user_shared->warned_notty)
+  if (!buf || !*buf)
+    allow_winsymlinks = WSYM_lnk;
+  else if (ascii_strncasematch (buf, "lnk", 3))
+    allow_winsymlinks = WSYM_lnk;
+  /* Make sure to try native symlinks only on systems supporting them. */
+  else if (ascii_strncasematch (buf, "native", 6))
     {
-      small_printf ("\"tty\" option detected in CYGWIN environment variable.\n"
-		    "CYGWIN=tty is no longer supported.  Please remove it from your\n"
-		    "CYGWIN environment variable and use a terminal emulator like mintty,\n"
-		    "xterm, or rxvt.\n");
-      user_shared->warned_notty = 1;
+      if (wincap.max_sys_priv () < SE_CREATE_SYMBOLIC_LINK_PRIVILEGE)
+	{
+	  if (!user_shared->warned_nonativesyms)
+	    {
+	      small_printf ("\"winsymlinks:%s\" option detected in CYGWIN environment variable.\n"
+			    "Native symlinks are not supported on Windows versions prior to\n"
+			    "Windows Vista/Server 2008.  This option will be ignored.\n", buf);
+	      user_shared->warned_nonativesyms = 1;
+	    }
+	}
+      else
+	allow_winsymlinks = ascii_strcasematch (buf + 6, "strict")
+			    ? WSYM_nativestrict : WSYM_native;
     }
 }
 
@@ -120,8 +133,8 @@ static struct parse_thing
   {"pipe_byte", {&pipe_byte}, setbool, NULL, {{false}, {true}}},
   {"proc_retry", {func: set_proc_retry}, isfunc, NULL, {{0}, {5}}},
   {"reset_com", {&reset_com}, setbool, NULL, {{false}, {true}}},
-  {"tty", {func: tty_is_gone}, isfunc, NULL, {{0}, {0}}},
-  {"winsymlinks", {&allow_winsymlinks}, setbool, NULL, {{false}, {true}}},
+  {"wincmdln", {&wincmdln}, setbool, NULL, {{false}, {true}}},
+  {"winsymlinks", {func: set_winsymlinks}, isfunc, NULL, {{0}, {0}}},
   {NULL, {0}, setdword, 0, {{0}, {0}}}
 };
 
@@ -187,7 +200,7 @@ parse_options (const char *inbuf)
 		  *k->setting.x = k->values[istrue].i;
 		else
 		  *k->setting.x = strtol (eq, NULL, 0);
-		debug_printf ("%s %d", k->name, *k->setting.x);
+		debug_printf ("%s %u", k->name, *k->setting.x);
 		break;
 	      case setbool:
 		if (!istrue || !eq)
@@ -360,11 +373,11 @@ win_env::add_cache (const char *in_posix, const char *in_native)
   MALLOC_CHECK;
   if (immediate && cygwin_finished_initializing)
     {
-      char s[namelen];
-      size_t n = namelen - 1;
-      memcpy (s, name, n);
-      s[n] = '\0';
-      SetEnvironmentVariable (s, native + namelen);
+      wchar_t s[sys_mbstowcs (NULL, 0, native) + 1];
+      sys_mbstowcs (s, sizeof s, native);
+      /* Hack. Relies on affected variables only having ASCII names. */
+      s[namelen - 1] = L'\0';
+      SetEnvironmentVariableW (s, s + namelen);
     }
   debug_printf ("posix %s", posix);
   debug_printf ("native %s", native);
@@ -375,7 +388,7 @@ win_env::add_cache (const char *in_posix, const char *in_native)
   to the beginning of the environment variable name.  *in_posix is any
   known posix value for the environment variable. Returns a pointer to
   the appropriate conversion structure.  */
-win_env * __stdcall
+win_env * __reg3
 getwinenv (const char *env, const char *in_posix, win_env *temp)
 {
   if (!match_first_char (env, WC))
@@ -444,7 +457,7 @@ posify_maybe (char **here, const char *value, char *outenv)
   environment array, for use by setenv(3) and unsetenv(3).
   Explicitly removes '=' in argument name.  */
 
-static char * __stdcall
+static char *
 my_findenv (const char *name, int *offset)
 {
   register int len;
@@ -472,7 +485,7 @@ my_findenv (const char *name, int *offset)
 
 /* Primitive getenv before the environment is built.  */
 
-static char __stdcall *
+static char *
 getearly (const char * name, int *)
 {
   char *ret;
@@ -494,7 +507,7 @@ getearly (const char * name, int *)
   return NULL;
 }
 
-static char * (*findenv_func)(const char *, int *) = (char * (*)(const char *, int *)) getearly;
+static char * (*findenv_func)(const char *, int *) = getearly;
 
 /* Returns ptr to value associated with name, if any, else NULL.  */
 
@@ -872,7 +885,7 @@ env_sort (const void *a, const void *b)
   return strcmp (*p, *q);
 }
 
-char * __stdcall
+char * __reg3
 getwinenveq (const char *name, size_t namelen, int x)
 {
   WCHAR name0[namelen - 1];
@@ -907,8 +920,7 @@ struct spenv
   bool add_if_exists;		/* if true, retrieve value from cache */
   const char * (cygheap_user::*from_cygheap) (const char *, size_t);
 
-  char *retrieve (bool, const char * const = NULL)
-    __attribute__ ((regparm (3)));
+  char __reg3 *retrieve (bool, const char * const = NULL);
 };
 
 #define env_dontadd almost_null
@@ -972,7 +984,7 @@ spenv::retrieve (bool no_envblock, const char *const env)
    filled with null terminated strings, terminated by double null characters.
    Converts environment variables noted in conv_envvars into win32 form
    prior to placing them in the string.  */
-char ** __stdcall
+char ** __reg3
 build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 	   bool no_envblock)
 {
@@ -1049,7 +1061,7 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
   else
     {
       *pass_dstp = NULL;
-      debug_printf ("env count %d, bytes %d", pass_envc, tl);
+      debug_printf ("env count %ld, bytes %d", pass_envc, tl);
       win_env temp;
       temp.reset ();
 
@@ -1119,6 +1131,7 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
   return newenv;
 }
 
+#ifndef __x86_64__
 /* This idiocy is necessary because the early implementers of cygwin
    did not seem to know about importing data variables from the DLL.
    So, we have to synchronize cygwin's idea of the environment with the
@@ -1134,3 +1147,4 @@ cur_environ ()
 
   return __cygwin_environ;
 }
+#endif

@@ -1,7 +1,6 @@
 /* Core dump and executable file functions below target vector, for GDB.
 
-   Copyright (C) 1986-1987, 1989, 1991-2001, 2003-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -47,6 +46,8 @@
 #include "progspace.h"
 #include "objfiles.h"
 #include "gdb_bfd.h"
+#include "completer.h"
+#include "filestuff.h"
 
 #ifndef O_LARGEFILE
 #define O_LARGEFILE 0
@@ -66,7 +67,7 @@ static struct core_fns *core_vec = NULL;
 /* FIXME: kettenis/20031023: Eventually this variable should
    disappear.  */
 
-struct gdbarch *core_gdbarch = NULL;
+static struct gdbarch *core_gdbarch = NULL;
 
 /* Per-core data.  Currently, only the section table.  Note that these
    target sections are *not* mapped in the current address spaces' set
@@ -86,7 +87,7 @@ static void core_open (char *, int);
 
 static void core_detach (struct target_ops *ops, char *, int);
 
-static void core_close (int);
+static void core_close (void);
 
 static void core_close_cleanup (void *ignore);
 
@@ -193,10 +194,8 @@ gdb_check_format (bfd *abfd)
    stack spaces as empty.  */
 
 static void
-core_close (int quitting)
+core_close (void)
 {
-  char *name;
-
   if (core_bfd)
     {
       int pid = ptid_get_pid (inferior_ptid);
@@ -226,7 +225,7 @@ core_close (int quitting)
 static void
 core_close_cleanup (void *ignore)
 {
-  core_close (0/*ignored*/);
+  core_close ();
 }
 
 /* Look for sections whose names start with `.reg/' so that we can
@@ -314,7 +313,7 @@ core_open (char *filename, int from_tty)
     flags |= O_RDWR;
   else
     flags |= O_RDONLY;
-  scratch_chan = open (filename, flags, 0);
+  scratch_chan = gdb_open_cloexec (filename, flags, 0);
   if (scratch_chan < 0)
     perror_with_name (filename);
 
@@ -445,8 +444,8 @@ core_open (char *filename, int from_tty)
 							       siggy)
 			     : gdb_signal_from_host (siggy));
 
-      printf_filtered (_("Program terminated with signal %d, %s.\n"),
-		       siggy, gdb_signal_to_string (sig));
+      printf_filtered (_("Program terminated with signal %s, %s.\n"),
+		       gdb_signal_to_name (sig), gdb_signal_to_string (sig));
     }
 
   /* Fetch all registers from core file.  */
@@ -454,7 +453,7 @@ core_open (char *filename, int from_tty)
 
   /* Now, set up the frame cache, and print the top of stack.  */
   reinit_frame_cache ();
-  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC);
+  print_stack_frame (get_selected_frame (NULL), 1, SRC_AND_LOC, 1);
 }
 
 static void
@@ -467,24 +466,6 @@ core_detach (struct target_ops *ops, char *args, int from_tty)
   if (from_tty)
     printf_filtered (_("No core file now.\n"));
 }
-
-#ifdef DEPRECATED_IBM6000_TARGET
-
-/* Resize the core memory's section table, by NUM_ADDED.  Returns a
-   pointer into the first new slot.  This will not be necessary when
-   the rs6000 target is converted to use the standard solib
-   framework.  */
-
-struct target_section *
-deprecated_core_resize_section_table (int num_added)
-{
-  int old_count;
-
-  old_count = resize_section_table (core_data, num_added);
-  return core_data->sections + old_count;
-}
-
-#endif
 
 /* Try to retrieve registers from a section in core_bfd, and supply
    them to core_vec->core_read_registers, as the register set numbered
@@ -665,7 +646,6 @@ static LONGEST
 get_core_siginfo (bfd *abfd, gdb_byte *readbuf, ULONGEST offset, LONGEST len)
 {
   asection *section;
-  long pid;
   char *section_name;
   const char *name = ".note.linuxcore.siginfo";
 
@@ -773,6 +753,18 @@ core_xfer_partial (struct target_ops *ops, enum target_object object,
 	  return
 	    gdbarch_core_xfer_shared_libraries (core_gdbarch,
 						readbuf, offset, len);
+	}
+      /* FALL THROUGH */
+
+    case TARGET_OBJECT_LIBRARIES_AIX:
+      if (core_gdbarch
+	  && gdbarch_core_xfer_shared_libraries_aix_p (core_gdbarch))
+	{
+	  if (writebuf)
+	    return -1;
+	  return
+	    gdbarch_core_xfer_shared_libraries_aix (core_gdbarch,
+						    readbuf, offset, len);
 	}
       /* FALL THROUGH */
 
@@ -927,6 +919,19 @@ core_has_registers (struct target_ops *ops)
   return (core_bfd != NULL);
 }
 
+/* Implement the to_info_proc method.  */
+
+static void
+core_info_proc (struct target_ops *ops, char *args, enum info_proc_what request)
+{
+  struct gdbarch *gdbarch = get_current_arch ();
+
+  /* Since this is the core file target, call the 'core_info_proc'
+     method on gdbarch, not 'info_proc'.  */
+  if (gdbarch_core_info_proc_p (gdbarch))
+    gdbarch_core_info_proc (gdbarch, args, request);
+}
+
 /* Fill in core_ops with its defined operations and properties.  */
 
 static void
@@ -953,6 +958,7 @@ init_core_ops (void)
   core_ops.to_has_memory = core_has_memory;
   core_ops.to_has_stack = core_has_stack;
   core_ops.to_has_registers = core_has_registers;
+  core_ops.to_info_proc = core_info_proc;
   core_ops.to_magic = OPS_MAGIC;
 
   if (core_target)
@@ -967,5 +973,5 @@ _initialize_corelow (void)
 {
   init_core_ops ();
 
-  add_target (&core_ops);
+  add_target_with_completer (&core_ops, filename_completer);
 }

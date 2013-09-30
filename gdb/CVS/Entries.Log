@@ -1,7 +1,10 @@
-R D/vx-share////
-R D/signals////
-R D/rdi-share////
-R D/nlm////
-R D/nindy-share////
-R D/ari////
-R D/29k-share////
+A D/29k-share////
+A D/ari////
+A D/nat////
+A D/nindy-share////
+A D/nlm////
+A D/rdi-share////
+A D/signals////
+A D/system-gdbinit////
+A D/target////
+A D/vx-share////

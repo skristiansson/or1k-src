@@ -26,9 +26,6 @@ D/sidcomp.rtc////
 D/sidcomp.sched////
 D/sidcomp.timers////
 D/sidcomp.uart////
-/ChangeLog/1.65/Sat Oct 27 22:59:30 2012//
-/Makefile.am/1.2/Sat Oct 27 22:59:30 2012//
-/Makefile.in/1.10/Sat Oct 27 22:59:30 2012//
-D/sidcomp.cgen-cpu.ms1////
-D/sidcomp.cgen-cpu.sh////
-D/sidcomp.pcmcia////
+/Makefile.am/1.2/Sat Aug 18 05:48:01 2012//
+/ChangeLog/1.66/Mon Sep 30 18:36:13 2013//
+/Makefile.in/1.11/Mon Sep 30 18:36:13 2013//

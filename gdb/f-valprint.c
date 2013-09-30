@@ -1,7 +1,6 @@
 /* Support for printing Fortran values for GDB, the GNU debugger.
 
-   Copyright (C) 1993-1996, 1998-2000, 2003, 2005-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1993-2013 Free Software Foundation, Inc.
 
    Contributed by Motorola.  Adapted from the C definitions by Farooq Butt
    (fmbutt@engage.sps.mot.com), additionally worked over by Stan Shebs.
@@ -428,7 +427,7 @@ info_common_command_for_block (struct block *block, const char *comname,
 	struct common_block *common = SYMBOL_VALUE_COMMON_BLOCK (sym);
 	size_t index;
 
-	gdb_assert (SYMBOL_CLASS (sym) == LOC_STATIC);
+	gdb_assert (SYMBOL_CLASS (sym) == LOC_COMMON_BLOCK);
 
 	if (comname && (!SYMBOL_LINKAGE_NAME (sym)
 	                || strcmp (comname, SYMBOL_LINKAGE_NAME (sym)) != 0))

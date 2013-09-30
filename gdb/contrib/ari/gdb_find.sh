@@ -2,7 +2,7 @@
 
 # GDB script to create list of files to check using gdb_ari.sh.
 #
-# Copyright (C) 2003-2012 Free Software Foundation, Inc.
+# Copyright (C) 2003-2013 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -34,7 +34,6 @@ find "$@" \
     -name gdbserver -prune -o \
     -name gdbtk -prune -o \
     -name gnulib -prune -o \
-    -name osf-share -prune -o \
     -name '*-stub.c' -prune -o \
     -name '*-exp.c' -prune -o \
     -name ada-lex.c -prune -o \

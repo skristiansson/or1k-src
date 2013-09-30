@@ -670,6 +670,7 @@ epiphany
 i386
 m32r
 m68hc11
+nds32
 m68k
 pa
 i960
@@ -697,6 +698,7 @@ v850
 xc16x
 xstormy16
 m32c
+msp430
 rl78
 rx
 arm
@@ -2414,6 +2416,10 @@ case "${target}" in
 	subdirs="$subdirs m68hc11"
 
 	;;
+  nds32*-*-*)
+	subdirs="$subdirs nds32"
+
+	;;
   fido-*-* | m68*-*-*)
 	subdirs="$subdirs m68k"
 
@@ -2498,7 +2504,7 @@ case "${target}" in
 	subdirs="$subdirs moxie"
 
 	;;
-  microblaze-*-*)
+  microblaze*-*-*)
 	subdirs="$subdirs microblaze"
 
 	;;
@@ -2521,6 +2527,11 @@ case "${target}" in
   m32c-*-*)
 	subdirs="$subdirs m32c"
 
+	;;
+  msp430*-*-elf)
+	subdirs="$subdirs msp430"
+
+	config_libnosys=false
 	;;
   rl78*-*-elf)
 	subdirs="$subdirs rl78"

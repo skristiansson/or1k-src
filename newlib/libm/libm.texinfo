@@ -13,7 +13,7 @@ END-INFO-DIR-ENTRY
 @ifinfo
 This file documents an ANSI-C conforming mathematical subroutine library.
 
-Copyright (C) 1992, 1993, 1995, 1996-2011 Red Hat, Inc. 
+Copyright (C) 1992, 1993, 1995, 1996-2012 Red Hat, Inc. 
 
 @file{libm} includes software developed at SunPro, a Sun Microsystems,
 Inc. business.  Permission to use, copy, modify, and distribute this
@@ -46,8 +46,8 @@ into another language, under the above conditions for modified versions.
 @titlepage
 @title The Red Hat newlib C Math Library
 @sp 1
-@subtitle @code{libm} 1.20.0
-@subtitle December 2010
+@subtitle @code{libm} 2.0.0
+@subtitle December 2012
 @author {Steve Chamberlain}
 @author {Roland Pesch}
 @author {Red Hat Support}
@@ -86,10 +86,10 @@ into another language, under the above conditions for modified versions.
 @end titlepage
 @end iftex
 
-@ifinfo
+@ifnottex
 @node Top
 @top LIBM
-@end ifinfo
+@end ifnottex
 
 @menu
 * Math::           The mathematical functions (`math.h').
@@ -135,7 +135,7 @@ For such platforms, the long double math functions are implemented as calls to t
 @printindex cp
 
 @tex
-% I think something like @colophon should be in texinfo.  In the
+% I think something like @@colophon should be in texinfo.  In the
 % meantime:
 \long\def\colophon{\hbox to0pt{}\vfill
 \centerline{The body of this manual is set in}
@@ -146,7 +146,7 @@ For such platforms, the long double math functions are implemented as calls to t
 \centerline{{\sl\fontname\tensl\/}}
 \centerline{are used for emphasis.}\vfill}
 \page\colophon
-% Blame: pesch@cygnus.com, 28mar91.
+% Blame: pesch@@cygnus.com, 28mar91.
 @end tex
 
 @contents

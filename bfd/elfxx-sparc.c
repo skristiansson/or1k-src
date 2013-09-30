@@ -1433,7 +1433,7 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 						TRUE);
 	      if (h == NULL)
 		return FALSE;
-	      
+
 	      /* Fake a STT_GNU_IFUNC symbol.  */
 	      h->type = STT_GNU_IFUNC;
 	      h->def_regular = 1;
@@ -1450,6 +1450,10 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       if (h && h->type == STT_GNU_IFUNC)
@@ -1872,6 +1876,29 @@ _bfd_sparc_elf_gc_mark_hook (asection *sec,
       case R_SPARC_GNU_VTENTRY:
 	return NULL;
       }
+
+  /* FIXME: The test here, in check_relocs and in relocate_section
+     dealing with TLS optimization, ought to be !info->executable.  */
+  if (info->shared)
+    {
+      switch (SPARC_ELF_R_TYPE (rel->r_info))
+	{
+	case R_SPARC_TLS_GD_CALL:
+	case R_SPARC_TLS_LDM_CALL:
+	  /* This reloc implicitly references __tls_get_addr.  We know
+	     another reloc will reference the same symbol as the one
+	     on this reloc, so the real symbol and section will be
+	     gc marked when processing the other reloc.  That lets
+	     us handle __tls_get_addr here.  */
+	  h = elf_link_hash_lookup (elf_hash_table (info), "__tls_get_addr",
+				    FALSE, FALSE, TRUE);
+	  BFD_ASSERT (h != NULL);
+	  h->mark = 1;
+	  if (h->u.weakdef != NULL)
+	    h->u.weakdef->mark = 1;
+	  sym = NULL;
+	}
+    }
 
   return _bfd_elf_gc_mark_hook (sec, info, rel, h, sym);
 }
@@ -2985,7 +3012,7 @@ _bfd_sparc_elf_relocate_section (bfd *output_bfd,
 	      if (h == NULL)
 		abort ();
 
-	      /* Set STT_GNU_IFUNC symbol value.  */ 
+	      /* Set STT_GNU_IFUNC symbol value.  */
 	      h->root.u.def.value = sym->st_value;
 	      h->root.u.def.section = sec;
 	    }
@@ -3278,7 +3305,7 @@ _bfd_sparc_elf_relocate_section (bfd *output_bfd,
 	      if (h == NULL)
 		break;
 	    }
-	  /* PR 7027: We need similar behaviour for 64-bit binaries.  */ 
+	  /* PR 7027: We need similar behaviour for 64-bit binaries.  */
 	  else if (r_type == R_SPARC_WPLT30 && h == NULL)
 	    break;
 	  else
@@ -4126,7 +4153,7 @@ do_relocation:
 	      {
 		const char *name;
 
-		/* The Solaris native linker silently disregards overflows. 
+		/* The Solaris native linker silently disregards overflows.
 		   We don't, but this breaks stabs debugging info, whose
 		   relocations are only 32-bits wide.  Ignore overflows in
 		   this case and also for discarded entries.  */
@@ -4718,7 +4745,7 @@ finish_local_dynamic_symbol (void **slot, void *inf)
   struct elf_link_hash_entry *h
     = (struct elf_link_hash_entry *) *slot;
   struct bfd_link_info *info
-    = (struct bfd_link_info *) inf; 
+    = (struct bfd_link_info *) inf;
 
   return _bfd_sparc_elf_finish_dynamic_symbol (info->output_bfd, info,
 					       h, NULL);
@@ -4766,9 +4793,10 @@ _bfd_sparc_elf_finish_dynamic_sections (bfd *output_bfd, struct bfd_link_info *i
 	    }
 	}
 
-      elf_section_data (splt->output_section)->this_hdr.sh_entsize
-	= (htab->is_vxworks || !ABI_64_P (output_bfd))
-	  ? 0 : htab->plt_entry_size;
+      if (elf_section_data (splt->output_section) != NULL)
+        elf_section_data (splt->output_section)->this_hdr.sh_entsize
+          = ((htab->is_vxworks || !ABI_64_P (output_bfd))
+             ? 0 : htab->plt_entry_size);
     }
 
   /* Set the first entry in the global offset table to the address of
@@ -4882,6 +4910,7 @@ _bfd_sparc_elf_merge_private_bfd_data (bfd *ibfd, bfd *obfd)
   out_attr = &out_attrs[Tag_GNU_Sparc_HWCAPS];
 
   out_attr->i |= in_attr->i;
+  out_attr->type = 1;
 
   /* Merge Tag_compatibility attributes and any common GNU ones.  */
   _bfd_elf_merge_object_attributes (ibfd, obfd);

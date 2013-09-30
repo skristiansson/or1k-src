@@ -1,6 +1,6 @@
 # Makefile for Cygwin utilities
-# Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-# 2005, 2006, 2007, 2008, 2009, 2010 Red Hat, Inc.
+# Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+# 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
 
 # This file is part of Cygwin.
 
@@ -49,7 +49,7 @@ EXEEXT_FOR_BUILD:=@EXEEXT_FOR_BUILD@
 .PHONY: all install clean realclean warn_dumper warn_cygcheck_zlib
 
 LDLIBS := -lnetapi32 -ladvapi32 -lkernel32 -luser32
-CYGWIN_LDFLAGS := -static-libgcc -static-libstdc++ -Wl,--enable-auto-import -L${WINDOWS_LIBDIR} $(LDLIBS)
+CYGWIN_LDFLAGS := -static -Wl,--enable-auto-import -L${WINDOWS_LIBDIR} $(LDLIBS)
 DEP_LDLIBS := $(cygwin_build)/libcygwin.a
 
 MINGW_CXX      := @MINGW_CXX@
@@ -67,10 +67,10 @@ MINGW_BINS := ${addsuffix .exe,cygcheck cygwin-console-helper ldh strace}
 # list will will be compiled in Cygwin mode implicitly, so there is no
 # need for a CYGWIN_OBJS.
 MINGW_OBJS := bloda.o cygcheck.o dump_setup.o ldh.o path.o strace.o
-MINGW_LDFLAGS:=-L${WINDOWS_LIBDIR} -static-libgcc -static-libstdc++
+MINGW_LDFLAGS:=-static
 
 CYGCHECK_OBJS:=cygcheck.o bloda.o path.o dump_setup.o
-ZLIB:=-Wl,-dn,-lz,-dy
+ZLIB:=-lz
 
 .PHONY: all
 all:
@@ -90,8 +90,8 @@ cygcheck.exe: MINGW_LDFLAGS += ${ZLIB} -lpsapi -lntdll
 cygcheck.exe: ${CYGCHECK_OBJS}
 
 cygpath.o: CXXFLAGS += -fno-threadsafe-statics
-cygpath.exe: CYGWIN_LDFLAGS += -luserenv -lntdll
-ps.exe: CYGWIN_LDFLAGS += -lpsapi -lntdll
+cygpath.exe: CYGWIN_LDFLAGS += -lcygwin -luserenv -lntdll
+ps.exe: CYGWIN_LDFLAGS += -lcygwin -lpsapi -lntdll
 strace.exe: MINGW_LDFLAGS += -lntdll
 
 ldd.exe:CYGWIN_LDFLAGS += -lpsapi

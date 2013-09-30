@@ -1,6 +1,6 @@
 /* cygwin/wait.h
 
-   Copyright 2006, 2009, 2011 Red Hat, Inc.
+   Copyright 2006, 2009, 2011, 2012 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -10,6 +10,9 @@ details. */
 
 #ifndef _CYGWIN_WAIT_H
 #define _CYGWIN_WAIT_H
+
+#define WAIT_ANY	(pid_t)-1
+#define WAIT_MYPGRP	(pid_t)0
 
 #define WNOHANG 1
 #define WUNTRACED 2

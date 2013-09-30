@@ -1,7 +1,7 @@
 /* Functions specific to running gdb native on IA-64 running
    GNU/Linux.
 
-   Copyright (C) 1999-2012 Free Software Foundation, Inc.
+   Copyright (C) 1999-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -511,9 +511,9 @@ store_debug_register (ptid_t ptid, int idx, long val)
 {
   int tid;
 
-  tid = TIDGET (ptid);
+  tid = ptid_get_lwp (ptid);
   if (tid == 0)
-    tid = PIDGET (ptid);
+    tid = ptid_get_pid (ptid);
 
   (void) ptrace (PT_WRITE_U, tid, (PTRACE_TYPE_ARG3) (PT_DBR + 8 * idx), val);
 }

@@ -1,5 +1,5 @@
-R D/w32api////
-R D/subauth////
-R D/mingw////
-R D/maint////
-R D/bz2lib////
+A D/bz2lib////
+A D/maint////
+A D/mingw////
+A D/subauth////
+A D/w32api////

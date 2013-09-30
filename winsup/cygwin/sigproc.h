@@ -1,7 +1,7 @@
 /* sigproc.h
 
-   Copyright 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
-   2011, 2012 Red Hat, Inc.
+   Copyright 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2009, 2010,
+   2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -20,12 +20,12 @@ enum
   __SIGSTRACE	    = -(NSIG + 2),
   __SIGCOMMUNE	    = -(NSIG + 3),
   __SIGPENDING	    = -(NSIG + 4),
-  __SIGDELETE	    = -(NSIG + 5),
+  __SIGDELETE	    = -(NSIG + 5),	/* Not currently used */
   __SIGFLUSHFAST    = -(NSIG + 6),
   __SIGHOLD	    = -(NSIG + 7),
   __SIGNOHOLD	    = -(NSIG + 8),
-  __SIGEXIT	    = -(NSIG + 9),
-  __SIGSETPGRP	    = -(NSIG + 10)
+  __SIGSETPGRP	    = -(NSIG + 9),
+  __SIGTHREADEXIT   = -(NSIG + 10)
 };
 #endif
 
@@ -47,7 +47,7 @@ struct sigpacket
 {
   siginfo_t si;
   pid_t pid;
-  class _cygtls *tls;
+  class _cygtls *sigtls;
   sigset_t *mask;
   union
   {
@@ -55,38 +55,33 @@ struct sigpacket
     HANDLE thread_handle;
     struct sigpacket *next;
   };
-  int __stdcall process () __attribute__ ((regparm (1)));
-  int setup_handler (void *handler, struct sigaction& siga, _cygtls *tls)
-    __attribute__ ((regparm (3)));
+  int __reg1 process ();
+  int __reg3 setup_handler (void *, struct sigaction&, _cygtls *);
 };
 
-void __stdcall sig_dispatch_pending (bool fast = false)
-  __attribute__ ((regparm (1)));
-void set_signal_mask (sigset_t&, sigset_t) __attribute__ ((regparm (2)));
-int __stdcall handle_sigprocmask (int sig, const sigset_t *set,
-				  sigset_t *oldset, sigset_t& opmask)
-  __attribute__ ((regparm (3)));
+void __reg1 sig_dispatch_pending (bool fast = false);
+void __reg2 set_signal_mask (sigset_t&, sigset_t);
+int __reg3 handle_sigprocmask (int sig, const sigset_t *set,
+				  sigset_t *oldset, sigset_t& opmask);
 
-void __stdcall sig_clear (int) __attribute__ ((regparm (1)));
-void __stdcall sig_set_pending (int) __attribute__ ((regparm (1)));
+void __reg1 sig_clear (int);
+void __reg1 sig_set_pending (int);
 int __stdcall handle_sigsuspend (sigset_t);
 
-int __stdcall proc_subproc (DWORD, DWORD) __attribute__ ((regparm (2)));
+int __reg2 proc_subproc (DWORD, uintptr_t);
 
 class _pinfo;
 void __stdcall proc_terminate ();
 void __stdcall sigproc_init ();
-#ifdef __INSIDE_CYGWIN__
-void __stdcall sigproc_terminate (enum exit_states);
-#endif
-bool __stdcall pid_exists (pid_t) __attribute__ ((regparm(1)));
-int __stdcall sig_send (_pinfo *, siginfo_t&, class _cygtls *tls = NULL) __attribute__ ((regparm (3)));
-int __stdcall sig_send (_pinfo *, int) __attribute__ ((regparm (2)));
+bool __reg1 pid_exists (pid_t);
+int __reg3 sig_send (_pinfo *, siginfo_t&, class _cygtls * = NULL);
+int __reg3 sig_send (_pinfo *, int, class _cygtls * = NULL);
 void __stdcall signal_fixup_after_exec ();
 void __stdcall sigalloc ();
 
 int kill_pgrp (pid_t, siginfo_t&);
-int killsys (pid_t, int);
+void __reg1 exit_thread (DWORD) __attribute__ ((noreturn));
+void __reg1 setup_signal_exit (int);
 
 extern "C" void sigdelayed ();
 
@@ -138,7 +133,7 @@ public:
 
 class hold_everything
 {
-  bool ischild;
+  bool& ischild;
   /* Note the order of the locks below.  It is important,
      to avoid races, that the lock order be preserved.
 
@@ -155,7 +150,7 @@ class hold_everything
   lock_process process;
 
 public:
-  hold_everything (bool x = false): ischild (x) {}
+  hold_everything (bool& x): ischild (x) {}
   operator int () const {return signals;}
 
   ~hold_everything()

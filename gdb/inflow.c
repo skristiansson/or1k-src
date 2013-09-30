@@ -1,5 +1,5 @@
 /* Low level interface to ptrace, for GDB when running under Unix.
-   Copyright (C) 1986-1996, 1998-2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -217,18 +217,21 @@ static void terminal_ours_1 (int);
 void
 terminal_init_inferior_with_pgrp (int pgrp)
 {
+  struct inferior *inf = current_inferior ();
+  struct terminal_info *tinfo = get_inflow_inferior_data (inf);
+
+#ifdef PROCESS_GROUP_TYPE
+  /* Store the process group even without a terminal as it is used not
+     only to reset the tty foreground process group, but also to
+     interrupt the inferior.  */
+  tinfo->process_group = pgrp;
+#endif
+
   if (gdb_has_a_terminal ())
     {
-      struct inferior *inf = current_inferior ();
-      struct terminal_info *tinfo = get_inflow_inferior_data (inf);
-
       xfree (tinfo->ttystate);
       tinfo->ttystate = serial_copy_tty_state (stdin_serial,
 					       our_terminal_info.ttystate);
-
-#ifdef PROCESS_GROUP_TYPE
-      tinfo->process_group = pgrp;
-#endif
 
       /* Make sure that next time we call terminal_inferior (which will be
          before the program runs, as it needs to be), we install the new
@@ -261,7 +264,7 @@ terminal_init_inferior (void)
      (and the non-threaded child_terminal_init_inferior can just pass in
      inferior_ptid to the same routine).  */
   /* We assume INFERIOR_PID is also the child's process group.  */
-  terminal_init_inferior_with_pgrp (PIDGET (inferior_ptid));
+  terminal_init_inferior_with_pgrp (ptid_get_pid (inferior_ptid));
 #endif /* PROCESS_GROUP_TYPE */
 }
 
@@ -563,7 +566,7 @@ term_info (char *arg, int from_tty)
 }
 
 void
-child_terminal_info (char *args, int from_tty)
+child_terminal_info (const char *args, int from_tty)
 {
   struct inferior *inf;
   struct terminal_info *tinfo;
@@ -766,7 +769,7 @@ static void
 pass_signal (int signo)
 {
 #ifndef _WIN32
-  kill (PIDGET (inferior_ptid), SIGINT);
+  kill (ptid_get_pid (inferior_ptid), SIGINT);
 #endif
 }
 

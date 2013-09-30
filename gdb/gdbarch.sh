@@ -2,7 +2,7 @@
 
 # Architecture commands for GDB, the GNU debugger.
 #
-# Copyright (C) 1998-2012 Free Software Foundation, Inc.
+# Copyright (C) 1998-2013 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -47,7 +47,10 @@ do_read ()
 {
     comment=""
     class=""
-    while read line
+    # On some SH's, 'read' trims leading and trailing whitespace by
+    # default (e.g., bash), while on others (e.g., dash), it doesn't.
+    # Set IFS to empty to disable the trimming everywhere.
+    while IFS='' read line
     do
 	if test "${line}" = ""
 	then
@@ -466,13 +469,11 @@ m:const char *:register_name:int regnr:regnr::0
 # use "register_type".
 M:struct type *:register_type:int reg_nr:reg_nr
 
-# See gdbint.texinfo, and PUSH_DUMMY_CALL.
 M:struct frame_id:dummy_id:struct frame_info *this_frame:this_frame
 # Implement DUMMY_ID and PUSH_DUMMY_CALL, then delete
 # deprecated_fp_regnum.
 v:int:deprecated_fp_regnum:::-1:-1::0
 
-# See gdbint.texinfo.  See infcall.c.
 M:CORE_ADDR:push_dummy_call:struct value *function, struct regcache *regcache, CORE_ADDR bp_addr, int nargs, struct value **args, CORE_ADDR sp, int struct_return, CORE_ADDR struct_addr:function, regcache, bp_addr, nargs, args, sp, struct_return, struct_addr
 v:int:call_dummy_location::::AT_ENTRY_POINT::0
 M:CORE_ADDR:push_dummy_code:CORE_ADDR sp, CORE_ADDR funaddr, struct value **args, int nargs, struct type *value_type, CORE_ADDR *real_pc, CORE_ADDR *bp_addr, struct regcache *regcache:sp, funaddr, args, nargs, value_type, real_pc, bp_addr, regcache
@@ -586,7 +587,7 @@ m:CORE_ADDR:addr_bits_remove:CORE_ADDR addr:addr::core_addr_identity::0
 # FIXME/cagney/2001-01-18: The logic is backwards.  It should be asking if the
 # target can single step.  If not, then implement single step using breakpoints.
 #
-# A return value of 1 means that the software_single_step breakpoints 
+# A return value of 1 means that the software_single_step breakpoints
 # were inserted; 0 means they were not.
 F:int:software_single_step:struct frame_info *frame:frame
 
@@ -638,12 +639,23 @@ v:struct core_regset_section *:core_regset_sections:const char *name, int len:::
 # Create core file notes
 M:char *:make_corefile_notes:bfd *obfd, int *note_size:obfd, note_size
 
+# The elfcore writer hook to use to write Linux prpsinfo notes to core
+# files.  Most Linux architectures use the same prpsinfo32 or
+# prpsinfo64 layouts, and so won't need to provide this hook, as we
+# call the Linux generic routines in bfd to write prpsinfo notes by
+# default.
+F:char *:elfcore_write_linux_prpsinfo:bfd *obfd, char *note_data, int *note_size, const struct elf_internal_linux_prpsinfo *info:obfd, note_data, note_size, info
+
 # Find core file memory regions
 M:int:find_memory_regions:find_memory_region_ftype func, void *data:func, data
 
 # Read offset OFFSET of TARGET_OBJECT_LIBRARIES formatted shared libraries list from
 # core file into buffer READBUF with length LEN.
 M:LONGEST:core_xfer_shared_libraries:gdb_byte *readbuf, ULONGEST offset, LONGEST len:readbuf, offset, len
+
+# Read offset OFFSET of TARGET_OBJECT_LIBRARIES_AIX formatted shared
+# libraries list from core file into buffer READBUF with length LEN.
+M:LONGEST:core_xfer_shared_libraries_aix:gdb_byte *readbuf, ULONGEST offset, LONGEST len:readbuf, offset, len
 
 # How the core target converts a PTID from a core file to a string.
 M:char *:core_pid_to_str:ptid_t ptid:ptid
@@ -784,6 +796,15 @@ M:int:process_record_signal:struct regcache *regcache, enum gdb_signal signal:re
 # "Live" targets hide the translation behind the target interface
 # (target_wait, target_resume, etc.).
 M:enum gdb_signal:gdb_signal_from_target:int signo:signo
+
+# Signal translation: translate the GDB's internal signal number into
+# the inferior's signal (target's) representation.  The implementation
+# of this method must be host independent.  IOW, don't rely on symbols
+# of the NAT_FILE header (the nm-*.h files), the host <signal.h>
+# header, or similar headers.
+# Return the target signal number if found, or -1 if the GDB internal
+# signal number is invalid.
+M:int:gdb_signal_to_target:enum gdb_signal signal:signal
 
 # Extra signal info inspection.
 #
@@ -940,6 +961,11 @@ m:void:gen_return_address:struct agent_expr *ax, struct axs_value *value, CORE_A
 # Implement the "info proc" command.
 M:void:info_proc:char *args, enum info_proc_what what:args, what
 
+# Implement the "info proc" command for core files.  Noe that there
+# are two "info_proc"-like methods on gdbarch -- one for core files,
+# one for live targets.
+M:void:core_info_proc:char *args, enum info_proc_what what:args, what
+
 # Iterate over all objfiles in the order that makes the most sense
 # for the architecture to make global symbol searches.
 #
@@ -955,6 +981,8 @@ M:void:info_proc:char *args, enum info_proc_what what:args, what
 # inspected when the symbol search was requested.
 m:void:iterate_over_objfiles_in_search_order:iterate_over_objfiles_in_search_order_cb_ftype *cb, void *cb_data, struct objfile *current_objfile:cb, cb_data, current_objfile:0:default_iterate_over_objfiles_in_search_order::0
 
+# Ravenscar arch-dependent ops.
+v:struct ravenscar_arch_ops *:ravenscar_ops:::NULL:NULL::0:host_address_to_string (gdbarch->ravenscar_ops)
 EOF
 }
 
@@ -1008,8 +1036,7 @@ cat <<EOF
 
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
-   2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 1998-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1072,6 +1099,8 @@ struct syscall;
 struct agent_expr;
 struct axs_value;
 struct stap_parse_info;
+struct ravenscar_arch_ops;
+struct elf_internal_linux_prpsinfo;
 
 /* The architecture associated with the inferior through the
    connection to the target.

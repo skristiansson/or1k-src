@@ -1,6 +1,6 @@
 /* Read MiniDebugInfo data from an objfile.
 
-   Copyright (C) 2012 Free Software Foundation, Inc.
+   Copyright (C) 2012-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -226,6 +226,8 @@ lzma_close (struct bfd *nbfd,
   lzma_index_end (lstream->index, &gdb_lzma_allocator);
   xfree (lstream->data);
   xfree (lstream);
+
+  /* Zero means success.  */
   return 0;
 }
 
@@ -267,8 +269,8 @@ find_separate_debug_file_in_section (struct objfile *objfile)
     return NULL;
 
 #ifdef HAVE_LIBLZMA
-  abfd = gdb_bfd_openr_iovec (objfile->name, gnutarget, lzma_open, section,
-			      lzma_pread, lzma_close, lzma_stat);
+  abfd = gdb_bfd_openr_iovec (objfile_name (objfile), gnutarget, lzma_open,
+			      section, lzma_pread, lzma_close, lzma_stat);
   if (abfd == NULL)
     return NULL;
 

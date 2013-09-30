@@ -67,11 +67,20 @@
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 
+/* Define to 1 if you have the `fdwalk' function. */
+#undef HAVE_FDWALK
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
 /* Define to 1 if you have the `dl' library (-ldl). */
 #undef HAVE_LIBDL
+
+/* Define to 1 if you have the `mcheck' library (-lmcheck). */
+#undef HAVE_LIBMCHECK
+
+/* Define if the target supports branch tracing. */
+#undef HAVE_LINUX_BTRACE
 
 /* Define to 1 if you have the <linux/elf.h> header file. */
 #undef HAVE_LINUX_ELF_H
@@ -108,6 +117,9 @@
 
 /* Define if you support the personality syscall. */
 #undef HAVE_PERSONALITY
+
+/* Define to 1 if you have the `pipe2' function. */
+#undef HAVE_PIPE2
 
 /* Define to 1 if you have the `pread' function. */
 #undef HAVE_PREAD
@@ -186,6 +198,9 @@
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/syscall.h> header file. */
+#undef HAVE_SYS_SYSCALL_H
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
@@ -286,6 +301,9 @@
 #endif
 
 
+/* Define if we should use libthread_db. */
+#undef USE_THREAD_DB
+
 /* Define if we should use the Windows API, instead of the POSIX API. On
    Windows, we use the Windows API when building for MinGW, but the POSIX API
    when building for Cygwin. */
@@ -293,6 +311,12 @@
 
 /* Define if an XML target description is available. */
 #undef USE_XML
+
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 /* Define to 1 if on MINIX. */
 #undef _MINIX

@@ -1,7 +1,7 @@
 /* wait.cc: Posix wait routines.
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2009, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2008,
+   2009, 2011, 2012 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -69,7 +69,7 @@ wait4 (int intpid, int *status, int options, struct rusage *r)
       w->rusage = r;
       sigproc_printf ("calling proc_subproc, pid %d, options %d",
 		      w->pid, w->options);
-      if (!proc_subproc (PROC_WAIT, (DWORD) w))
+      if (!proc_subproc (PROC_WAIT, (uintptr_t) w))
 	{
 	  set_errno (ENOSYS);
 	  paranoid_printf ("proc_subproc returned 0");
@@ -110,7 +110,7 @@ wait4 (int intpid, int *status, int options, struct rusage *r)
       break;
     }
 
-  syscall_printf ("%R = wait4(%d, %p, %d, %p)", res, intpid, w->status, options, r);
+  syscall_printf ("%R = wait4(%d, %y, %d, %p)", res, intpid, w->status, options, r);
   w->status = -1;
   return res;
 }

@@ -1,7 +1,5 @@
 /* This module handles expression trees.
-   Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright 1991-2013 Free Software Foundation, Inc.
    Written by Steve Chamberlain of Cygnus Support <sac@cygnus.com>.
 
    This file is part of the GNU Binutils.
@@ -81,6 +79,7 @@ exp_print_token (token_code_type code, int infix_p)
     { GE, ">=" },
     { LSHIFT, "<<" },
     { RSHIFT, ">>" },
+    { LOG2CEIL, "LOG2CEIL" },
     { ALIGN_K, "ALIGN" },
     { BLOCK, "BLOCK" },
     { QUAD, "QUAD" },
@@ -132,6 +131,28 @@ exp_print_token (token_code_type code, int infix_p)
 
   if (infix_p)
     fputc (' ', config.map_file);
+}
+
+static void
+make_log2ceil (void)
+{
+  bfd_vma value = expld.result.value;
+  bfd_vma result = -1;
+  bfd_boolean round_up = FALSE;
+
+  do
+    {
+      result++;
+      /* If more than one bit is set in the value we will need to round up.  */
+      if ((value > 1) && (value & 1))
+	round_up = TRUE;
+    }
+  while (value >>= 1);
+
+  if (round_up)
+    result += 1;
+  expld.result.section = NULL;
+  expld.result.value = result;
 }
 
 static void
@@ -242,6 +263,10 @@ fold_unary (etree_type *tree)
 	  make_abs ();
 	  break;
 
+	case LOG2CEIL:
+	  make_log2ceil ();
+	  break;
+
 	case '~':
 	  expld.result.value = ~expld.result.value;
 	  break;
@@ -312,7 +337,7 @@ fold_binary (etree_type *tree)
       /* Check to see if the user has overridden the default
 	 value.  */
       segment_name = tree->binary.rhs->name.name;
-      for (seg = segments; seg; seg = seg->next) 
+      for (seg = segments; seg; seg = seg->next)
 	if (strcmp (seg->name, segment_name) == 0)
 	  {
 	    if (!seg->used
@@ -572,6 +597,9 @@ fold_name (etree_type *tree)
       break;
 
     case NAME:
+      if (expld.assign_name != NULL
+	  && strcmp (expld.assign_name, tree->name.name) == 0)
+	expld.assign_name = NULL;
       if (expld.phase == lang_first_phase_enum)
 	;
       else if (tree->name.name[0] == '.' && tree->name.name[1] == 0)
@@ -694,7 +722,7 @@ fold_name (etree_type *tree)
 		       / bfd_octets_per_byte (link_info.output_bfd));
 	      else
 		val = (bfd_vma)1 << os->bfd_section->alignment_power;
-	      
+
 	      new_number (val);
 	    }
 	  else
@@ -705,11 +733,11 @@ fold_name (etree_type *tree)
     case LENGTH:
       {
         lang_memory_region_type *mem;
-        
-        mem = lang_memory_region_lookup (tree->name.name, FALSE);  
-        if (mem != NULL) 
+
+        mem = lang_memory_region_lookup (tree->name.name, FALSE);
+        if (mem != NULL)
           new_number (mem->length);
-        else          
+        else
           einfo (_("%F%S: undefined MEMORY region `%s'"
 		   " referenced in expression\n"),
 		 tree, tree->name.name);
@@ -720,11 +748,11 @@ fold_name (etree_type *tree)
       if (expld.phase != lang_first_phase_enum)
 	{
 	  lang_memory_region_type *mem;
-        
-	  mem = lang_memory_region_lookup (tree->name.name, FALSE);  
-	  if (mem != NULL) 
+
+	  mem = lang_memory_region_lookup (tree->name.name, FALSE);
+	  if (mem != NULL)
 	    new_rel_from_abs (mem->origin);
-	  else          
+	  else
 	    einfo (_("%F%S: undefined MEMORY region `%s'"
 		     " referenced in expression\n"),
 		   tree, tree->name.name);
@@ -852,8 +880,6 @@ exp_fold_tree_1 (etree_type *tree)
 	}
       else
 	{
-	  etree_type *name;
-
 	  struct bfd_link_hash_entry *h = NULL;
 
 	  if (tree->type.node_class == etree_provide)
@@ -871,25 +897,20 @@ exp_fold_tree_1 (etree_type *tree)
 		}
 	    }
 
-	  name = tree->assign.src;
-	  if (name->type.node_class == etree_trinary)
-	    {
-	      exp_fold_tree_1 (name->trinary.cond);
-	      if (expld.result.valid_p)
-		name = (expld.result.value
-			? name->trinary.lhs : name->trinary.rhs);
-	    }
-
-	  if (name->type.node_class == etree_name
-	      && name->type.node_code == NAME
-	      && strcmp (tree->assign.dst, name->name.name) == 0)
-	    /* Leave it alone.  Do not replace a symbol with its own
-	       output address, in case there is another section sizing
-	       pass.  Folding does not preserve input sections.  */
-	    break;
-
+	  expld.assign_name = tree->assign.dst;
 	  exp_fold_tree_1 (tree->assign.src);
-	  if (expld.result.valid_p
+	  /* expld.assign_name remaining equal to tree->assign.dst
+	     below indicates the evaluation of tree->assign.src did
+	     not use the value of tree->assign.dst.  We don't allow
+	     self assignment until the final phase for two reasons:
+	     1) Expressions are evaluated multiple times.  With
+	     relaxation, the number of times may vary.
+	     2) Section relative symbol values cannot be correctly
+	     converted to absolute values, as is required by many
+	     expressions, until final section sizing is complete.  */
+	  if ((expld.result.valid_p
+	       && (expld.phase == lang_final_phase_enum
+		   || expld.assign_name != NULL))
 	      || (expld.phase <= lang_mark_phase_enum
 		  && tree->type.node_class == etree_assign
 		  && tree->assign.defsym))
@@ -937,6 +958,7 @@ exp_fold_tree_1 (etree_type *tree)
 		  && h->type == bfd_link_hash_new)
 		h->type = bfd_link_hash_undefined;
 	    }
+	  expld.assign_name = NULL;
 	}
       break;
 

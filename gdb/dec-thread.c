@@ -1,4 +1,4 @@
-/* Copyright (C) 2008-2012 Free Software Foundation, Inc.
+/* Copyright (C) 2008-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -727,7 +727,7 @@ void
 _initialize_dec_thread (void)
 {
   init_dec_thread_ops ();
-  add_target (&dec_thread_ops);
+  complete_target_initialization (&dec_thread_ops);
 
   observer_attach_new_objfile (dec_thread_new_objfile_observer);
 

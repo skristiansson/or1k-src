@@ -47,6 +47,11 @@ typedef struct
 } lldiv_t;
 #endif
 
+#ifndef __compar_fn_t_defined
+#define __compar_fn_t_defined
+typedef int (*__compar_fn_t) (const _PTR, const _PTR);
+#endif
+
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 
@@ -71,7 +76,7 @@ _PTR	_EXFUN(bsearch,(const _PTR __key,
 		       const _PTR __base,
 		       size_t __nmemb,
 		       size_t __size,
-		       int _EXFNPTR(_compar,(const _PTR, const _PTR))));
+		       __compar_fn_t _compar));
 _PTR	_EXFUN_NOTHROW(calloc,(size_t __nmemb, size_t __size));
 div_t	_EXFUN(div,(int __numer, int __denom));
 _VOID	_EXFUN(exit,(int __status) _ATTRIBUTE ((noreturn)));
@@ -113,7 +118,7 @@ int	_EXFUN(_mkstemp_r, (struct _reent *, char *));
 int	_EXFUN(_mkstemps_r, (struct _reent *, char *, int));
 char *	_EXFUN(_mktemp_r, (struct _reent *, char *) _ATTRIBUTE ((__warning__ ("the use of `mktemp' is dangerous; use `mkstemp' instead"))));
 #endif
-_VOID	_EXFUN(qsort,(_PTR __base, size_t __nmemb, size_t __size, int(*_compar)(const _PTR, const _PTR)));
+_VOID	_EXFUN(qsort,(_PTR __base, size_t __nmemb, size_t __size, __compar_fn_t _compar));
 int	_EXFUN(rand,(_VOID));
 _PTR	_EXFUN_NOTHROW(realloc,(_PTR __r, size_t __size));
 #ifndef __STRICT_ANSI__
@@ -122,7 +127,7 @@ _PTR	_EXFUN(reallocf,(_PTR __r, size_t __size));
 _VOID	_EXFUN(srand,(unsigned __seed));
 double	_EXFUN(strtod,(const char *__n, char **__end_PTR));
 double	_EXFUN(_strtod_r,(struct _reent *,const char *__n, char **__end_PTR));
-#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L)
+#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L) || (__cplusplus >= 201103L)
 float	_EXFUN(strtof,(const char *__n, char **__end_PTR));
 #endif
 #ifndef __STRICT_ANSI__
@@ -186,13 +191,13 @@ long long _EXFUN(_atoll_r,(struct _reent *, const char *__nptr));
 long long _EXFUN(llabs,(long long));
 lldiv_t	_EXFUN(lldiv,(long long __numer, long long __denom));
 #endif /* ! __STRICT_ANSI__ */
-#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L)
+#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L) || (__cplusplus >= 201103L)
 long long _EXFUN(strtoll,(const char *__n, char **__end_PTR, int __base));
 #endif
 #ifndef __STRICT_ANSI__
 long long _EXFUN(_strtoll_r,(struct _reent *, const char *__n, char **__end_PTR, int __base));
 #endif /* ! __STRICT_ANSI__ */
-#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L)
+#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L) || (__cplusplus >= 201103L)
 unsigned long long _EXFUN(strtoull,(const char *__n, char **__end_PTR, int __base));
 #endif
 #ifndef __STRICT_ANSI__
@@ -224,7 +229,7 @@ _VOID	_EXFUN(__eprintf,(const char *, const char *, unsigned int, const char *))
 
 /* On platforms where long double equals double.  */
 #ifdef _LDBL_EQ_DBL
-#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L)
+#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L) || (__cplusplus >= 201103L)
 extern long double strtold (const char *, char **);
 #endif
 extern long double wcstold (const wchar_t *, wchar_t **);

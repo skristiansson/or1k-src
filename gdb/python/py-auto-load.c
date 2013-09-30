@@ -1,6 +1,6 @@
 /* GDB routines for supporting auto-loaded scripts.
 
-   Copyright (C) 2010-2012 Free Software Foundation, Inc.
+   Copyright (C) 2010-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -74,7 +74,7 @@ gdbpy_load_auto_script_for_objfile (struct objfile *objfile, FILE *file,
   is_safe = file_is_auto_load_safe (filename,
 				    _("auto-load: Loading Python script \"%s\" "
 				      "by extension for objfile \"%s\".\n"),
-				    filename, objfile->name);
+				    filename, objfile_name (objfile));
 
   /* Add this script to the hash table too so "info auto-load python-scripts"
      can print it.  */
@@ -157,7 +157,7 @@ source_section_scripts (struct objfile *objfile, const char *source_name,
 					 "\"%s\" from section \"%s\" of "
 					 "objfile \"%s\".\n"),
 				       full_path, GDBPY_AUTO_SECTION_NAME,
-				       objfile->name))
+				       objfile_name (objfile)))
 	    opened = 0;
 	}
       else
@@ -169,7 +169,7 @@ source_section_scripts (struct objfile *objfile, const char *source_name,
 	    warning (_("Missing auto-load scripts referenced in section %s\n\
 of file %s\n\
 Use `info auto-load python [REGEXP]' to list them."),
-		     GDBPY_AUTO_SECTION_NAME, objfile->name);
+		     GDBPY_AUTO_SECTION_NAME, objfile_name (objfile));
 	}
 
       /* If one script isn't found it's not uncommon for more to not be
@@ -238,11 +238,11 @@ info_auto_load_python_scripts (char *pattern, int from_tty)
   auto_load_info_scripts (pattern, from_tty, &script_language_python);
 }
 
-void
+int
 gdbpy_initialize_auto_load (void)
 {
   struct cmd_list_element *cmd;
-  char *cmd_name;
+  const char *cmd_name;
 
   add_setshow_boolean_cmd ("python-scripts", class_support,
 			   &auto_load_python_scripts, _("\
@@ -281,6 +281,8 @@ Usage: info auto-load python-scripts [REGEXP]"),
   cmd = add_info ("auto-load-scripts", info_auto_load_python_scripts, _("\
 Print the list of automatically loaded Python scripts, deprecated."));
   deprecate_cmd (cmd, "info auto-load python-scripts");
+
+  return 0;
 }
 
 #else /* ! HAVE_PYTHON */

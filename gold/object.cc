@@ -1,6 +1,6 @@
 // object.cc -- support for an object file for linking in gold
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
 // Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
@@ -389,6 +389,23 @@ Sized_relobj<size, big_endian>::do_for_all_local_got_entries(
     }
 }
 
+// Get the address of an output section.
+
+template<int size, bool big_endian>
+uint64_t
+Sized_relobj<size, big_endian>::do_output_section_address(
+    unsigned int shndx)
+{
+  // If the input file is linked as --just-symbols, the output
+  // section address is the input section address.
+  if (this->just_symbols())
+    return this->section_address(shndx);
+
+  const Output_section* os = this->do_output_section(shndx);
+  gold_assert(os != NULL);
+  return os->address();
+}
+
 // Class Sized_relobj_file.
 
 template<int size, bool big_endian>
@@ -517,15 +534,16 @@ Sized_relobj_file<size, big_endian>::check_eh_frame_flags(
 
 template<int size, bool big_endian>
 const unsigned char*
-Sized_relobj_file<size, big_endian>::find_shdr(
+Object::find_shdr(
     const unsigned char* pshdrs,
     const char* name,
     const char* names,
     section_size_type names_size,
     const unsigned char* hdr) const
 {
+  const int shdr_size = elfcpp::Elf_sizes<size>::shdr_size;
   const unsigned int shnum = this->shnum();
-  const unsigned char* hdr_end = pshdrs + This::shdr_size * shnum;
+  const unsigned char* hdr_end = pshdrs + shdr_size * shnum;
   size_t sh_name = 0;
 
   while (1)
@@ -533,7 +551,7 @@ Sized_relobj_file<size, big_endian>::find_shdr(
       if (hdr)
 	{
 	  // We found HDR last time we were called, continue looking.
-	  typename This::Shdr shdr(hdr);
+	  typename elfcpp::Shdr<size, big_endian> shdr(hdr);
 	  sh_name = shdr.get_sh_name();
 	}
       else
@@ -557,13 +575,13 @@ Sized_relobj_file<size, big_endian>::find_shdr(
 	    return hdr;
 	}
 
-      hdr += This::shdr_size;
+      hdr += shdr_size;
       while (hdr < hdr_end)
 	{
-	  typename This::Shdr shdr(hdr);
+	  typename elfcpp::Shdr<size, big_endian> shdr(hdr);
 	  if (shdr.get_sh_name() == sh_name)
 	    return hdr;
-	  hdr += This::shdr_size;
+	  hdr += shdr_size;
 	}
       hdr = NULL;
       if (sh_name == 0)
@@ -585,7 +603,8 @@ Sized_relobj_file<size, big_endian>::find_eh_frame(
 
   while (1)
     {
-      s = this->find_shdr(pshdrs, ".eh_frame", names, names_size, s);
+      s = this->template find_shdr<size, big_endian>(pshdrs, ".eh_frame",
+						     names, names_size, s);
       if (s == NULL)
 	return false;
 
@@ -1813,19 +1832,21 @@ Sized_relobj_file<size, big_endian>::do_layout_deferred_sections(Layout* layout)
        ++deferred)
     {
       typename This::Shdr shdr(deferred->shdr_data_);
-      // If the section is not included, it is because the garbage collector
-      // decided it is not needed.  Avoid reverting that decision.
-      if (!this->is_section_included(deferred->shndx_))
-	continue;
 
-      if (parameters->options().relocatable()
-	  || deferred->name_ != ".eh_frame"
-	  || !this->check_eh_frame_flags(&shdr))
-	this->layout_section(layout, deferred->shndx_, deferred->name_.c_str(),
-			     shdr, deferred->reloc_shndx_,
-			     deferred->reloc_type_);
-      else
+      if (!parameters->options().relocatable()
+	  && deferred->name_ == ".eh_frame"
+	  && this->check_eh_frame_flags(&shdr))
 	{
+	  // Checking is_section_included is not reliable for
+	  // .eh_frame sections, because they do not have an output
+	  // section.  This is not a problem normally because we call
+	  // layout_eh_frame_section unconditionally, but when
+	  // deferring sections that is not true.  We don't want to
+	  // keep all .eh_frame sections because that will cause us to
+	  // keep all sections that they refer to, which is the wrong
+	  // way around.  Instead, the eh_frame code will discard
+	  // .eh_frame sections that refer to discarded sections.
+
 	  // Reading the symbols again here may be slow.
 	  Read_symbols_data sd;
 	  this->read_symbols(&sd);
@@ -1838,7 +1859,17 @@ Sized_relobj_file<size, big_endian>::do_layout_deferred_sections(Layout* layout)
 					shdr,
 					deferred->reloc_shndx_,
 					deferred->reloc_type_);
+	  continue;
 	}
+
+      // If the section is not included, it is because the garbage collector
+      // decided it is not needed.  Avoid reverting that decision.
+      if (!this->is_section_included(deferred->shndx_))
+	continue;
+
+      this->layout_section(layout, deferred->shndx_, deferred->name_.c_str(),
+			   shdr, deferred->reloc_shndx_,
+			   deferred->reloc_type_);
     }
 
   this->deferred_layout_.clear();
@@ -2673,6 +2704,7 @@ Sized_relobj_file<size, big_endian>::get_symbol_location_info(
 	  && (static_cast<off_t>(sym.get_st_value() + sym.get_st_size())
 	      > offset))
 	{
+	  info->enclosing_symbol_type = sym.get_st_type();
 	  if (sym.get_st_name() > names_size)
 	    info->enclosing_symbol_name = "(invalid)";
 	  else
@@ -2982,12 +3014,10 @@ Relocate_info<size, big_endian>::location(size_t, off_t offset) const
 	  ret += ":";
 	  ret += info.source_file;
 	}
-      size_t len = info.enclosing_symbol_name.length() + 100;
-      char* buf = new char[len];
-      snprintf(buf, len, _(":function %s"),
-	       info.enclosing_symbol_name.c_str());
-      ret += buf;
-      delete[] buf;
+      ret += ":";
+      if (info.enclosing_symbol_type == elfcpp::STT_FUNC)
+	ret += _("function ");
+      ret += info.enclosing_symbol_name;
       return ret;
     }
 
@@ -3163,6 +3193,10 @@ template
 void
 Object::read_section_data<32, false>(elfcpp::Elf_file<32, false, Object>*,
 				     Read_symbols_data*);
+template
+const unsigned char*
+Object::find_shdr<32,false>(const unsigned char*, const char*, const char*,
+			    section_size_type, const unsigned char*) const;
 #endif
 
 #ifdef HAVE_TARGET_32_BIG
@@ -3170,6 +3204,10 @@ template
 void
 Object::read_section_data<32, true>(elfcpp::Elf_file<32, true, Object>*,
 				    Read_symbols_data*);
+template
+const unsigned char*
+Object::find_shdr<32,true>(const unsigned char*, const char*, const char*,
+			   section_size_type, const unsigned char*) const;
 #endif
 
 #ifdef HAVE_TARGET_64_LITTLE
@@ -3177,6 +3215,10 @@ template
 void
 Object::read_section_data<64, false>(elfcpp::Elf_file<64, false, Object>*,
 				     Read_symbols_data*);
+template
+const unsigned char*
+Object::find_shdr<64,false>(const unsigned char*, const char*, const char*,
+			    section_size_type, const unsigned char*) const;
 #endif
 
 #ifdef HAVE_TARGET_64_BIG
@@ -3184,24 +3226,40 @@ template
 void
 Object::read_section_data<64, true>(elfcpp::Elf_file<64, true, Object>*,
 				    Read_symbols_data*);
+template
+const unsigned char*
+Object::find_shdr<64,true>(const unsigned char*, const char*, const char*,
+			   section_size_type, const unsigned char*) const;
 #endif
 
 #ifdef HAVE_TARGET_32_LITTLE
+template
+class Sized_relobj<32, false>;
+
 template
 class Sized_relobj_file<32, false>;
 #endif
 
 #ifdef HAVE_TARGET_32_BIG
 template
+class Sized_relobj<32, true>;
+
+template
 class Sized_relobj_file<32, true>;
 #endif
 
 #ifdef HAVE_TARGET_64_LITTLE
 template
+class Sized_relobj<64, false>;
+
+template
 class Sized_relobj_file<64, false>;
 #endif
 
 #ifdef HAVE_TARGET_64_BIG
+template
+class Sized_relobj<64, true>;
+
 template
 class Sized_relobj_file<64, true>;
 #endif

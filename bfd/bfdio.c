@@ -1,8 +1,6 @@
 /* Low-level I/O routines for BFDs.
 
-   Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2011
-   Free Software Foundation, Inc.
+   Copyright 1990-2013 Free Software Foundation, Inc.
 
    Written by Cygnus Support.
 
@@ -89,7 +87,7 @@ real_fopen (const char *filename, const char *modes)
 #ifdef VMS
   char *vms_attr;
 
-  /* On VMS, fopen allows file attributes as optionnal arguments.
+  /* On VMS, fopen allows file attributes as optional arguments.
      We need to use them but we'd better to use the common prototype.
      In fopen-vms.h, they are separated from the mode with a comma.
      Split here.  */
@@ -154,7 +152,7 @@ DESCRIPTION
 .  {* For the following, on successful completion a value of 0 is returned.
 .     Otherwise, a value of -1 is returned (and  <<bfd_error>> is set).  *}
 .  int (*bseek) (struct bfd *abfd, file_ptr offset, int whence);
-.  bfd_boolean (*bclose) (struct bfd *abfd);
+.  int (*bclose) (struct bfd *abfd);
 .  int (*bflush) (struct bfd *abfd);
 .  int (*bstat) (struct bfd *abfd, struct stat *sb);
 .  {* Mmap a part of the files. ADDR, LEN, PROT, FLAGS and OFFSET are the usual
@@ -576,7 +574,7 @@ memory_bseek (bfd *abfd, file_ptr position, int direction)
   return 0;
 }
 
-static bfd_boolean
+static int
 memory_bclose (struct bfd *abfd)
 {
   struct bfd_in_memory *bim = (struct bfd_in_memory *) abfd->iostream;
@@ -586,7 +584,7 @@ memory_bclose (struct bfd *abfd)
   free (bim);
   abfd->iostream = NULL;
 
-  return TRUE;
+  return 0;
 }
 
 static int

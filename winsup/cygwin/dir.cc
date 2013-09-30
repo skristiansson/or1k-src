@@ -1,7 +1,7 @@
 /* dir.cc: Posix directory-related routines
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2006, 2007,
-   2008, 2009, 2010, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -204,10 +204,10 @@ telldir (DIR *dir)
 /* telldir was never defined using off_t in POSIX, only in early versions
    of glibc.  We have to keep the function in as entry point for backward
    compatibility. */
-extern "C" _off64_t
+extern "C" off_t
 telldir64 (DIR *dir)
 {
-  return (_off64_t) telldir (dir);
+  return (off_t) telldir (dir);
 }
 
 /* seekdir */
@@ -228,7 +228,7 @@ seekdir (DIR *dir, long loc)
    of glibc.  We have to keep the function in as entry point for backward
    compatibility. */
 extern "C" void
-seekdir64 (DIR *dir, _off64_t loc)
+seekdir64 (DIR *dir, off_t loc)
 {
   seekdir (dir, (long) loc);
 }

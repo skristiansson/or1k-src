@@ -1,7 +1,7 @@
 /* pthread.h: POSIX pthread interface
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2006,
-   2007, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2011, 2012, 2013 Red Hat, Inc.
 
    Written by Marco Fuykschot <marco@ddi.nl>
 
@@ -63,6 +63,8 @@ extern "C"
 #define PTHREAD_SCOPE_PROCESS 0
 #define PTHREAD_SCOPE_SYSTEM 1
 
+/* Register Fork Handlers */
+int pthread_atfork (void (*)(void), void (*)(void), void (*)(void));
 
 /* Attributes */
 int pthread_attr_destroy (pthread_attr_t *);
@@ -137,7 +139,7 @@ int pthread_create (pthread_t *, const pthread_attr_t *,
 		    void *(*)(void *), void *);
 int pthread_detach (pthread_t);
 int pthread_equal (pthread_t, pthread_t);
-void pthread_exit (void *);
+void pthread_exit (void *) __attribute__ ((noreturn));
 int pthread_getcpuclockid (pthread_t, clockid_t *);
 int pthread_getschedparam (pthread_t, int *, struct sched_param *);
 void *pthread_getspecific (pthread_key_t);

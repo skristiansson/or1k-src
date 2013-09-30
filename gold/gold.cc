@@ -653,10 +653,6 @@ queue_middle_tasks(const General_options& options,
   // dynamic objects that it depends upon.
   input_objects->check_dynamic_dependencies();
 
-  // See if any of the input definitions violate the One Definition Rule.
-  // TODO: if this is too slow, do this as a task, rather than inline.
-  symtab->detect_odr_violations(task, options.output_file_name());
-
   // Do the --no-undefined-version check.
   if (!parameters->options().undefined_version())
     {
@@ -877,6 +873,9 @@ queue_final_tasks(const General_options& options,
       workqueue->queue(t);
       final_blocker = new_final_blocker;
     }
+
+  // Create tasks for tree-style build ID computation, if necessary.
+  final_blocker = layout->queue_build_id_tasks(workqueue, final_blocker, of);
 
   // Queue a task to close the output file.  This will be blocked by
   // FINAL_BLOCKER.

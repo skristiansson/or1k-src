@@ -290,11 +290,11 @@ SECTIONS
 
   .debug_frame ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
   {
-    *(.debug_frame*)
+    *(.debug_frame)
   }
   .zdebug_frame ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :
   {
-    *(.zdebug_frame*)
+    *(.zdebug_frame)
   }
 
   .debug_str ${RELOCATING+BLOCK(__section_alignment__)} ${RELOCATING+(NOLOAD)} :

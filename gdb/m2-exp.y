@@ -1,6 +1,5 @@
 /* YACC grammar for Modula-2 expressions, for GDB.
-   Copyright (C) 1986, 1989-1996, 1999-2000, 2007-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
    Generated from expread.y (now c-exp.y) and contributed by the Department
    of Computer Science at the State University of New York at Buffalo, 1991.
 
@@ -602,7 +601,7 @@ variable:	block COLONCOLON NAME
 /* Base case for variables.  */
 variable:	NAME
 			{ struct symbol *sym;
-			  int is_a_field_of_this;
+			  struct field_of_this_result is_a_field_of_this;
 
  			  sym = lookup_symbol (copy_name ($1),
 					       expression_context_block,
@@ -628,12 +627,12 @@ variable:	NAME
 			    }
 			  else
 			    {
-			      struct minimal_symbol *msymbol;
+			      struct bound_minimal_symbol msymbol;
 			      char *arg = copy_name ($1);
 
 			      msymbol =
-				lookup_minimal_symbol (arg, NULL, NULL);
-			      if (msymbol != NULL)
+				lookup_bound_minimal_symbol (arg);
+			      if (msymbol.minsym != NULL)
 				write_exp_msymbol (msymbol);
 			      else if (!have_full_symbols () && !have_partial_symbols ())
 				error (_("No symbol table is loaded.  Use the \"symbol-file\" command."));

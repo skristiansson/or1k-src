@@ -1,7 +1,7 @@
 /* version.h -- Cygwin version numbers and accompanying documentation.
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -43,7 +43,7 @@ details. */
 	 changes to the DLL and is mainly informative in nature. */
 
 #define CYGWIN_VERSION_DLL_MAJOR 1007
-#define CYGWIN_VERSION_DLL_MINOR 18
+#define CYGWIN_VERSION_DLL_MINOR 26
 
       /* Major numbers before CYGWIN_VERSION_DLL_EPOCH are
 	 incompatible. */
@@ -432,12 +432,21 @@ details. */
       261: Export memrchr.
       262: Export getmntent_r.
       263: Export cfsetspeed.
+      264: Consistently export strtold
+      265: Export __b64_ntop, __b64_pton.
+      266: Export arc4random, arc4random_addrandom, arc4random_buf,
+	   arc4random_stir, arc4random_uniform.
+      267: Export rawmemchr.
+      268: Export GetCommandLineA, GetCommandLineW
+      269: Allow application override of posix_memalign.
+      270: Redefine mtget.mt_resid field to contain current partition as well
+           as number of partitions on tape.
      */
 
      /* Note that we forgot to bump the api for ualarm, strtoll, strtoull */
 
 #define CYGWIN_VERSION_API_MAJOR 0
-#define CYGWIN_VERSION_API_MINOR 263
+#define CYGWIN_VERSION_API_MINOR 270
 
      /* There is also a compatibity version number associated with the
 	shared memory regions.  It is incremented when incompatible

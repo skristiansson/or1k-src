@@ -1,7 +1,6 @@
 /* Source-language-related definitions for GDB.
 
-   Copyright (C) 1991-1995, 1998-2000, 2003-2004, 2007-2012 Free
-   Software Foundation, Inc.
+   Copyright (C) 1991-2013 Free Software Foundation, Inc.
 
    Contributed by the Department of Computer Science at the State University
    of New York at Buffalo.
@@ -284,8 +283,12 @@ struct language_defn
 
     /* Should return a vector of all symbols which are possible
        completions for TEXT.  WORD is the entire command on which the
-       completion is being made.  */
-    VEC (char_ptr) *(*la_make_symbol_completion_list) (char *text, char *word);
+       completion is being made.  If CODE is TYPE_CODE_UNDEF, then all
+       symbols should be examined; otherwise, only STRUCT_DOMAIN
+       symbols whose type has a code of CODE should be matched.  */
+    VEC (char_ptr) *(*la_make_symbol_completion_list) (const char *text,
+						       const char *word,
+						       enum type_code code);
 
     /* The per-architecture (OS/ABI) language information.  */
     void (*la_language_arch_info) (struct gdbarch *,
@@ -324,9 +327,9 @@ struct language_defn
     /* Find all symbols in the current program space matching NAME in
        DOMAIN, according to this language's rules.
 
-       The search starts with BLOCK.  This function iterates upward
-       through blocks.  When the outermost block has been finished,
-       the function returns.
+       The search is done in BLOCK only.
+       The caller is responsible for iterating up through superblocks
+       if desired.
 
        For each one, call CALLBACK with the symbol and the DATA
        argument.  If CALLBACK returns zero, the iteration ends at that

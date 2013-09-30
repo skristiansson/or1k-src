@@ -1,7 +1,6 @@
 /* Definitions for dealing with stack frames, for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1988-1994, 1996-2004, 2007-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -660,18 +659,15 @@ extern CORE_ADDR get_pc_function_start (CORE_ADDR);
 
 extern struct frame_info *find_relative_frame (struct frame_info *, int *);
 
-extern void show_and_print_stack_frame (struct frame_info *fi, int print_level,
-					enum print_what print_what);
-
 extern void print_stack_frame (struct frame_info *, int print_level,
-			       enum print_what print_what);
+			       enum print_what print_what,
+			       int set_current_sal);
 
 extern void print_frame_info (struct frame_info *, int print_level,
-			      enum print_what print_what, int args);
+			      enum print_what print_what, int args,
+			      int set_current_sal);
 
 extern struct frame_info *block_innermost_frame (const struct block *);
-
-extern int deprecated_pc_in_call_dummy (struct gdbarch *gdbarch, CORE_ADDR pc);
 
 extern int deprecated_frame_register_read (struct frame_info *frame, int regnum,
 				gdb_byte *buf);
@@ -717,6 +713,8 @@ struct frame_arg
 extern void read_frame_arg (struct symbol *sym, struct frame_info *frame,
 			    struct frame_arg *argp,
 			    struct frame_arg *entryargp);
+extern void read_frame_local (struct symbol *sym, struct frame_info *frame,
+			      struct frame_arg *argp);
 
 extern void args_info (char *, int);
 

@@ -4,10 +4,10 @@ D/machine////
 D/math////
 D/mathfp////
 D/test////
-/Makefile.am/1.9/Sat Oct 27 22:59:29 2012/-ko/
-/Makefile.in/1.24/Sat Oct 27 22:59:29 2012/-ko/
-/aclocal.m4/1.31/Sat Oct 27 22:59:29 2012/-ko/
-/config.h.in/1.1.1.1/Sat Oct 27 22:59:29 2012/-ko/
-/configure/1.40/Sat Oct 27 22:59:29 2012/-ko/
-/configure.in/1.11/Sat Oct 27 22:59:29 2012/-ko/
-/libm.texinfo/1.16/Sat Oct 27 22:59:29 2012/-ko/
+/Makefile.am/1.9/Sat Aug 18 05:48:01 2012/-ko/
+/config.h.in/1.1.1.1/Sat Aug 18 05:48:01 2012/-ko/
+/configure.in/1.11/Sat Aug 18 05:48:01 2012/-ko/
+/Makefile.in/1.26/Mon Sep 30 18:36:13 2013/-ko/
+/aclocal.m4/1.32/Mon Sep 30 18:36:13 2013/-ko/
+/configure/1.41/Mon Sep 30 18:36:13 2013/-ko/
+/libm.texinfo/1.18/Mon Sep 30 18:36:13 2013/-ko/

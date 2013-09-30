@@ -1,6 +1,6 @@
 /* nlsfuncs.cc: NLS helper functions
 
-   Copyright 2010 Red Hat, Inc.
+   Copyright 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -41,11 +41,6 @@ details. */
 
 #define has_modifier(x)	((x)[0] && !strcmp (modifier, (x)))
 
-/* Vista and later.  Not defined in w32api yet. */
-extern "C" {
-WINBASEAPI LCID WINAPI LocaleNameToLCID (LPCWSTR, DWORD);
-};
-
 static char last_locale[ENCODING_LEN + 1];
 static LCID last_lcid;
 
@@ -66,7 +61,7 @@ __get_lcid_from_locale (const char *name)
   /* Speed up reusing the same locale as before, for instance in LC_ALL case. */
   if (!strcmp (name, last_locale))
     {
-      debug_printf ("LCID=0x%04x", last_lcid);
+      debug_printf ("LCID=%04y", last_lcid);
       return last_lcid;
     }
   stpcpy (last_locale, name);
@@ -105,16 +100,22 @@ __get_lcid_from_locale (const char *name)
 	  } sc_only_locale[] = {
 	    { "az-AZ" , L"az-Latn-AZ"  },
 	    { "bs-BA" , L"bs-Latn-BA"  },
+	    { "chr-US", L"chr-Cher-US"},
+	    { "ff-SN" , L"ff-Latn-SN"  },
 	    { "ha-NG" , L"ha-Latn-NG"  },
 	    { "iu-CA" , L"iu-Latn-CA"  },
+	    { "ku-IQ" , L"ku-Arab-IQ"  },
 	    { "mn-CN" , L"mn-Mong-CN"  },
 	    { "no-NO" , L"nb-NO"       },
+	    { "pa-PK" , L"pa-Arab-PK"  },
+	    { "sd-PK" , L"sd-Arab-PK"  },
 	    { "sr-BA" , L"sr-Cyrl-BA"  },
 	    { "sr-CS" , L"sr-Cyrl-CS"  },
 	    { "sr-ME" , L"sr-Cyrl-ME"  },
 	    { "sr-RS" , L"sr-Cyrl-RS"  },
 	    { "tg-TJ" , L"tg-Cyrl-TJ"  },
 	    { "tzm-DZ", L"tzm-Latn-DZ" },
+	    { "tzm-MA", L"tzm-Tfng-MA" },
 	    { "uz-UZ" , L"uz-Latn-UZ"  },
 	    { NULL    , NULL	       }
 	  };
@@ -145,7 +146,7 @@ __get_lcid_from_locale (const char *name)
 	      }
 	}
       last_lcid = lcid ?: (LCID) -1;
-      debug_printf ("LCID=0x%04x", last_lcid);
+      debug_printf ("LCID=%04y", last_lcid);
       return last_lcid;
     }
   /* Pre-Vista we have to loop through the LCID values and see if they
@@ -230,7 +231,7 @@ __get_lcid_from_locale (const char *name)
 	lcid = MAKELANGID (lcid & 0x3ff, (lcid >> 10) + 1);
     }
   last_lcid = lcid ?: (LCID) -1;
-  debug_printf ("LCID=0x%04x", last_lcid);
+  debug_printf ("LCID=%04y", last_lcid);
   return last_lcid;
 }
 
@@ -1192,13 +1193,15 @@ strcoll (const char *s1, const char *s2)
   return ret - CSTR_EQUAL;
 }
 
-/* BSD.  Used in glob.cc and regcomp.c, for instance. */
+/* BSD.  Used from glob.cc, fnmatch.c and regcomp.c.  Make sure caller is
+   using wide chars.  Unfortunately the definition of this functions hides
+   the required input type. */
 extern "C" int
 __collate_range_cmp (int c1, int c2)
 {
-  char s1[2] = { c1, '\0' };
-  char s2[2] = { c2, '\0' };
-  return strcoll (s1, s2);
+  wchar_t s1[2] = { (wchar_t) c1, L'\0' };
+  wchar_t s2[2] = { (wchar_t) c2, L'\0' };
+  return wcscoll (s1, s2);
 }
 
 extern "C" size_t
@@ -1340,17 +1343,20 @@ __set_charset_from_locale (const char *locale, char *charset)
       if (lcid == 0x0452)		/* cy_GB (Welsh/Great Britain) */
 	cs = "ISO-8859-14";
       else if (lcid == 0x4009		/* en_IN (English/India) */
+	       || lcid == 0x0867	/* ff_SN (Fulah/Senegal) */
 	       || lcid == 0x0464	/* fil_PH (Filipino/Philippines) */
 	       || lcid == 0x0462	/* fy_NL (Frisian/Netherlands) */
 	       || lcid == 0x0468	/* ha_NG (Hausa/Nigeria) */
+	       || lcid == 0x0475	/* haw_US (Hawaiian/United States) */
 	       || lcid == 0x0470	/* ig_NG (Igbo/Nigeria) */
+	       || lcid == 0x085d	/* iu_CA (Inuktitut/Canada) */
 	       || lcid == 0x046c	/* nso_ZA (Northern Sotho/South Africa) */
 	       || lcid == 0x0487	/* rw_RW (Kinyarwanda/Rwanda) */
 	       || lcid == 0x043b	/* se_NO (Northern Saami/Norway) */
+	       || lcid == 0x0832	/* tn_BW (Tswana/Botswana) */
 	       || lcid == 0x0432	/* tn_ZA (Tswana/South Africa) */
 	       || lcid == 0x0488	/* wo_SN (Wolof/Senegal) */
-	       || lcid == 0x046a	/* yo_NG (Yoruba/Nigeria) */
-	       || lcid == 0x085d)	/* iu_CA (Inuktitut/Canada) */
+	       || lcid == 0x046a)	/* yo_NG (Yoruba/Nigeria) */
 	cs = "UTF-8";
       else if (lcid == 0x042e)		/* hsb_DE (Upper Sorbian/Germany) */
 	cs = "ISO-8859-2";
@@ -1378,6 +1384,8 @@ __set_charset_from_locale (const char *locale, char *charset)
       break;
     case 1256:
       if (lcid == 0x0429		/* fa_IR (Persian/Iran) */
+	  || lcid == 0x0846		/* pa_PK (Punjabi/Pakistan) */
+	  || lcid == 0x0859		/* sd_PK (Sindhi/Pakistan) */
 	  || lcid == 0x0480		/* ug_CN (Uyghur/China) */
 	  || lcid == 0x0420)		/* ur_PK (Urdu/Pakistan) */
 	cs = "UTF-8";
@@ -1392,17 +1400,30 @@ __set_charset_from_locale (const char *locale, char *charset)
       break;
     case 1258:
     default:
-      if (lcid == 0x0481)		/* mi_NZ (Maori/New Zealand) */
-	cs = "ISO-8859-13";
+      if (lcid == 0x3c09 		/* en_HK (English/Hong Kong) */
+	  || lcid == 0x200c		/* fr_RE (French/Réunion) */
+	  || lcid == 0x240c		/* fr_CD (French/Congo) */
+	  || lcid == 0x280c		/* fr_SN (French/Senegal) */
+	  || lcid == 0x2c0c		/* fr_CM (French/Cameroon) */
+	  || lcid == 0x300c		/* fr_CI (French/Ivory Coast) */
+	  || lcid == 0x340c		/* fr_ML (French/Mali) */
+	  || lcid == 0x380c		/* fr_MA (French/Morocco) */
+	  || lcid == 0x3c0c		/* fr_HT (French/Haiti) */
+	  || lcid == 0x0477		/* so_SO (Somali/Somali) */
+	  || lcid == 0x0430)		/* st_ZA (Sotho/South Africa) */
+      	cs = "ISO-8859-1";
+      else if (lcid == 0x818)		/* ro_MD (Romanian/Moldovia) */
+      	cs = "ISO-8859-2";
       else if (lcid == 0x043a)		/* mt_MT (Maltese/Malta) */
 	cs = "ISO-8859-3";
+      else if (lcid == 0x0481)		/* mi_NZ (Maori/New Zealand) */
+	cs = "ISO-8859-13";
       else if (lcid == 0x0437)		/* ka_GE (Georgian/Georgia) */
 	cs = "GEORGIAN-PS";
       else if (lcid == 0x043f)		/* kk_KZ (Kazakh/Kazakhstan) */
 	cs = "PT154";
       else
 	cs = "UTF-8";
-      break;
     }
   stpcpy (charset, cs);
 }

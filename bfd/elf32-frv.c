@@ -952,7 +952,7 @@ frvfdpic_elf_link_hash_table_create (bfd *abfd)
   struct frvfdpic_elf_link_hash_table *ret;
   bfd_size_type amt = sizeof (struct frvfdpic_elf_link_hash_table);
 
-  ret = bfd_zalloc (abfd, amt);
+  ret = bfd_zmalloc (amt);
   if (ret == NULL)
     return NULL;
 
@@ -5507,7 +5507,7 @@ elf32_frvfdpic_always_size_sections (bfd *output_bfd,
 static bfd_boolean
 _frvfdpic_check_discarded_relocs (bfd *abfd, asection *sec,
 				  struct bfd_link_info *info,
-				  
+
 				  bfd_boolean *changed)
 {
   Elf_Internal_Shdr *symtab_hdr;
@@ -6046,6 +6046,10 @@ elf32_frv_check_relocs (bfd *abfd,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       switch (ELF32_R_TYPE (rel->r_info))
@@ -6744,12 +6748,12 @@ elf32_frv_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
          hardcoded offsets and sizes listed below (and contained within
 	 this lexical block) refer to fields in the target's elf_prstatus
 	 struct.  */
-      case 268:	
+      case 268:
 	/* `pr_cursig' is at offset 12.  */
-	elf_tdata (abfd)->core_signal = bfd_get_16 (abfd, note->descdata + 12);
+	elf_tdata (abfd)->core->signal = bfd_get_16 (abfd, note->descdata + 12);
 
 	/* `pr_pid' is at offset 24.  */
-	elf_tdata (abfd)->core_lwpid = bfd_get_32 (abfd, note->descdata + 24);
+	elf_tdata (abfd)->core->lwpid = bfd_get_32 (abfd, note->descdata + 24);
 
 	/* `pr_reg' is at offset 72.  */
 	offset = 72;
@@ -6760,7 +6764,7 @@ elf32_frv_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
 	   and `pr_interp_fdpic_loadmap', both of which (by design)
 	   immediately follow `pr_reg'.  This will allow these fields to
 	   be viewed by GDB as registers.
-	   
+
 	   `pr_reg' is 184 bytes long.  `pr_exec_fdpic_loadmap' and
 	   `pr_interp_fdpic_loadmap' are 4 bytes each.  */
 	raw_size = 184 + 4 + 4;
@@ -6785,11 +6789,11 @@ elf32_frv_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
       case 124:
 
 	/* `pr_fname' is found at offset 28 and is 16 bytes long.  */
-	elf_tdata (abfd)->core_program
+	elf_tdata (abfd)->core->program
 	  = _bfd_elfcore_strndup (abfd, note->descdata + 28, 16);
 
 	/* `pr_psargs' is found at offset 44 and is 80 bytes long.  */
-	elf_tdata (abfd)->core_command
+	elf_tdata (abfd)->core->command
 	  = _bfd_elfcore_strndup (abfd, note->descdata + 44, 80);
     }
 
@@ -6798,7 +6802,7 @@ elf32_frv_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
      implementations, so strip it off if it exists.  */
 
   {
-    char *command = elf_tdata (abfd)->core_command;
+    char *command = elf_tdata (abfd)->core->command;
     int n = strlen (command);
 
     if (0 < n && command[n - 1] == ' ')

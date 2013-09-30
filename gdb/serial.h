@@ -1,6 +1,5 @@
 /* Remote serial support interface definitions for GDB, the GNU Debugger.
-   Copyright (C) 1992-1996, 1998-2001, 2004-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1992-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -105,10 +104,10 @@ enum serial_rc {
 
 extern int serial_readchar (struct serial *scb, int timeout);
 
-/* Write LEN chars from STRING to the port SCB.  Returns 0 for
+/* Write COUNT bytes from BUF to the port SCB.  Returns 0 for
    success, non-zero for failure.  */
 
-extern int serial_write (struct serial *scb, const char *str, int len);
+extern int serial_write (struct serial *scb, const void *buf, size_t count);
 
 /* Write a printf style string onto the serial port.  */
 
@@ -205,13 +204,6 @@ typedef void (serial_event_ftype) (struct serial *scb, void *context);
 extern void serial_async (struct serial *scb,
 			  serial_event_ftype *handler, void *context);
 
-/* Provide direct access to the underlying FD (if any) used to
-   implement the serial device.  This interface is clearly
-   deprecated.  Will call internal_error() if the operation isn't
-   applicable to the current serial device.  */
-
-extern int deprecated_serial_fd (struct serial *scb);
-
 /* Trace/debug mechanism.
 
    serial_debug() enables/disables internal debugging.
@@ -264,7 +256,7 @@ struct serial_ops
     void (*close) (struct serial *);
     int (*fdopen) (struct serial *, int fd);
     int (*readchar) (struct serial *, int timeout);
-    int (*write) (struct serial *, const char *str, int len);
+    int (*write) (struct serial *, const void *buf, size_t count);
     /* Discard pending output */
     int (*flush_output) (struct serial *);
     /* Discard pending input */

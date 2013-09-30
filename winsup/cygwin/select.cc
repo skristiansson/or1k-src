@@ -1,7 +1,7 @@
 /* select.cc
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -53,7 +53,6 @@ details. */
  * should be >= NOFILE (param.h).
  */
 
-typedef long fd_mask;
 #define UNIX_NFDBITS (sizeof (fd_mask) * NBBY)       /* bits per mask */
 #ifndef unix_howmany
 #define unix_howmany(x,y) (((x)+((y)-1))/(y))
@@ -63,7 +62,7 @@ typedef long fd_mask;
 
 #define NULL_fd_set ((fd_set *) NULL)
 #define sizeof_fd_set(n) \
-  ((unsigned) (NULL_fd_set->fds_bits + unix_howmany ((n), UNIX_NFDBITS)))
+  ((size_t) (NULL_fd_set->fds_bits + unix_howmany ((n), UNIX_NFDBITS)))
 #define UNIX_FD_SET(n, p) \
   ((p)->fds_bits[(n)/UNIX_NFDBITS] |= (1L << ((n) % UNIX_NFDBITS)))
 #define UNIX_FD_CLR(n, p) \
@@ -114,7 +113,7 @@ cygwin_select (int maxfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	ms = 1;			/* At least 1 ms granularity */
 
       if (to)
-	select_printf ("to->tv_sec %d, to->tv_usec %d, ms %d", to->tv_sec, to->tv_usec, ms);
+	select_printf ("to->tv_sec %ld, to->tv_usec %ld, ms %d", to->tv_sec, to->tv_usec, ms);
       else
 	select_printf ("to NULL, ms %x", ms);
 
@@ -165,13 +164,12 @@ select (int maxfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
 	  {
 	  case WAIT_SIGNALED:
 	    select_printf ("signal received");
-	    if (_my_tls.call_signal_handler ())
-	      res = select_stuff::select_loop;		/* Emulate linux behavior */
-	    else
-	      {
-		set_sig_errno (EINTR);
-		res = select_stuff::select_error;
-	      }
+	    /* select() is always interrupted by a signal so set EINTR,
+	       unconditionally, ignoring any SA_RESTART detection by
+	       call_signal_handler().  */
+	    _my_tls.call_signal_handler ();
+	    set_sig_errno (EINTR);
+	    res = select_stuff::select_signalled;
 	    break;
 	  case WAIT_CANCELED:
 	    sel.destroy ();
@@ -286,6 +284,22 @@ select_stuff::~select_stuff ()
   destroy ();
 }
 
+#ifdef DEBUGGING
+void
+select_record::dump_select_record ()
+{
+  select_printf ("fd %d, h %p, fh %p, thread_errno %d, windows_handle %p",
+		 fd, h, fh, thread_errno, windows_handle);
+  select_printf ("read_ready %d, write_ready %d, except_ready %d",
+		 read_ready, write_ready, except_ready);
+  select_printf ("read_selected %d, write_selected %d, except_selected %d, except_on_write %d",
+		 read_selected, write_selected, except_selected, except_on_write);
+                    
+  select_printf ("startup %p, peek %p, verify %p cleanup %p, next %p",
+		 startup, peek, verify, cleanup, next);
+}
+#endif /*DEBUGGING*/
+
 /* Add a record to the select chain */
 bool
 select_stuff::test_and_set (int i, fd_set *readfds, fd_set *writefds,
@@ -315,6 +329,9 @@ select_stuff::test_and_set (int i, fd_set *readfds, fd_set *writefds,
   if (s->windows_handle)
     windows_used = true;
 
+#ifdef DEBUGGING
+  s->dump_select_record ();
+#endif
   return true;
 
 err:
@@ -385,16 +402,15 @@ next_while:;
 	 be assured that a signal handler won't jump out of select entirely. */
       cleanup ();
       destroy ();
-      if (_my_tls.call_signal_handler ())
-	res = select_loop;
-      else
-	{
-	  set_sig_errno (EINTR);
-	  res = select_signalled;	/* Cause loop exit in cygwin_select */
-	}
+      /* select() is always interrupted by a signal so set EINTR,
+	 unconditionally, ignoring any SA_RESTART detection by
+	 call_signal_handler().  */
+      _my_tls.call_signal_handler ();
+      set_sig_errno (EINTR);
+      res = select_signalled;	/* Cause loop exit in cygwin_select */
       break;
     case WAIT_FAILED:
-      system_printf ("WaitForMultipleObjects failed");
+      system_printf ("WaitForMultipleObjects failed, %E");
       s = &start;
       s->set_select_errno ();
       res = select_error;
@@ -522,7 +538,7 @@ no_verify (select_record *, fd_set *, fd_set *, fd_set *)
 static int
 pipe_data_available (int fd, fhandler_base *fh, HANDLE h, bool writing)
 {
-  IO_STATUS_BLOCK iosb = {0};
+  IO_STATUS_BLOCK iosb = {{0}, 0};
   FILE_PIPE_LOCAL_INFORMATION fpli = {0};
 
   bool res;
@@ -551,7 +567,7 @@ pipe_data_available (int fd, fhandler_base *fh, HANDLE h, bool writing)
        that.  This means that a pipe could still block since you could
        be trying to write more to the pipe than is available in the
        buffer but that is the hazard of select().  */
-    paranoid_printf ("fd %d, %s, write: size %lu, avail %lu", fd,
+    paranoid_printf ("fd %d, %s, write: size %u, avail %u", fd,
 		     fh->get_name (), fpli.OutboundQuota,
 		     fpli.WriteQuotaAvailable);
   else if ((res = (fpli.OutboundQuota < PIPE_BUF &&
@@ -559,7 +575,7 @@ pipe_data_available (int fd, fhandler_base *fh, HANDLE h, bool writing)
     /* If we somehow inherit a tiny pipe (size < PIPE_BUF), then consider
        the pipe writable only if it is completely empty, to minimize the
        probability that a subsequent write will block.  */
-    select_printf ("fd, %s, write tiny pipe: size %lu, avail %lu",
+    select_printf ("fd, %s, write tiny pipe: size %u, avail %u",
 		   fd, fh->get_name (), fpli.OutboundQuota,
 		   fpli.WriteQuotaAvailable);
   return res ?: -!!(fpli.NamedPipeState & FILE_PIPE_CLOSING_STATE);

@@ -1,7 +1,7 @@
 /* window.cc: hidden windows for signals/itimer support
 
-   Copyright 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005, 2010,
-   2011 Red Hat, Inc.
+   Copyright 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2010, 2011
+   Red Hat, Inc.
 
    Written by Sergey Okhapkin <sos@prospect.com.ru>
 
@@ -26,7 +26,7 @@ wininfo NO_COPY winmsg;
 
 muto NO_COPY wininfo::_lock;
 
-int __stdcall
+int __reg3
 wininfo::process (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 #ifndef NOSTRACE
@@ -57,7 +57,7 @@ process_window_events (HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 /* Handle windows events.  Inherits ownership of the wininfo lock */
-DWORD WINAPI
+DWORD __reg1 WINAPI
 wininfo::winthread ()
 {
   MSG msg;

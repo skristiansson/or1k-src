@@ -1,6 +1,6 @@
 /* OS ABI variant handling for GDB.
 
-   Copyright (C) 2001-2004, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2001-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -63,7 +63,6 @@ static const char * const gdb_osabi_names[] =
   "Windows CE",
   "DJGPP",
   "Irix",
-  "Interix",
   "HP/UX ELF",
   "HP/UX SOM",
   "QNX Neutrino",
@@ -73,6 +72,8 @@ static const char * const gdb_osabi_names[] =
   "Darwin",
   "Symbian",
   "OpenVMS",
+  "LynxOS178",
+  "Newlib",
 
   "<invalid>"
 };

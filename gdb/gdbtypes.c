@@ -1,6 +1,6 @@
 /* Support routines for manipulating internal types for GDB.
 
-   Copyright (C) 1992-1996, 1998-2012 Free Software Foundation, Inc.
+   Copyright (C) 1992-2013 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support, using pieces from other GDB modules.
 
@@ -37,6 +37,7 @@
 #include "gdb_assert.h"
 #include "hashtab.h"
 #include "exceptions.h"
+#include "cp-support.h"
 
 /* Initialize BADNESS constants.  */
 
@@ -107,8 +108,8 @@ const struct floatformat *floatformats_vax_d[BFD_ENDIAN_UNKNOWN] = {
   &floatformat_vax_d
 };
 const struct floatformat *floatformats_ibm_long_double[BFD_ENDIAN_UNKNOWN] = {
-  &floatformat_ibm_long_double,
-  &floatformat_ibm_long_double
+  &floatformat_ibm_long_double_big,
+  &floatformat_ibm_long_double_little
 };
 
 /* Should opaque types be resolved?  */
@@ -676,6 +677,17 @@ make_cv_type (int cnst, int voltl,
   return ntype;
 }
 
+/* Make a 'restrict'-qualified version of TYPE.  */
+
+struct type *
+make_restrict_type (struct type *type)
+{
+  return make_qualified_type (type,
+			      (TYPE_INSTANCE_FLAGS (type)
+			       | TYPE_INSTANCE_FLAG_RESTRICT),
+			      NULL);
+}
+
 /* Replace the contents of ntype with the type *type.  This changes the
    contents, rather than the pointer for TYPE_MAIN_TYPE (ntype); thus
    the changes are propogated to all types in the TYPE_CHAIN.
@@ -1175,7 +1187,8 @@ type_name_no_tag_or_error (struct type *type)
   name = type_name_no_tag (saved_type);
   objfile = TYPE_OBJFILE (saved_type);
   error (_("Invalid anonymous type %s [in module %s], GCC PR debug/47510 bug?"),
-	 name ? name : "<anonymous>", objfile ? objfile->name : "<arch>");
+	 name ? name : "<anonymous>",
+	 objfile ? objfile_name (objfile) : "<arch>");
 }
 
 /* Lookup a typedef or primitive type named NAME, visible in lexical
@@ -1234,7 +1247,7 @@ lookup_signed_typename (const struct language_defn *language,
    visible in lexical block BLOCK.  */
 
 struct type *
-lookup_struct (const char *name, struct block *block)
+lookup_struct (const char *name, const struct block *block)
 {
   struct symbol *sym;
 
@@ -1256,7 +1269,7 @@ lookup_struct (const char *name, struct block *block)
    visible in lexical block BLOCK.  */
 
 struct type *
-lookup_union (const char *name, struct block *block)
+lookup_union (const char *name, const struct block *block)
 {
   struct symbol *sym;
   struct type *t;
@@ -1280,7 +1293,7 @@ lookup_union (const char *name, struct block *block)
    visible in lexical block BLOCK.  */
 
 struct type *
-lookup_enum (const char *name, struct block *block)
+lookup_enum (const char *name, const struct block *block)
 {
   struct symbol *sym;
 
@@ -1302,7 +1315,7 @@ lookup_enum (const char *name, struct block *block)
 
 struct type *
 lookup_template_type (char *name, struct type *type, 
-		      struct block *block)
+		      const struct block *block)
 {
   struct symbol *sym;
   char *nam = (char *) 
@@ -1753,8 +1766,8 @@ check_stub_method (struct type *type, int method_id, int signature_id)
   struct gdbarch *gdbarch = get_type_arch (type);
   struct fn_field *f;
   char *mangled_name = gdb_mangle_name (type, method_id, signature_id);
-  char *demangled_name = cplus_demangle (mangled_name,
-					 DMGL_PARAMS | DMGL_ANSI);
+  char *demangled_name = gdb_demangle (mangled_name,
+				       DMGL_PARAMS | DMGL_ANSI);
   char *argtypetext, *p;
   int depth = 0, argcount = 1;
   struct field *argtypes;
@@ -1939,14 +1952,13 @@ allocate_gnat_aux_type (struct type *type)
 
 /* Helper function to initialize the standard scalar types.
 
-   If NAME is non-NULL, then we make a copy of the string pointed
-   to by name in the objfile_obstack for that objfile, and initialize
-   the type name to that copy.  There are places (mipsread.c in particular),
-   where init_type is called with a NULL value for NAME).  */
+   If NAME is non-NULL, then it is used to initialize the type name.
+   Note that NAME is not copied; it is required to have a lifetime at
+   least as long as OBJFILE.  */
 
 struct type *
 init_type (enum type_code code, int length, int flags,
-	   char *name, struct objfile *objfile)
+	   const char *name, struct objfile *objfile)
 {
   struct type *type;
 
@@ -1980,9 +1992,7 @@ init_type (enum type_code code, int length, int flags,
   if (flags & TYPE_FLAG_GNU_IFUNC)
     TYPE_GNU_IFUNC (type) = 1;
 
-  if (name)
-    TYPE_NAME (type) = obsavestring (name, strlen (name),
-				     &objfile->objfile_obstack);
+  TYPE_NAME (type) = name;
 
   /* C++ fancies.  */
 
@@ -2447,6 +2457,25 @@ types_equal (struct type *a, struct type *b)
   /* Check if identical after resolving typedefs.  */
   if (a == b)
     return 1;
+
+  /* Two function types are equal if their argument and return types
+     are equal.  */
+  if (TYPE_CODE (a) == TYPE_CODE_FUNC)
+    {
+      int i;
+
+      if (TYPE_NFIELDS (a) != TYPE_NFIELDS (b))
+	return 0;
+      
+      if (!types_equal (TYPE_TARGET_TYPE (a), TYPE_TARGET_TYPE (b)))
+	return 0;
+
+      for (i = 0; i < TYPE_NFIELDS (a); ++i)
+	if (!types_equal (TYPE_FIELD_TYPE (a, i), TYPE_FIELD_TYPE (b, i)))
+	  return 0;
+
+      return 1;
+    }
 
   return 0;
 }
@@ -3193,6 +3222,10 @@ recursive_dump_type (struct type *type, int spaces)
   if (TYPE_ADDRESS_CLASS_2 (type))
     {
       puts_filtered (" TYPE_FLAG_ADDRESS_CLASS_2");
+    }
+  if (TYPE_RESTRICT (type))
+    {
+      puts_filtered (" TYPE_FLAG_RESTRICT");
     }
   puts_filtered ("\n");
 
@@ -4037,9 +4070,7 @@ objfile_type (struct objfile *objfile)
 		 "<thread local variable, no debug info>", objfile);
 
   /* NOTE: on some targets, addresses and pointers are not necessarily
-     the same --- for example, on the D10V, pointers are 16 bits long,
-     but addresses are 32 bits long.  See doc/gdbint.texinfo,
-     ``Pointers Are Not Always Addresses''.
+     the same.
 
      The upshot is:
      - gdb's `struct type' always describes the target's
@@ -4051,12 +4082,6 @@ objfile_type (struct objfile *objfile)
        since target_read_memory takes a CORE_ADDR as an argument, it
        can access any memory on the target, even if the processor has
        separate code and data address spaces.
-
-     So, for example:
-     - If v is a value holding a D10V code pointer, its contents are
-       in target form: a big-endian address left-shifted two bits.
-     - If p is a D10V pointer type, TYPE_LENGTH (p) == 2, just as
-       sizeof (void *) == 2 on the target.
 
      In this context, objfile_type->builtin_core_addr is a bit odd:
      it's a target type for a value the target will never see.  It's

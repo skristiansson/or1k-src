@@ -1,6 +1,7 @@
 /* signal.h
 
-  Copyright 2004, 2005, 2006, 2011 Red Hat, Inc.
+  Copyright 2003, 2004, 2005, 2006, 2007, 2008, 2010, 2011, 2012, 2013
+  Red Hat, Inc.
 
   This file is part of Cygwin.
 
@@ -11,53 +12,144 @@
 #ifndef _CYGWIN_SIGNAL_H
 #define _CYGWIN_SIGNAL_H
 
+#include <bits/wordsize.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#ifdef __x86_64__
+
+struct _uc_fpxreg {
+  __uint16_t significand[4];
+  __uint16_t exponent;
+  __uint16_t padding[3];
+};
+
+struct _uc_xmmreg {
+  __uint32_t element[4];
+};
+
 struct _fpstate
 {
-  unsigned long cw;
-  unsigned long sw;
-  unsigned long tag;
-  unsigned long ipoff;
-  unsigned long cssel;
-  unsigned long dataoff;
-  unsigned long datasel;
-  unsigned char _st[80];
-  unsigned long nxst;
+  __uint16_t cwd;
+  __uint16_t swd;
+  __uint16_t ftw;
+  __uint16_t fop;
+  __uint64_t rip;
+  __uint64_t rdp;
+  __uint32_t mxcsr;
+  __uint32_t mxcr_mask;
+  struct _uc_fpxreg st[8];
+  struct _uc_xmmreg xmm[16];
+  __uint32_t padding[24];
 };
 
 struct ucontext
 {
-  unsigned long cr2;
-  unsigned long dr0;
-  unsigned long dr1;
-  unsigned long dr2;
-  unsigned long dr3;
-  unsigned long dr6;
-  unsigned long dr7;
-  struct _fpstate fpstate;
-  unsigned long gs;
-  unsigned long fs;
-  unsigned long es;
-  unsigned long ds;
-  unsigned long edi;
-  unsigned long esi;
-  unsigned long ebx;
-  unsigned long edx;
-  unsigned long ecx;
-  unsigned long eax;
-  unsigned long ebp;
-  unsigned long eip;
-  unsigned long cs;
-  unsigned long eflags;
-  unsigned long esp;
-  unsigned long ss;
-  unsigned char _internal;
-  unsigned long oldmask;
+  __uint64_t p1home;
+  __uint64_t p2home;
+  __uint64_t p3home;
+  __uint64_t p4home;
+  __uint64_t p5home;
+  __uint64_t p6home;
+  __uint32_t cr2;
+  __uint32_t mxcsr;
+  __uint16_t cs;
+  __uint16_t ds;
+  __uint16_t es;
+  __uint16_t fs;
+  __uint16_t gs;
+  __uint16_t ss;
+  __uint32_t eflags;
+  __uint64_t dr0;
+  __uint64_t dr1;
+  __uint64_t dr2;
+  __uint64_t dr3;
+  __uint64_t dr6;
+  __uint64_t dr7;
+  __uint64_t rax;
+  __uint64_t rcx;
+  __uint64_t rdx;
+  __uint64_t rbx;
+  __uint64_t rsp;
+  __uint64_t rbp;
+  __uint64_t rsi;
+  __uint64_t rdi;
+  __uint64_t r8;
+  __uint64_t r9;
+  __uint64_t r10;
+  __uint64_t r11;
+  __uint64_t r12;
+  __uint64_t r13;
+  __uint64_t r14;
+  __uint64_t r15;
+  __uint64_t rip;
+  struct _fpstate fpregs;
+  __uint64_t vcx;
+  __uint64_t dbc;
+  __uint64_t btr;
+  __uint64_t bfr;
+  __uint64_t etr;
+  __uint64_t efr;
+  __uint8_t _internal;
+  __uint64_t oldmask;
 };
 
-#define __COPY_CONTEXT_SIZE ((unsigned) &((struct ucontext *) 0)->_internal)
+#else /* !x86_64 */
+
+struct _uc_fpreg
+{
+  __uint16_t significand[4];
+  __uint16_t exponent;
+};
+
+struct _fpstate
+{
+  __uint32_t cw;
+  __uint32_t sw;
+  __uint32_t tag;
+  __uint32_t ipoff;
+  __uint32_t cssel;
+  __uint32_t dataoff;
+  __uint32_t datasel;
+  struct _uc_fpreg _st[8];
+  __uint32_t nxst;
+};
+
+struct ucontext
+{
+  __uint32_t cr2;
+  __uint32_t dr0;
+  __uint32_t dr1;
+  __uint32_t dr2;
+  __uint32_t dr3;
+  __uint32_t dr6;
+  __uint32_t dr7;
+  struct _fpstate fpstate;
+  __uint32_t gs;
+  __uint32_t fs;
+  __uint32_t es;
+  __uint32_t ds;
+  __uint32_t edi;
+  __uint32_t esi;
+  __uint32_t ebx;
+  __uint32_t edx;
+  __uint32_t ecx;
+  __uint32_t eax;
+  __uint32_t ebp;
+  __uint32_t eip;
+  __uint32_t cs;
+  __uint32_t eflags;
+  __uint32_t esp;
+  __uint32_t ss;
+  __uint8_t _internal;
+  __uint32_t oldmask;
+};
+
+#endif /* !x86_64 */
+
+#define __COPY_CONTEXT_SIZE ((size_t) (uintptr_t) &((struct ucontext *) 0)->_internal)
 
 typedef union sigval
 {
@@ -89,6 +181,19 @@ struct _sigcommune
   };
 };
 
+#define __SI_PAD_SIZE 32
+#ifdef __INSIDE_CYGWIN__
+# ifndef max
+#   define max(a,b) (((a) > (b)) ? (a) : (b))
+# endif /*max*/
+# define __uint32_size(__x) (max(sizeof (__x) / sizeof (uint32_t), 1))
+
+/* This padding represents the elements of the last struct in siginfo_t,
+   aligning the elements to the end to avoid conflicts with other struct
+   members. */
+# define __SI_CYG_PAD (__SI_PAD_SIZE - __uint32_size (void *))
+#endif /*__INSIDE_CYGWIN__*/
+
 typedef struct
 {
   int si_signo;				/* signal number */
@@ -99,26 +204,21 @@ typedef struct
 
   __extension__ union
   {
-    __uint32_t __pad[32];		/* plan for future growth */
+    __uint32_t __pad[__SI_PAD_SIZE];	/* plan for future growth */
     struct _sigcommune _si_commune;	/* cygwin ipc */
-    __extension__ union
+    __extension__ struct
     {
-      /* timers */
-      struct
+      __extension__ union
       {
-	union
-	{
-	  struct
-	  {
-	    timer_t si_tid;		/* timer id */
-	    unsigned int si_overrun;	/* overrun count */
-	  };
-	  sigval_t si_sigval;		/* signal value */
-	  sigval_t si_value;		/* signal value */
-	};
+	sigval_t si_sigval;		/* signal value */
+	sigval_t si_value;		/* signal value */
+      };
+      __extension__ struct
+      {
+	timer_t si_tid;			/* timer id */
+	unsigned int si_overrun;	/* overrun count */
       };
     };
-
     /* SIGCHLD */
     __extension__ struct
     {
@@ -127,8 +227,17 @@ typedef struct
       clock_t si_stime;			/* system time */
     };
 
-    /* core dumping signals */
-    void *si_addr;			/* faulting address */
+    void *si_addr;			/* faulting address for core dumping
+					   signals */
+    /* Cygwin internal fields */
+#ifdef __INSIDE_CYGWIN__
+    __extension__ struct 
+    {
+      __uint32_t __pad2[__SI_CYG_PAD];	/* Locate at end of struct */
+      void *si_cyg;			/* pointer to block containing
+					   cygwin-special info */
+    };
+#endif /*__INSIDE_CYGWIN__*/
   };
 } siginfo_t;
 #pragma pack(pop)
@@ -190,7 +299,13 @@ enum
 					   perform notification */
 };
 
+#if __WORDSIZE == 64
+typedef __uint64_t sigset_t;
+#else
+/* FIXME: We should probably raise the # of signals for 32 bit as well.
+          Unfortunately this is an ABI change so requires some forethought. */
 typedef __uint32_t sigset_t;
+#endif
 
 typedef void (*_sig_func_ptr)(int);
 
@@ -256,10 +371,15 @@ struct sigaction
 #define	SIGUSR1 30	/* user defined signal 1 */
 #define	SIGUSR2 31	/* user defined signal 2 */
 
+#if __WORDSIZE == 64
+#define NSIG	65      /* signal 0 implied */
+#else
+#define NSIG	33      /* signal 0 implied */
+#endif
+
 /* Real-Time signals per SUSv3.  RT_SIGMAX is defined as 8 in limits.h */
 #define SIGRTMIN 32
-#define SIGRTMAX ((SIGRTMIN) + 0)
-#define NSIG	33      /* signal 0 implied */
+#define SIGRTMAX (NSIG - 1)
 
 #define SIG_HOLD ((_sig_func_ptr)2)	/* Signal in signal mask */
 

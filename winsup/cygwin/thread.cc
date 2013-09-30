@@ -1,7 +1,7 @@
 /* thread.cc: Locking and threading module functions
 
-   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
+   2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -38,7 +38,12 @@ extern "C" void __fp_lock_all ();
 extern "C" void __fp_unlock_all ();
 extern "C" int valid_sched_parameters(const struct sched_param *);
 extern "C" int sched_set_thread_priority(HANDLE thread, int priority);
+#if __GNUC__ == 4 && __GNUC_MINOR__ >= 7
+/* FIXME: Temporarily workaround gcc 4.7+ bug. */
+static verifyable_object_state
+#else
 static inline verifyable_object_state
+#endif
   verifyable_object_isvalid (void const * objectptr, thread_magic_t magic,
 			     void *static_ptr1 = NULL,
 			     void *static_ptr2 = NULL,
@@ -117,7 +122,12 @@ __cygwin_lock_unlock (_LOCK_T *lock)
   paranoid_printf ("threadcount %d.  unlocked", MT_INTERFACE->threadcount);
 }
 
+#if __GNUC__ == 4 && __GNUC_MINOR__ >= 7
+/* FIXME: Temporarily workaround gcc 4.7+ bug. */
+static verifyable_object_state
+#else
 static inline verifyable_object_state
+#endif
 verifyable_object_isvalid (void const *objectptr, thread_magic_t magic, void *static_ptr1,
 			   void *static_ptr2, void *static_ptr3)
 {
@@ -216,7 +226,7 @@ pthread_mutex::can_be_unlocked ()
    * Also check for the ANONYMOUS owner to cover NORMAL mutexes as well. */
   bool res = type == PTHREAD_MUTEX_NORMAL || no_owner ()
 	     || (recursion_counter == 1 && pthread::equal (owner, self));
-  pthread_printf ("recursion_counter %d res %d", recursion_counter, res);
+  pthread_printf ("recursion_counter %u res %d", recursion_counter, res);
   return res;
 }
 
@@ -306,6 +316,7 @@ void
 MTinterface::fixup_before_fork ()
 {
   pthread_key::fixup_before_fork ();
+  semaphore::fixup_before_fork ();
 }
 
 /* This function is called from a single threaded process */
@@ -338,7 +349,7 @@ pthread::init_mainthread ()
 	api_fatal ("failed to create mainthread object");
     }
 
-  set_tls_self_pointer (thread);
+  thread->set_tls_self_pointer ();
   thread->thread_id = GetCurrentThreadId ();
   if (!DuplicateHandle (GetCurrentProcess (), GetCurrentThread (),
 			GetCurrentProcess (), &thread->win32_obj_id,
@@ -357,16 +368,16 @@ pthread::self ()
   if (!thread)
     {
       thread = pthread_null::get_null_pthread ();
-      set_tls_self_pointer (thread);
+      thread->set_tls_self_pointer ();
     }
   return thread;
 }
 
 void
-pthread::set_tls_self_pointer (pthread *thread)
+pthread::set_tls_self_pointer ()
 {
-  thread->cygtls = &_my_tls;
-  _my_tls.tid = thread;
+  cygtls = &_my_tls;
+  _my_tls.tid = this;
 }
 
 List<pthread> pthread::threads;
@@ -579,7 +590,11 @@ pthread::cancel ()
 	 executing Windows code.  Rely on deferred cancellation in this case. */
       if (!cygtls->inside_kernel (&context))
 	{
+#ifdef __x86_64__
+	  context.Rip = (ULONG_PTR) pthread::static_cancel_self;
+#else
 	  context.Eip = (DWORD) pthread::static_cancel_self;
+#endif
 	  SetThreadContext (win32_obj_id, &context);
 	}
     }
@@ -1143,7 +1158,7 @@ pthread_cond::pthread_cond (pthread_condattr *attr) :
   /* Change the mutex type to NORMAL to speed up mutex operations */
   mtx_out.set_type (PTHREAD_MUTEX_NORMAL);
 
-  sem_wait = ::CreateSemaphore (&sec_none_nih, 0, LONG_MAX, NULL);
+  sem_wait = ::CreateSemaphore (&sec_none_nih, 0, INT32_MAX, NULL);
   if (!sem_wait)
     {
       pthread_printf ("CreateSemaphore failed. %E");
@@ -1165,7 +1180,7 @@ pthread_cond::~pthread_cond ()
 void
 pthread_cond::unblock (const bool all)
 {
-  unsigned long releaseable;
+  LONG releaseable;
 
   /*
    * Block outgoing threads (and avoid simultanous unblocks)
@@ -1175,7 +1190,7 @@ pthread_cond::unblock (const bool all)
   releaseable = waiting - pending;
   if (releaseable)
     {
-      unsigned long released;
+      LONG released;
 
       if (!pending)
 	{
@@ -1212,11 +1227,11 @@ pthread_cond::wait (pthread_mutex_t mutex, PLARGE_INTEGER timeout)
   DWORD rv;
 
   mtx_in.lock ();
-  if (InterlockedIncrement ((long *)&waiting) == 1)
+  if (InterlockedIncrement (&waiting) == 1)
     mtx_cond = mutex;
   else if (mtx_cond != mutex)
     {
-      InterlockedDecrement ((long *)&waiting);
+      InterlockedDecrement (&waiting);
       mtx_in.unlock ();
       return EINVAL;
     }
@@ -1247,7 +1262,7 @@ pthread_cond::wait (pthread_mutex_t mutex, PLARGE_INTEGER timeout)
 	rv = WAIT_OBJECT_0;
     }
 
-  InterlockedDecrement ((long *)&waiting);
+  InterlockedDecrement (&waiting);
 
   if (rv == WAIT_OBJECT_0 && --pending == 0)
     /*
@@ -1286,7 +1301,7 @@ pthread_cond::_fixup_after_fork ()
   mtx_in.unlock ();
   mtx_out.unlock ();
 
-  sem_wait = ::CreateSemaphore (&sec_none_nih, 0, LONG_MAX, NULL);
+  sem_wait = ::CreateSemaphore (&sec_none_nih, 0, INT32_MAX, NULL);
   if (!sem_wait)
     api_fatal ("pthread_cond::_fixup_after_fork () failed to recreate win32 semaphore");
 }
@@ -1377,24 +1392,16 @@ pthread_rwlock::rdlock ()
 {
   int result = 0;
   struct RWLOCK_READER *reader;
-  pthread_t self = pthread::self ();
 
   mtx.lock ();
 
-  reader = lookup_reader (self);
+  reader = lookup_reader ();
   if (reader)
     {
-      if (reader->n < ULONG_MAX)
+      if (reader->n < UINT32_MAX)
 	++reader->n;
       else
 	errno = EAGAIN;
-      goto DONE;
-    }
-
-  reader = new struct RWLOCK_READER;
-  if (!reader)
-    {
-      result = EAGAIN;
       goto DONE;
     }
 
@@ -1409,9 +1416,13 @@ pthread_rwlock::rdlock ()
       pthread_cleanup_pop (0);
     }
 
-  reader->thread = self;
-  reader->n = 1;
-  add_reader (reader);
+  if ((reader = add_reader ()))
+    ++reader->n;
+  else
+    {
+      result = EAGAIN;
+      goto DONE;
+    }
 
  DONE:
   mtx.unlock ();
@@ -1423,25 +1434,18 @@ int
 pthread_rwlock::tryrdlock ()
 {
   int result = 0;
-  pthread_t self = pthread::self ();
 
   mtx.lock ();
 
-  if (writer || waiting_writers || lookup_reader (self))
+  if (writer || waiting_writers)
     result = EBUSY;
   else
     {
-      struct RWLOCK_READER *reader;
-
-      reader = lookup_reader (self);
-      if (reader && reader->n < ULONG_MAX)
+      RWLOCK_READER *reader = lookup_reader ();
+      if (!reader)
+	reader = add_reader ();
+      if (reader && reader->n < UINT32_MAX)
 	++reader->n;
-      else if ((reader = new struct RWLOCK_READER))
-	{
-	  reader->thread = self;
-	  reader->n = 1;
-	  add_reader (reader);
-	}
       else
 	result = EAGAIN;
     }
@@ -1459,7 +1463,7 @@ pthread_rwlock::wrlock ()
 
   mtx.lock ();
 
-  if (writer == self || lookup_reader (self))
+  if (writer == self || lookup_reader ())
     {
       result = EDEADLK;
       goto DONE;
@@ -1506,13 +1510,12 @@ int
 pthread_rwlock::unlock ()
 {
   int result = 0;
-  pthread_t self = pthread::self ();
 
   mtx.lock ();
 
   if (writer)
     {
-      if (writer != self)
+      if (writer != pthread::self ())
 	{
 	  result = EPERM;
 	  goto DONE;
@@ -1522,7 +1525,7 @@ pthread_rwlock::unlock ()
     }
   else
     {
-      struct RWLOCK_READER *reader = lookup_reader (self);
+      struct RWLOCK_READER *reader = lookup_reader ();
 
       if (!reader)
 	{
@@ -1544,10 +1547,13 @@ pthread_rwlock::unlock ()
   return result;
 }
 
-void
-pthread_rwlock::add_reader (struct RWLOCK_READER *rd)
+pthread_rwlock::RWLOCK_READER *
+pthread_rwlock::add_reader ()
 {
-  List_insert (readers, rd);
+  RWLOCK_READER *rd = new RWLOCK_READER;
+  if (rd)
+    List_insert (readers, rd);
+  return rd;
 }
 
 void
@@ -1557,9 +1563,10 @@ pthread_rwlock::remove_reader (struct RWLOCK_READER *rd)
 }
 
 struct pthread_rwlock::RWLOCK_READER *
-pthread_rwlock::lookup_reader (pthread_t thread)
+pthread_rwlock::lookup_reader ()
 {
   readers_mx.lock ();
+  pthread_t thread = pthread::self ();
 
   struct RWLOCK_READER *cur = readers;
 
@@ -1738,7 +1745,7 @@ pthread_mutex::lock ()
   pthread_t self = ::pthread_self ();
   int result = 0;
 
-  if (InterlockedIncrement ((long *) &lock_counter) == 1)
+  if (InterlockedIncrement (&lock_counter) == 1)
     set_owner (self);
   else if (type == PTHREAD_MUTEX_NORMAL /* potentially causes deadlock */
 	   || !pthread::equal (owner, self))
@@ -1749,14 +1756,14 @@ pthread_mutex::lock ()
     }
   else
     {
-      InterlockedDecrement ((long *) &lock_counter);
+      InterlockedDecrement (&lock_counter);
       if (type == PTHREAD_MUTEX_RECURSIVE)
 	result = lock_recursive ();
       else
 	result = EDEADLK;
     }
 
-  pthread_printf ("mutex %p, self %p, owner %p, lock_counter %d, recursion_counter %d",
+  pthread_printf ("mutex %p, self %p, owner %p, lock_counter %d, recursion_counter %u",
 		  this, self, owner, lock_counter, recursion_counter);
   return result;
 }
@@ -1778,14 +1785,14 @@ pthread_mutex::unlock ()
     {
       owner = (pthread_t) _unlocked_mutex;
 #ifdef DEBUGGING
-      tid = 0;
+      tid = 0;		// thread-id
 #endif
-      if (InterlockedDecrement ((long *) &lock_counter))
+      if (InterlockedDecrement (&lock_counter))
 	::SetEvent (win32_obj_id); // Another thread is waiting
       res = 0;
     }
 
-  pthread_printf ("mutex %p, owner %p, self %p, lock_counter %d, recursion_counter %d, type %d, res %d",
+  pthread_printf ("mutex %p, owner %p, self %p, lock_counter %d, recursion_counter %u, type %d, res %d",
 		  this, owner, self, lock_counter, recursion_counter, type, res);
   return res;
 }
@@ -1796,7 +1803,7 @@ pthread_mutex::trylock ()
   pthread_t self = ::pthread_self ();
   int result = 0;
 
-  if (InterlockedCompareExchange ((long *) &lock_counter, 1, 0) == 0)
+  if (InterlockedCompareExchange (&lock_counter, 1, 0) == 0)
     set_owner (self);
   else if (type == PTHREAD_MUTEX_RECURSIVE && pthread::equal (owner, self))
     result = lock_recursive ();
@@ -1872,7 +1879,7 @@ pthread_spinlock::lock ()
 
   do
     {
-      if (InterlockedExchange ((long *) &lock_counter, 1) == 0)
+      if (InterlockedExchange (&lock_counter, 1) == 0)
 	{
 	  set_owner (self);
 	  result = 0;
@@ -1905,9 +1912,9 @@ pthread_spinlock::unlock ()
     {
       owner = (pthread_t) _unlocked_mutex;
 #ifdef DEBUGGING
-      tid = 0;
+      tid = 0;		// thread-id
 #endif
-      InterlockedExchange ((long *) &lock_counter, 0);
+      InterlockedExchange (&lock_counter, 0);
       ::SetEvent (win32_obj_id);
       result = 0;
     }
@@ -1920,14 +1927,17 @@ DWORD WINAPI
 pthread::thread_init_wrapper (void *arg)
 {
   pthread *thread = (pthread *) arg;
-  set_tls_self_pointer (thread);
+  /* This *must* be set prior to calling set_tls_self_pointer or there is
+     a race with the signal processing code which may miss the signal mask
+     settings. */
+  _my_tls.sigmask = thread->parent_sigmask;
+  thread->set_tls_self_pointer ();
 
   thread->mutex.lock ();
 
   // if thread is detached force cleanup on exit
   if (thread->attr.joinable == PTHREAD_CREATE_DETACHED && thread->joiner == NULL)
     thread->joiner = thread;
-  _my_tls.sigmask = thread->parent_sigmask;
   thread->mutex.unlock ();
 
   debug_printf ("tid %p", &_my_tls);
@@ -2253,7 +2263,7 @@ pthread_attr_getstack (const pthread_attr_t *attr, void **addr, size_t *size)
   if (!pthread_attr::is_good_object (attr))
     return EINVAL;
   /* uses lowest address of stack on all platforms */
-  *addr = (void *)((int)(*attr)->stackaddr - (*attr)->stacksize);
+  *addr = (void *)((ptrdiff_t)(*attr)->stackaddr - (*attr)->stacksize);
   *size = (*attr)->stacksize;
   return 0;
 }
@@ -2486,7 +2496,7 @@ pthread_getattr_np (pthread_t thread, pthread_attr_t *attr)
   else
     {
       debug_printf ("NtQueryInformationThread(ThreadBasicInformation), "
-		    "status %p", status);
+		    "status %y", status);
       (*attr)->stackaddr = thread->attr.stackaddr;
       (*attr)->stacksize = thread->attr.stacksize;
     }
@@ -3035,7 +3045,8 @@ extern "C" int
 pthread_sigmask (int operation, const sigset_t *set, sigset_t *old_set)
 {
   int res = handle_sigprocmask (operation, set, old_set, _my_tls.sigmask);
-  syscall_printf ("%d = pthread_sigmask(%d, %p, %p)", operation, set, old_set);
+  syscall_printf ("%d = pthread_sigmask(%d, %p, %p)",
+		  res, operation, set, old_set);
   return res;
 }
 
@@ -3366,14 +3377,15 @@ List<semaphore> semaphore::semaphores;
 semaphore::semaphore (int pshared, unsigned int value)
 : verifyable_object (SEM_MAGIC),
   shared (pshared),
-  currentvalue (value),
+  currentvalue (-1),
+  startvalue (value),
   fd (-1),
   hash (0ULL),
   sem (NULL)
 {
   SECURITY_ATTRIBUTES sa = (pshared != PTHREAD_PROCESS_PRIVATE)
 			   ? sec_all : sec_none_nih;
-  this->win32_obj_id = ::CreateSemaphore (&sa, value, LONG_MAX, NULL);
+  this->win32_obj_id = ::CreateSemaphore (&sa, value, INT32_MAX, NULL);
   if (!this->win32_obj_id)
     magic = 0;
 
@@ -3384,7 +3396,8 @@ semaphore::semaphore (unsigned long long shash, LUID sluid, int sfd,
 		      sem_t *ssem, int oflag, mode_t mode, unsigned int value)
 : verifyable_object (SEM_MAGIC),
   shared (PTHREAD_PROCESS_SHARED),
-  currentvalue (value),		/* Unused for named semaphores. */
+  currentvalue (-1),		/* Unused for named semaphores. */
+  startvalue (value),
   fd (sfd),
   hash (shash),
   luid (sluid),
@@ -3394,7 +3407,7 @@ semaphore::semaphore (unsigned long long shash, LUID sluid, int sfd,
 
   __small_sprintf (name, "semaphore/%016X%08x%08x",
 		   hash, luid.HighPart, luid.LowPart);
-  this->win32_obj_id = ::CreateSemaphore (&sec_all, value, LONG_MAX, name);
+  this->win32_obj_id = ::CreateSemaphore (&sec_all, value, INT32_MAX, name);
   if (!this->win32_obj_id)
     magic = 0;
   if (GetLastError () == ERROR_ALREADY_EXISTS && (oflag & O_EXCL))
@@ -3418,29 +3431,31 @@ semaphore::~semaphore ()
 void
 semaphore::_post ()
 {
-  if (ReleaseSemaphore (win32_obj_id, 1, &currentvalue))
-    currentvalue++;
+  LONG dummy;
+  ReleaseSemaphore (win32_obj_id, 1, &dummy);
 }
 
 int
 semaphore::_getvalue (int *sval)
 {
-  long val;
+  NTSTATUS status;
+  SEMAPHORE_BASIC_INFORMATION sbi;
 
-  switch (WaitForSingleObject (win32_obj_id, 0))
+  status = NtQuerySemaphore (win32_obj_id, SemaphoreBasicInformation, &sbi,
+			     sizeof sbi, NULL);
+  int res;
+  if (NT_SUCCESS (status))
     {
-      case WAIT_OBJECT_0:
-	ReleaseSemaphore (win32_obj_id, 1, &val);
-	*sval = val + 1;
-	break;
-      case WAIT_TIMEOUT:
-	*sval = 0;
-	break;
-      default:
-	set_errno (EAGAIN);
-	return -1;
+      *sval = sbi.CurrentCount;
+      res = 0;
     }
-  return 0;
+  else
+    {
+      *sval = startvalue;
+      __seterrno_from_nt_status (status);
+      res = -1;
+    }
+  return res;
 }
 
 int
@@ -3453,7 +3468,6 @@ semaphore::_trywait ()
       set_errno (EAGAIN);
       return -1;
     }
-  currentvalue--;
   return 0;
 }
 
@@ -3479,7 +3493,6 @@ semaphore::_timedwait (const struct timespec *abstime)
   switch (cygwait (win32_obj_id, &timeout, cw_cancel | cw_cancel_self | cw_sig_eintr))
     {
     case WAIT_OBJECT_0:
-      currentvalue--;
       break;
     case WAIT_SIGNALED:
       set_errno (EINTR);
@@ -3501,7 +3514,6 @@ semaphore::_wait ()
   switch (cygwait (win32_obj_id, cw_infinite, cw_cancel | cw_cancel_self | cw_sig_eintr))
     {
     case WAIT_OBJECT_0:
-      currentvalue--;
       break;
     case WAIT_SIGNALED:
       set_errno (EINTR);
@@ -3514,16 +3526,30 @@ semaphore::_wait ()
 }
 
 void
+semaphore::_fixup_before_fork ()
+{
+  NTSTATUS status;
+  SEMAPHORE_BASIC_INFORMATION sbi;
+
+  status = NtQuerySemaphore (win32_obj_id, SemaphoreBasicInformation, &sbi,
+			     sizeof sbi, NULL);
+  if (NT_SUCCESS (status))
+    currentvalue = sbi.CurrentCount;
+  else
+    currentvalue = startvalue;
+}
+
+void
 semaphore::_fixup_after_fork ()
 {
   if (shared == PTHREAD_PROCESS_PRIVATE)
     {
-      pthread_printf ("sem %x", this);
-      /* FIXME: duplicate code here and in the constructor. */
-      this->win32_obj_id = ::CreateSemaphore (&sec_none_nih, currentvalue,
-					      LONG_MAX, NULL);
+      pthread_printf ("sem %p", this);
+      win32_obj_id = ::CreateSemaphore (&sec_none_nih, currentvalue,
+					INT32_MAX, NULL);
       if (!win32_obj_id)
-	api_fatal ("failed to create new win32 semaphore, %E");
+	api_fatal ("failed to create new win32 semaphore, "
+		   "currentvalue %ld, %E", currentvalue);
     }
 }
 
@@ -3547,9 +3573,7 @@ semaphore::init (sem_t *sem, int pshared, unsigned int value)
      contents happen to be a valid pointer
    */
   if (is_good_object (sem))
-    {
-      paranoid_printf ("potential attempt to reinitialise a semaphore");
-    }
+    paranoid_printf ("potential attempt to reinitialise a semaphore");
 
   if (value > SEM_VALUE_MAX)
     {

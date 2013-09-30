@@ -1,6 +1,5 @@
 /* Support for printing C and C++ types for GDB, the GNU debugger.
-   Copyright (C) 1986, 1988-1989, 1991-1996, 1998-2003, 2006-2012 Free
-   Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -270,6 +269,9 @@ cp_type_print_method_args (struct type *mtype, const char *prefix,
 
       if (TYPE_VOLATILE (domain))
 	fprintf_filtered (stream, " volatile");
+
+      if (TYPE_RESTRICT (domain))
+	fprintf_filtered (stream, " restrict");
     }
 }
 
@@ -423,6 +425,14 @@ c_type_print_modifier (struct type *type, struct ui_file *stream,
       did_print_modifier = 1;
     }
 
+  if (TYPE_RESTRICT (type))
+    {
+      if (did_print_modifier || need_pre_space)
+	fprintf_filtered (stream, " ");
+      fprintf_filtered (stream, "restrict");
+      did_print_modifier = 1;
+    }
+
   address_space_id = address_space_int_to_name (get_type_arch (type),
 						TYPE_INSTANCE_FLAGS (type));
   if (address_space_id)
@@ -452,13 +462,10 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 		   int linkage_name, enum language language,
 		   const struct type_print_options *flags)
 {
-  int i, len;
-  struct field *args;
+  int i;
   int printed_any = 0;
 
   fprintf_filtered (stream, "(");
-  args = TYPE_FIELDS (type);
-  len = TYPE_NFIELDS (type);
 
   for (i = 0; i < TYPE_NFIELDS (type); i++)
     {
@@ -1143,7 +1150,8 @@ c_type_print_base (struct type *type, struct ui_file *stream,
 		  struct cleanup *inner_cleanup;
 		  const char *physname = TYPE_FN_FIELD_PHYSNAME (f, j);
 		  int is_full_physname_constructor =
-		    is_constructor_name (physname) 
+		    TYPE_FN_FIELD_CONSTRUCTOR (f, j)
+		    || is_constructor_name (physname)
 		    || is_destructor_name (physname)
 		    || method_name[0] == '~';
 
@@ -1219,8 +1227,8 @@ c_type_print_base (struct type *type, struct ui_file *stream,
 		    mangled_name = TYPE_FN_FIELD_PHYSNAME (f, j);
 
 		  demangled_name =
-		    cplus_demangle (mangled_name,
-				    DMGL_ANSI | DMGL_PARAMS);
+		    gdb_demangle (mangled_name,
+				  DMGL_ANSI | DMGL_PARAMS);
 		  if (demangled_name == NULL)
 		    {
 		      /* In some cases (for instance with the HP
@@ -1287,7 +1295,6 @@ c_type_print_base (struct type *type, struct ui_file *stream,
 		for (i = 0; i < TYPE_TYPEDEF_FIELD_COUNT (type); i++)
 		  {
 		    struct type *target = TYPE_TYPEDEF_FIELD_TYPE (type, i);
-		    struct typedef_hash_table *table2;
 
 		    /* Dereference the typedef declaration itself.  */
 		    gdb_assert (TYPE_CODE (target) == TYPE_CODE_TYPEDEF);

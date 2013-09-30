@@ -1,7 +1,6 @@
 /* Target-dependent definitions for AMD64.
 
-   Copyright (C) 2001, 2003-2004, 2007-2012 Free Software Foundation,
-   Inc.
+   Copyright (C) 2001-2013 Free Software Foundation, Inc.
    Contributed by Jiri Smid, SuSE Labs.
 
    This file is part of GDB.
@@ -104,13 +103,9 @@ extern void amd64_supply_xsave (struct regcache *regcache, int regnum,
 
 extern void amd64_collect_fxsave (const struct regcache *regcache, int regnum,
 				  void *fxsave);
-
 /* Similar to amd64_collect_fxsave, but use XSAVE extended state.  */
 extern void amd64_collect_xsave (const struct regcache *regcache,
 				 int regnum, void *xsave, int gcore);
-
-void amd64_classify (struct type *type, enum amd64_reg_class class[2]);
-
 
 
 /* Variables exported from amd64-linux-tdep.c.  */

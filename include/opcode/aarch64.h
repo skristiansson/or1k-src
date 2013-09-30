@@ -1,6 +1,6 @@
 /* AArch64 assembler/disassembler support.
 
-   Copyright 2009, 2010, 2011, 2012  Free Software Foundation, Inc.
+   Copyright 2009, 2010, 2011, 2012, 2013  Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GNU Binutils.
@@ -37,6 +37,7 @@ typedef uint32_t aarch64_insn;
 #define AARCH64_FEATURE_CRYPTO	0x00010000	/* Crypto instructions.  */
 #define AARCH64_FEATURE_FP	0x00020000	/* FP instructions.  */
 #define AARCH64_FEATURE_SIMD	0x00040000	/* SIMD instructions.  */
+#define AARCH64_FEATURE_CRC	0x00080000	/* CRC instructions.  */
 
 /* Architectures are the sum of the base and extensions.  */
 #define AARCH64_ARCH_V8		AARCH64_FEATURE (AARCH64_FEATURE_V8, \
@@ -409,8 +410,6 @@ enum aarch64_op
   OP_UXTH,
   OP_UXTW,
 
-  OP_V_MOVI_B,
-
   OP_CINC,
   OP_CINV,
   OP_CNEG,
@@ -425,6 +424,11 @@ enum aarch64_op
   OP_FCVTXN_S,		/* Scalar version.  */
 
   OP_ROR_IMM,
+
+  OP_SXTL,
+  OP_SXTL2,
+  OP_UXTL,
+  OP_UXTL2,
 
   OP_TOTAL_NUM,		/* Pseudo.  */
 };

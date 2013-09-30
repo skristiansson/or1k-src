@@ -1,7 +1,7 @@
 /* pinfo.cc: process table support
 
-   Copyright 1996, 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
+   2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -110,19 +110,26 @@ pinfo_init (char **envp, int envc)
   debug_printf ("pid %d, pgid %d", myself->pid, myself->pgid);
 }
 
-static DWORD
-status_exit (DWORD x)
+DWORD
+pinfo::status_exit (DWORD x)
 {
   switch (x)
     {
     case STATUS_DLL_NOT_FOUND:
       {
 	char posix_prog[NT_MAX_PATH];
-	UNICODE_STRING uc;
-	RtlInitUnicodeString(&uc, myself->progname);
-	path_conv pc (&uc, PC_NOWARN);
+	path_conv pc;
+	if (!procinfo)
+	   pc.check ("/dev/null");
+	else
+	  {
+	    UNICODE_STRING uc;
+	    RtlInitUnicodeString(&uc, procinfo->progname);
+	    pc.check (&uc, PC_NOWARN);
+	  }
 	mount_table->conv_to_posix_path (pc.get_win32 (), posix_prog, 1);
-	small_printf ("%s: error while loading shared libraries: %s: cannot open shared object file: No such file or directory\n",
+	small_printf ("%s: error while loading shared libraries: %s: cannot "
+		      "open shared object file: No such file or directory\n",
 		      posix_prog, find_first_notloaded_dll (pc));
 	x = 127 << 8;
       }
@@ -137,8 +144,21 @@ status_exit (DWORD x)
     case STATUS_ILLEGAL_INSTRUCTION:
       x = SIGILL;
       break;
+    case STATUS_NO_MEMORY:
+      /* If the PATH environment variable is longer than about 30K and the full
+	 Windows environment is > 32K, startup of an exec'ed process fails with
+	 STATUS_NO_MEMORY.  This happens with all Cygwin executables, as well
+	 as, for instance, notepad, but it does not happen with CMD for some
+	 reason (but note, the environment *in* CMD is broken and shortened).
+	 This occurs at a point where there's no return to the exec'ing parent
+	 process, so we have to find some way to inform the user what happened.
+	 
+	 FIXME: For now, just return with SIGBUS set.  Maybe it's better to add
+	 a lengthy small_printf instead. */
+      x = SIGBUS;
+      break;
     default:
-      debug_printf ("*** STATUS_%p\n", x);
+      debug_printf ("*** STATUS_%y\n", x);
       x = 127 << 8;
     }
   return EXITCODE_SET | x;
@@ -168,25 +188,23 @@ pinfo::maybe_set_exit_code_from_windows ()
       GetExitCodeProcess (hProcess, &x);
       set_exit_code (x);
     }
-  sigproc_printf ("pid %d, exit value - old %p, windows %p, cygwin %p",
+  sigproc_printf ("pid %d, exit value - old %y, windows %y, cygwin %y",
 		  self->pid, oexitcode, x, self->exitcode);
 }
 
 void
 pinfo::exit (DWORD n)
 {
-  minimal_printf ("winpid %d, exit %d", GetCurrentProcessId (), n);
-  sigproc_terminate (ES_FINAL);
+  debug_only_printf ("winpid %d, exit %d", GetCurrentProcessId (), n);
+  proc_terminate ();
   lock_process until_exit (true);
   cygthread::terminate ();
 
   if (n != EXITCODE_NOSET)
     self->exitcode = EXITCODE_SET | n;/* We're really exiting.  Record the UNIX exit code. */
   else
-    {
-      exit_state = ES_EXEC_EXIT;
-      maybe_set_exit_code_from_windows ();
-    }
+    maybe_set_exit_code_from_windows ();	/* may block */
+  exit_state = ES_FINAL;
 
   if (myself->ctty > 0 && !iscons_dev (myself->ctty))
     {
@@ -204,7 +222,7 @@ pinfo::exit (DWORD n)
   int exitcode = self->exitcode & 0xffff;
   if (!self->cygstarted)
     exitcode = ((exitcode & 0xff) << 8) | ((exitcode >> 8) & 0xff);
-  sigproc_printf ("Calling ExitProcess n %p, exitcode %p", n, exitcode);
+  sigproc_printf ("Calling ExitProcess n %y, exitcode %y", n, exitcode);
   if (!TerminateProcess (GetCurrentProcess (), exitcode))
     system_printf ("TerminateProcess failed, %E");
   ExitProcess (exitcode);
@@ -320,7 +338,7 @@ pinfo::init (pid_t n, DWORD flag, HANDLE h0)
       if (procinfo->process_state & PID_EXECED)
 	{
 	  pid_t realpid = procinfo->pid;
-	  debug_printf ("execed process windows pid %d, cygwin pid %d", n, realpid);
+	  debug_printf ("execed process windows pid %u, cygwin pid %d", n, realpid);
 	  if (realpid == n)
 	    api_fatal ("retrieval of execed process info for pid %d failed due to recursion.", n);
 
@@ -385,9 +403,9 @@ pinfo::set_acl()
   RtlCreateSecurityDescriptor (&sd, SECURITY_DESCRIPTOR_REVISION);
   status = RtlSetDaclSecurityDescriptor (&sd, TRUE, acl_buf, FALSE);
   if (!NT_SUCCESS (status))
-    debug_printf ("RtlSetDaclSecurityDescriptor %p", status);
+    debug_printf ("RtlSetDaclSecurityDescriptor %y", status);
   else if ((status = NtSetSecurityObject (h, DACL_SECURITY_INFORMATION, &sd)))
-    debug_printf ("NtSetSecurityObject %p", status);
+    debug_printf ("NtSetSecurityObject %y", status);
 }
 
 pinfo::pinfo (HANDLE parent, pinfo_minimal& from, pid_t pid):
@@ -437,7 +455,7 @@ bool
 _pinfo::set_ctty (fhandler_termios *fh, int flags)
 {
   tty_min& tc = *fh->tc ();
-  debug_printf ("old %s, ctty device number %p, tc.ntty device number %p flags & O_NOCTTY %p", __ctty (), ctty, tc.ntty, flags & O_NOCTTY);
+  debug_printf ("old %s, ctty device number %y, tc.ntty device number %y flags & O_NOCTTY %y", __ctty (), ctty, tc.ntty, flags & O_NOCTTY);
   if (fh && &tc && (ctty <= 0 || ctty == tc.ntty) && !(flags & O_NOCTTY))
     {
       ctty = tc.ntty;
@@ -487,7 +505,7 @@ _pinfo::set_ctty (fhandler_termios *fh, int flags)
 
 /* Test to determine if a process really exists and is processing signals.
  */
-bool __stdcall
+bool __reg1
 _pinfo::exists ()
 {
   return this && process_state && !(process_state & (PID_EXITED | PID_REAPED | PID_EXECED));
@@ -515,7 +533,7 @@ commune_process (void *arg)
   if (process_sync)		// FIXME: this test shouldn't be necessary
     ProtectHandle (process_sync);
 
-  lock_process now ();
+  lock_process now;
   if (si._si_commune._si_code & PICOM_EXTRASTR)
     si._si_commune._si_str = (char *) (&si + 1);
 
@@ -637,7 +655,7 @@ commune_process (void *arg)
     {
       DWORD res = WaitForSingleObject (process_sync, 5000);
       if (res != WAIT_OBJECT_0)
-	sigproc_printf ("WFSO failed - %d, %E", res);
+	sigproc_printf ("WFSO failed - %u, %E", res);
       else
 	sigproc_printf ("synchronized with pid %d", si.si_pid);
       ForceCloseHandle (process_sync);
@@ -684,7 +702,7 @@ _pinfo::commune_request (__uint32_t code, ...)
   va_end (args);
 
   char name_buf[MAX_PATH];
-  request_sync = CreateSemaphore (&sec_none_nih, 0, LONG_MAX,
+  request_sync = CreateSemaphore (&sec_none_nih, 0, INT32_MAX,
 				  shared_name (name_buf, "commune", myself->pid));
   if (!request_sync)
     goto err;
@@ -698,7 +716,7 @@ _pinfo::commune_request (__uint32_t code, ...)
       goto err;
     }
 
-  size_t n;
+  DWORD n;
   switch (code)
     {
     case PICOM_CMDLINE:
@@ -707,7 +725,7 @@ _pinfo::commune_request (__uint32_t code, ...)
     case PICOM_FDS:
     case PICOM_FD:
     case PICOM_PIPE_FHANDLER:
-      if (!ReadPipeOverlapped (fromthem, &n, sizeof n, &nr, 500L)
+      if (!ReadPipeOverlapped (fromthem, &n, sizeof n, &nr, 1000L)
 	  || nr != sizeof n)
 	{
 	  __seterrno ();
@@ -720,7 +738,7 @@ _pinfo::commune_request (__uint32_t code, ...)
 	  res.s = (char *) cmalloc_abort (HEAP_COMMUNE, n);
 	  char *p;
 	  for (p = res.s;
-	       n && ReadPipeOverlapped (fromthem, p, n, &nr, 500L);
+	       n && ReadPipeOverlapped (fromthem, p, n, &nr, 1000L);
 	       p += nr, n -= nr)
 	    continue;
 	  if (n)
@@ -995,7 +1013,7 @@ pinfo::wait ()
   else
     {
       wait_thread = h;
-      sigproc_printf ("created tracking thread for pid %d, winpid %p, rd_proc_pipe %p",
+      sigproc_printf ("created tracking thread for pid %d, winpid %y, rd_proc_pipe %p",
 		      (*this)->pid, (*this)->dwProcessId, rd_proc_pipe);
     }
 
@@ -1250,11 +1268,11 @@ winpids::enum_processes (bool winpid)
   if (winpid)
     {
       static DWORD szprocs;
-      static PSYSTEM_PROCESSES procs;
+      static PSYSTEM_PROCESS_INFORMATION procs;
 
       if (!szprocs)
 	{
-	  procs = (PSYSTEM_PROCESSES)
+	  procs = (PSYSTEM_PROCESS_INFORMATION)
 		  malloc (sizeof (*procs) + (szprocs = 200 * sizeof (*procs)));
 	  if (!procs)
 	    {
@@ -1267,16 +1285,16 @@ winpids::enum_processes (bool winpid)
       for (;;)
 	{
 	  status =
-		NtQuerySystemInformation (SystemProcessesAndThreadsInformation,
+		NtQuerySystemInformation (SystemProcessInformation,
 					  procs, szprocs, NULL);
 	  if (NT_SUCCESS (status))
 	    break;
 
 	  if (status == STATUS_INFO_LENGTH_MISMATCH)
 	    {
-	      PSYSTEM_PROCESSES new_p;
+	      PSYSTEM_PROCESS_INFORMATION new_p;
 
-	      new_p = (PSYSTEM_PROCESSES)
+	      new_p = (PSYSTEM_PROCESS_INFORMATION)
 		      realloc (procs, szprocs += 200 * sizeof (*procs));
 	      if (!new_p)
 		{
@@ -1288,30 +1306,30 @@ winpids::enum_processes (bool winpid)
 	    }
 	  else
 	    {
-	      system_printf ("error %p reading system process information",
+	      system_printf ("error %y reading system process information",
 			     status);
 	      return 0;
 	    }
 	}
 
-      PSYSTEM_PROCESSES px = procs;
+      PSYSTEM_PROCESS_INFORMATION px = procs;
       for (;;)
 	{
-	  if (px->ProcessId)
+	  if (px->UniqueProcessId)
 	    {
 	      bool do_add = true;
 	      for (unsigned i = 0; i < cygwin_pid_nelem; ++i)
-		if (pidlist[i] == px->ProcessId)
+		if (pidlist[i] == (uintptr_t) px->UniqueProcessId)
 		  {
 		    do_add = false;
 		    break;
 		  }
 	      if (do_add)
-		add (nelem, true, px->ProcessId);
+		add (nelem, true, (DWORD) (uintptr_t) px->UniqueProcessId);
 	    }
-	  if (!px->NextEntryDelta)
+	  if (!px->NextEntryOffset)
 	    break;
-	  px = (PSYSTEM_PROCESSES) ((char *) px + px->NextEntryDelta);
+	  px = (PSYSTEM_PROCESS_INFORMATION) ((char *) px + px->NextEntryOffset);
 	}
     }
 

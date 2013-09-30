@@ -1,5 +1,5 @@
 /* Simulator for the moxie processor
-   Copyright (C) 2008-2012 Free Software Foundation, Inc.
+   Copyright (C) 2008-2013 Free Software Foundation, Inc.
    Contributed by Anthony Green
 
 This file is part of GDB, the GNU debugger.
@@ -1165,7 +1165,6 @@ sim_open (kind, cb, abfd, argv)
      char ** argv;
 {
   SIM_DESC sd = sim_state_alloc (kind, cb);
-  printf ("0x%x 0x%x\n", sd, STATE_MAGIC(sd));
   SIM_ASSERT (STATE_MAGIC (sd) == SIM_MAGIC_NUMBER);
 
   if (sim_pre_argv_init (sd, argv[0]) != SIM_RC_OK)
