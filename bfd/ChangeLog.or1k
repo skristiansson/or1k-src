@@ -1,3 +1,8 @@
+2013-10-01  Stefan Kristiansson <stefan.kristiansson@saunalahti.fi>
+
+	* elf32-or1k.c (or1k_elf_reloc_type_class): Add extra params functions.
+	(or1k_elf_link_hash_table_create): Use bfd_zmalloc.
+
 2013-02-12  Christian Svensson  <blue@cmd.nu>
 
 	* reloc.c: Add R_OR1K_TLS_GD_HI16,

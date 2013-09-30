@@ -1,3 +1,9 @@
+2013-10-01  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* or1k-tdep.c (or1k_fetch_instruction): Change char to gdb_byte to
+	prevent pointer signedness error.
+	(or1k_push_dummy_code): Likewise.
+
 2013-03-15  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
 
 	* or1k-tdep.c (or1k_regset_from_core_section) : Silence gcc warning

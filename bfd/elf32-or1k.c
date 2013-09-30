@@ -1,5 +1,5 @@
 /* Or1k-specific support for 32-bit ELF.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007
+   Copyright 2001-2013
    Free Software Foundation, Inc.
    Contributed by Johan Rydberg, jrydberg@opencores.org
 
@@ -688,7 +688,7 @@ or1k_elf_link_hash_table_create (bfd *abfd)
   struct elf_or1k_link_hash_table *ret;
   bfd_size_type amt = sizeof (struct elf_or1k_link_hash_table);
 
-  ret = bfd_malloc (amt);
+  ret = bfd_zmalloc (amt);
   if (ret == NULL)
     return NULL;
 
@@ -700,14 +700,6 @@ or1k_elf_link_hash_table_create (bfd *abfd)
       free (ret);
       return NULL;
     }
-
-  ret->sgot = NULL;
-  ret->sgotplt = NULL;
-  ret->srelgot = NULL;
-  ret->splt = NULL;
-  ret->srelplt = NULL;
-  ret->sdynbss = NULL;
-  ret->srelbss = NULL;
 
   return &ret->root.root;
 }
@@ -2075,7 +2067,9 @@ or1k_elf_finish_dynamic_symbol (bfd *output_bfd,
 }
 
 static enum elf_reloc_type_class
-or1k_elf_reloc_type_class (const Elf_Internal_Rela *rela)
+or1k_elf_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			   const asection *rel_sec ATTRIBUTE_UNUSED,
+			   const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {
