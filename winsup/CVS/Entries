@@ -2,27 +2,22 @@ D/cygserver////
 D/cygwin////
 D/doc////
 D/lsaauth////
-D/mingw////
 D/testsuite////
 D/utils////
-D/w32api////
-/COPYING/1.2/Sat Oct 27 22:59:31 2012//
-/CYGWIN_LICENSE/1.10/Sat Oct 27 22:59:31 2012/-ko/
-/ChangeLog/1.118/Thu Nov 29 07:49:59 2012/-ko/
-/Makefile.common/1.62/Thu Nov 29 07:49:59 2012/-ko/
-/Makefile.in/1.36/Thu Nov 29 07:49:59 2012/-ko/
-/README/1.1/Sat Oct 27 22:59:31 2012//
-/acinclude.m4/1.2/Thu Nov 29 07:49:59 2012//
-/aclocal.m4/1.4/Thu Nov 29 07:49:59 2012//
-/autogen.sh/1.1/Fri Nov 23 13:22:42 2012//
-/c++wrap/1.1/Fri Nov 23 13:22:42 2012//
-/ccwrap/1.2/Mon Nov 26 19:00:35 2012//
-/config.guess/1.1/Fri Nov 23 13:22:42 2012//
-/config.sub/1.1/Fri Nov 23 13:22:42 2012//
-/configure/1.39/Thu Nov 29 07:50:00 2012/-ko/
-/configure.ac/1.1/Mon Nov 26 19:50:44 2012//
-/configure.cygwin/1.1/Fri Nov 23 13:22:42 2012//
-/install-sh/1.1/Fri Nov 23 13:22:42 2012//
-D/bz2lib////
-D/maint////
-D/subauth////
+/COPYING/1.2/Sat Aug 18 05:48:02 2012//
+/CYGWIN_LICENSE/1.10/Sat Aug 18 05:48:02 2012/-ko/
+/README/1.1/Sat Aug 18 05:48:02 2012//
+/acinclude.m4/1.2/Mon Sep 30 13:51:33 2013//
+/aclocal.m4/1.4/Mon Sep 30 13:51:33 2013//
+/autogen.sh/1.1/Mon Sep 30 13:51:33 2013//
+/c++wrap/1.1/Mon Sep 30 13:51:33 2013//
+/ccwrap/1.2/Mon Sep 30 13:51:33 2013//
+/config.guess/1.1/Mon Sep 30 13:51:33 2013//
+/config.sub/1.1/Mon Sep 30 13:51:33 2013//
+/configure/1.39/Mon Sep 30 13:51:33 2013/-ko/
+/configure.cygwin/1.1/Mon Sep 30 13:51:33 2013//
+/install-sh/1.1/Mon Sep 30 13:51:33 2013//
+/ChangeLog/1.119/Mon Sep 30 18:36:13 2013/-ko/
+/Makefile.common/1.63/Mon Sep 30 18:36:13 2013/-ko/
+/Makefile.in/1.37/Mon Sep 30 18:36:13 2013/-ko/
+/configure.ac/1.2/Mon Sep 30 18:36:13 2013//

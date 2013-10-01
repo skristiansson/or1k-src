@@ -1,6 +1,6 @@
 /* fhandler_mailslot.cc.  See fhandler.h for a description of the fhandler classes.
 
-   Copyright 2005, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 2005, 2007, 2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
    This file is part of Cygwin.
 
@@ -28,8 +28,8 @@ fhandler_mailslot::fhandler_mailslot ()
 {
 }
 
-int __stdcall
-fhandler_mailslot::fstat (struct __stat64 *buf)
+int __reg2
+fhandler_mailslot::fstat (struct stat *buf)
 {
   debug_printf ("here");
 
@@ -146,7 +146,7 @@ fhandler_mailslot::open (int flags, mode_t mode)
   return res;
 }
 
-ssize_t __stdcall
+ssize_t __reg3
 fhandler_mailslot::raw_write (const void *ptr, size_t len)
 {
   /* Check for 425/426 byte weirdness */
@@ -177,7 +177,7 @@ fhandler_mailslot::ioctl (unsigned int cmd, void *buf)
 				       FileMailslotSetInformation);
 	if (!NT_SUCCESS (status))
 	  {
-	    debug_printf ("NtSetInformationFile (%X): %08x",
+	    debug_printf ("NtSetInformationFile (%X): %p",
 			  fmsi.ReadTimeout.QuadPart, status);
 	    __seterrno_from_nt_status (status);
 	    break;

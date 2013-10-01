@@ -1,6 +1,6 @@
 /* Print values for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1988-2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -76,6 +76,9 @@ struct converted_character
 typedef struct converted_character converted_character_d;
 DEF_VEC_O (converted_character_d);
 
+/* Command lists for set/show print raw.  */
+struct cmd_list_element *setprintrawlist;
+struct cmd_list_element *showprintrawlist;
 
 /* Prototypes for local functions */
 
@@ -104,9 +107,9 @@ void _initialize_valprint (void);
 
 struct value_print_options user_print_options =
 {
-  Val_pretty_default,		/* pretty */
-  0,				/* prettyprint_arrays */
-  0,				/* prettyprint_structs */
+  Val_prettyformat_default,	/* prettyformat */
+  0,				/* prettyformat_arrays */
+  0,				/* prettyformat_structs */
   0,				/* vtblprint */
   1,				/* unionprint */
   1,				/* addressprint */
@@ -116,7 +119,6 @@ struct value_print_options user_print_options =
   0,				/* output_format */
   0,				/* format */
   0,				/* stop_print_at_null */
-  0,				/* inspect_it */
   0,				/* print_array_indexes */
   0,				/* deref_ref */
   1,				/* static_field_print */
@@ -134,12 +136,12 @@ get_user_print_options (struct value_print_options *opts)
 }
 
 /* Initialize *OPTS to be a copy of the user print options, but with
-   pretty-printing disabled.  */
+   pretty-formatting disabled.  */
 void
-get_raw_print_options (struct value_print_options *opts)
+get_no_prettyformat_print_options (struct value_print_options *opts)
 {  
   *opts = user_print_options;
-  opts->pretty = Val_no_prettyprint;
+  opts->prettyformat = Val_no_prettyformat;
 }
 
 /* Initialize *OPTS to be a copy of the user print options, but using
@@ -222,19 +224,19 @@ show_stop_print_at_null (struct ui_file *file, int from_tty,
 /* Controls pretty printing of structures.  */
 
 static void
-show_prettyprint_structs (struct ui_file *file, int from_tty,
+show_prettyformat_structs (struct ui_file *file, int from_tty,
 			  struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Prettyprinting of structures is %s.\n"), value);
+  fprintf_filtered (file, _("Pretty formatting of structures is %s.\n"), value);
 }
 
 /* Controls pretty printing of arrays.  */
 
 static void
-show_prettyprint_arrays (struct ui_file *file, int from_tty,
+show_prettyformat_arrays (struct ui_file *file, int from_tty,
 			 struct cmd_list_element *c, const char *value)
 {
-  fprintf_filtered (file, _("Prettyprinting of arrays is %s.\n"), value);
+  fprintf_filtered (file, _("Pretty formatting of arrays is %s.\n"), value);
 }
 
 /* If nonzero, causes unions inside structures or other unions to be
@@ -273,8 +275,8 @@ show_symbol_print (struct ui_file *file, int from_tty,
    we want to print scalar arguments, but not aggregate arguments.
    This function distinguishes between the two.  */
 
-static int
-scalar_type_p (struct type *type)
+int
+val_print_scalar_type_p (struct type *type)
 {
   CHECK_TYPEDEF (type);
   while (TYPE_CODE (type) == TYPE_CODE_REF)
@@ -371,7 +373,6 @@ generic_val_print (struct type *type, const gdb_byte *valaddr,
 		   const struct generic_val_print_decorations *decorations)
 {
   struct gdbarch *gdbarch = get_type_arch (type);
-  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned int i = 0;	/* Number of characters printed.  */
   unsigned len;
   struct type *elttype, *unresolved_elttype;
@@ -392,7 +393,7 @@ generic_val_print (struct type *type, const gdb_byte *valaddr,
           if (!get_array_bounds (type, &low_bound, &high_bound))
             error (_("Could not determine the array high bound"));
 
-	  if (options->prettyprint_arrays)
+	  if (options->prettyformat_arrays)
 	    {
 	      print_spaces_filtered (2 + 2 * recurse, stream);
 	    }
@@ -738,9 +739,9 @@ val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
   struct value_print_options local_opts = *options;
   struct type *real_type = check_typedef (type);
 
-  if (local_opts.pretty == Val_pretty_default)
-    local_opts.pretty = (local_opts.prettyprint_structs
-			 ? Val_prettyprint : Val_no_prettyprint);
+  if (local_opts.prettyformat == Val_prettyformat_default)
+    local_opts.prettyformat = (local_opts.prettyformat_structs
+			       ? Val_prettyformat : Val_no_prettyformat);
 
   QUIT;
 
@@ -769,7 +770,7 @@ val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 
   /* Handle summary mode.  If the value is a scalar, print it;
      otherwise, print an ellipsis.  */
-  if (options->summary && !scalar_type_p (type))
+  if (options->summary && !val_print_scalar_type_p (type))
     {
       fprintf_filtered (stream, "...");
       return;
@@ -801,7 +802,7 @@ value_check_printable (struct value *val, struct ui_file *stream,
 
   if (value_entirely_optimized_out (val))
     {
-      if (options->summary && !scalar_type_p (value_type (val)))
+      if (options->summary && !val_print_scalar_type_p (value_type (val)))
 	fprintf_filtered (stream, "...");
       else
 	val_print_optimized_out (stream);
@@ -1644,7 +1645,7 @@ val_print_array_elements (struct type *type,
     {
       if (i != 0)
 	{
-	  if (options->prettyprint_arrays)
+	  if (options->prettyformat_arrays)
 	    {
 	      fprintf_filtered (stream, ",\n");
 	      print_spaces_filtered (2 + 2 * recurse, stream);
@@ -2073,7 +2074,7 @@ generic_emit_char (int c, struct type *type, struct ui_file *stream,
   make_cleanup_obstack_free (&output);
 
   convert_between_encodings (INTERMEDIATE_ENCODING, host_charset (),
-			     obstack_base (&wchar_buf),
+			     (gdb_byte *) obstack_base (&wchar_buf),
 			     obstack_object_size (&wchar_buf),
 			     sizeof (gdb_wchar_t), &output, translit_char);
   obstack_1grow (&output, '\0');
@@ -2211,8 +2212,6 @@ print_converted_chars_to_obstack (struct obstack *obstack,
 		   must output and a comma and a quote.  */
 		if (last != START)
 		  obstack_grow_wstr (obstack, LCST (", "));
-		if (options->inspect_it)
-		  obstack_grow_wstr (obstack, LCST ("\\"));
 		obstack_grow (obstack, &wide_quote_char, sizeof (gdb_wchar_t));
 	      }
 	    /* Output the character.  */
@@ -2240,8 +2239,6 @@ print_converted_chars_to_obstack (struct obstack *obstack,
 	      {
 		/* We were outputting a single string.  Terminate the
 		   string.  */
-		if (options->inspect_it)
-		  obstack_grow_wstr (obstack, LCST ("\\"));
 		obstack_grow (obstack, &wide_quote_char, sizeof (gdb_wchar_t));
 	      }
 	    if (last != START)
@@ -2272,8 +2269,6 @@ print_converted_chars_to_obstack (struct obstack *obstack,
 	    {
 	      /* If we were outputting a string of SINGLE characters,
 		 terminate the quote.  */
-	      if (options->inspect_it)
-		obstack_grow_wstr (obstack, LCST ("\\"));
 	      obstack_grow (obstack, &wide_quote_char, sizeof (gdb_wchar_t));
 	    }
 	  if (last != START)
@@ -2294,11 +2289,7 @@ print_converted_chars_to_obstack (struct obstack *obstack,
 	     characters, the string must be terminated.  Otherwise,
 	     REPEAT and INCOMPLETE are always left properly terminated.  */
 	  if (last == SINGLE)
-	    {
-	      if (options->inspect_it)
-		obstack_grow_wstr (obstack, LCST ("\\"));
-	      obstack_grow (obstack, &wide_quote_char, sizeof (gdb_wchar_t));
-	    }
+	    obstack_grow (obstack, &wide_quote_char, sizeof (gdb_wchar_t));
 
 	  return;
 	}
@@ -2438,7 +2429,7 @@ generic_printstr (struct ui_file *stream, struct type *type,
   make_cleanup_obstack_free (&output);
 
   convert_between_encodings (INTERMEDIATE_ENCODING, host_charset (),
-			     obstack_base (&wchar_buf),
+			     (gdb_byte *) obstack_base (&wchar_buf),
 			     obstack_object_size (&wchar_buf),
 			     sizeof (gdb_wchar_t), &output, translit_char);
   obstack_1grow (&output, '\0');
@@ -2698,6 +2689,21 @@ show_print (char *args, int from_tty)
 {
   cmd_show_list (showprintlist, from_tty, "");
 }
+
+static void
+set_print_raw (char *arg, int from_tty)
+{
+  printf_unfiltered (
+     "\"set print raw\" must be followed by the name of a \"print raw\" subcommand.\n");
+  help_list (setprintrawlist, "set print raw ", -1, gdb_stdout);
+}
+
+static void
+show_print_raw (char *args, int from_tty)
+{
+  cmd_show_list (showprintrawlist, from_tty, "");
+}
+
 
 void
 _initialize_valprint (void)
@@ -2715,11 +2721,19 @@ _initialize_valprint (void)
   add_alias_cmd ("p", "print", no_class, 1, &showlist);
   add_alias_cmd ("pr", "print", no_class, 1, &showlist);
 
+  add_prefix_cmd ("raw", no_class, set_print_raw,
+		  _("\
+Generic command for setting what things to print in \"raw\" mode."),
+		  &setprintrawlist, "set print raw ", 0, &setprintlist);
+  add_prefix_cmd ("raw", no_class, show_print_raw,
+		  _("Generic command for showing \"print raw\" settings."),
+		  &showprintrawlist, "show print raw ", 0, &showprintlist);
+
   add_setshow_uinteger_cmd ("elements", no_class,
 			    &user_print_options.print_max, _("\
 Set limit on string chars or array elements to print."), _("\
 Show limit on string chars or array elements to print."), _("\
-\"set print elements 0\" causes there to be no limit."),
+\"set print elements unlimited\" causes there to be no limit."),
 			    NULL,
 			    show_print_max,
 			    &setprintlist, &showprintlist);
@@ -2736,17 +2750,17 @@ Show printing of char arrays to stop at first null char."), NULL,
 			    &user_print_options.repeat_count_threshold, _("\
 Set threshold for repeated print elements."), _("\
 Show threshold for repeated print elements."), _("\
-\"set print repeats 0\" causes all elements to be individually printed."),
+\"set print repeats unlimited\" causes all elements to be individually printed."),
 			    NULL,
 			    show_repeat_count_threshold,
 			    &setprintlist, &showprintlist);
 
   add_setshow_boolean_cmd ("pretty", class_support,
-			   &user_print_options.prettyprint_structs, _("\
-Set prettyprinting of structures."), _("\
-Show prettyprinting of structures."), NULL,
+			   &user_print_options.prettyformat_structs, _("\
+Set pretty formatting of structures."), _("\
+Show pretty formatting of structures."), NULL,
 			   NULL,
-			   show_prettyprint_structs,
+			   show_prettyformat_structs,
 			   &setprintlist, &showprintlist);
 
   add_setshow_boolean_cmd ("union", class_support,
@@ -2758,11 +2772,11 @@ Show printing of unions interior to structures."), NULL,
 			   &setprintlist, &showprintlist);
 
   add_setshow_boolean_cmd ("array", class_support,
-			   &user_print_options.prettyprint_arrays, _("\
-Set prettyprinting of arrays."), _("\
-Show prettyprinting of arrays."), NULL,
+			   &user_print_options.prettyformat_arrays, _("\
+Set pretty formatting of arrays."), _("\
+Show pretty formatting of arrays."), NULL,
 			   NULL,
-			   show_prettyprint_arrays,
+			   show_prettyformat_arrays,
 			   &setprintlist, &showprintlist);
 
   add_setshow_boolean_cmd ("address", class_support,

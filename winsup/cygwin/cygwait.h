@@ -1,6 +1,6 @@
 /* cygwait.h
 
-   Copyright 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
+   Copyright 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
    Red Hat, Inc.
 
    This file is part of Cygwin.
@@ -19,7 +19,8 @@ enum cw_wait_mask
   cw_cancel =		0x0001,
   cw_cancel_self =	0x0002,
   cw_sig =		0x0004,
-  cw_sig_eintr =	0x0008
+  cw_sig_eintr =	0x0008,
+  cw_sig_cont =		0x0010
 };
 
 extern LARGE_INTEGER cw_nowait_storage;
@@ -28,9 +29,8 @@ extern LARGE_INTEGER cw_nowait_storage;
 
 const unsigned cw_std_mask = cw_cancel | cw_cancel_self | cw_sig;
 
-DWORD cygwait (HANDLE, PLARGE_INTEGER timeout,
-		       unsigned = cw_std_mask)
-  __attribute__ ((regparm (3)));
+DWORD __reg3 cygwait (HANDLE, PLARGE_INTEGER timeout,
+		       unsigned = cw_std_mask);
 
 extern inline DWORD __attribute__ ((always_inline))
 cygwait (HANDLE h, DWORD howlong, unsigned mask)

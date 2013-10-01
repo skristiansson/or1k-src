@@ -79,7 +79,7 @@ case "${target_optspace}:${host}" in
   yes:*)
     newlib_cflags="${newlib_cflags} -Os"
     ;;
-  :m32r-* | :d10v-* | :d30v-* | :avr-* | :m32c-* )
+  :m32r-* | :d10v-* | :d30v-* | :avr-* | :m32c-* | :msp430*-* | :nds32* )
     newlib_cflags="${newlib_cflags} -Os"
     ;;
   no:* | :*)
@@ -104,6 +104,7 @@ case "${host_cpu}" in
 	;;
   arm*)
 	machine_dir=arm
+	libm_machine_dir=arm
 	;;
   avr*)
 	newlib_cflags="${newlib_cflags} -DPREFER_SIZE_OVER_SPEED -mcall-prologues"
@@ -202,7 +203,7 @@ case "${host_cpu}" in
 	;;
   mcore)
 	;;
-  microblaze)
+  microblaze*)
 	machine_dir=microblaze
 	;;
   mep)
@@ -223,8 +224,23 @@ case "${host_cpu}" in
   moxie)
 	machine_dir=moxie
         ;;
+  msp430*)
+	newlib_cflags="${newlib_cflags} -DPREFER_SIZE_OVER_SPEED -DSMALL_MEMORY"
+	newlib_cflags="${newlib_cflags} -ffunction-sections -fdata-sections "
+	newlib_cflags="${newlib_cflags} -mOs "
+	machine_dir=msp430
+	;;
   mt*)
 	machine_dir=mt
+	;;
+  nds32*)
+	machine_dir=nds32
+	newlib_cflags="${newlib_cflags} -DPREFER_SIZE_OVER_SPEED "
+	newlib_cflags="${newlib_cflags} -DSMALL_MEMORY "
+	newlib_cflags="${newlib_cflags} -ffunction-sections -fdata-sections"
+	;;
+  nios2*)
+	machine_dir=nios2
 	;;
   or1k | or1knd)
         machine_dir=or1k
@@ -462,7 +478,7 @@ case "${host}" in
 	default_newlib_io_long_long="yes"
 	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES"
 	;;
-  microblaze-*-*)
+  microblaze*-*-*)
 	machine_dir=microblaze
 	;;
   mips*-dec-*)
@@ -474,6 +490,9 @@ case "${host}" in
   moxie*)
         sys_dir=
         ;;
+  nios2*)
+	sys_dir=
+	;;
   powerpcle-*-pe)
 	posix_dir=posix
 	;;
@@ -676,7 +695,7 @@ case "${host}" in
   mcore-*-*)
 	syscall_dir=syscalls
 	;;
-  microblaze-*-*)
+  microblaze*-*-*)
    	default_newlib_io_long_long="yes"
  	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES -DSMALL_MEMORY -D_REENT_SMALL"
 	;;
@@ -701,6 +720,11 @@ case "${host}" in
         syscall_dir=syscalls
 	default_newlib_io_long_long="yes"
         ;;
+  nios2*)
+	syscall_dir=
+	newlib_cflags="${newlib_cflags} -DHAVE_RENAME -DHAVE_SYSTEM -DMISSING_SYSCALL_NAMES"
+	;;
+  nds32*)
   or1k-*-* | or1knd-*-*)
 	syscall_dir=syscalls
         ;;

@@ -1,7 +1,7 @@
 /* winsup.h: main Cygwin header file.
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -13,9 +13,9 @@ details. */
 
 #define __INSIDE_CYGWIN__
 
+#define NO_COPY_RO __attribute__((nocommon)) __attribute__((section(".rdata_cygwin_nocopy")))
 #define NO_COPY __attribute__((nocommon)) __attribute__((section(".data_cygwin_nocopy")))
 #define NO_COPY_INIT __attribute__((section(".data_cygwin_nocopy")))
-#define _RDATA __attribute__ ((section(".rdata")))
 
 #define EXPORT_ALIAS(sym,symalias) extern "C" __typeof (sym) symalias __attribute__ ((alias(#sym)));
 
@@ -33,11 +33,11 @@ details. */
 #ifdef __cplusplus
 extern "C" {
 #endif
-__uid32_t getuid32 ();
-__uid32_t geteuid32 ();
-int seteuid32 (__uid32_t);
-__gid32_t getegid32 (void);
-struct passwd *getpwuid32 (__uid32_t);
+uid_t getuid32 ();
+uid_t geteuid32 ();
+int seteuid32 (uid_t);
+gid_t getegid32 (void);
+struct passwd *getpwuid32 (uid_t);
 struct passwd *getpwnam (const char *);
 struct __sFILE64 *fopen64 (const char *, const char *);
 struct hostent *cygwin_gethostbyname (const char *name);
@@ -78,11 +78,12 @@ int fcntl64 (int fd, int cmd, ...);
 #ifdef __cplusplus
 
 #include "wincap.h"
+#include "regparm.h"
 
-extern const char case_folded_lower[];
-#define cyg_tolower(c) (case_folded_lower[(unsigned char)(c)])
-extern const char case_folded_upper[];
-#define cyg_toupper(c) (case_folded_upper[(unsigned char)(c)])
+extern const unsigned char case_folded_lower[];
+#define cyg_tolower(c) ((char) case_folded_lower[(unsigned char)(c)])
+extern const unsigned char case_folded_upper[];
+#define cyg_toupper(c) ((char) case_folded_upper[(unsigned char)(c)])
 
 #ifndef MALLOC_DEBUG
 #define cfree newlib_cfree_dont_use
@@ -151,19 +152,22 @@ extern int cygserver_running;
 
 class per_process;
 /* cygwin .dll initialization */
-void dll_crt0 (per_process *) __asm__ ("_dll_crt0__FP11per_process");
+void dll_crt0 (per_process *) __asm__ (_SYMSTR (dll_crt0__FP11per_process));
 extern "C" void __stdcall _dll_crt0 ();
 void dll_crt0_1 (void *);
 void dll_dllcrt0_1 (void *);
 
 /* dynamically loaded dll initialization */
-extern "C" int dll_dllcrt0 (HMODULE, per_process *);
+extern "C" PVOID dll_dllcrt0 (HMODULE, per_process *);
 
 extern "C" void _pei386_runtime_relocator (per_process *);
 
+#ifndef __x86_64__
 /* dynamically loaded dll initialization for non-cygwin apps */
 extern "C" int dll_noncygwin_dllcrt0 (HMODULE, per_process *);
-void __stdcall do_exit (int) __attribute__ ((regparm (1), noreturn));
+#endif /* !__x86_64__ */
+
+void __reg1 do_exit (int) __attribute__ ((noreturn));
 
 /* libstdc++ malloc operator wrapper support.  */
 extern struct per_process_cxx_malloc default_cygwin_cxx_malloc;
@@ -171,21 +175,22 @@ extern struct per_process_cxx_malloc default_cygwin_cxx_malloc;
 /* UID/GID */
 void uinfo_init ();
 
-#define ILLEGAL_UID16 ((__uid16_t)-1)
-#define ILLEGAL_UID ((__uid32_t)-1)
-#define ILLEGAL_GID16 ((__gid16_t)-1)
-#define ILLEGAL_GID ((__gid32_t)-1)
-#define ILLEGAL_SEEK ((_off64_t)-1)
+#define ILLEGAL_UID ((uid_t)-1)
+#define ILLEGAL_GID ((gid_t)-1)
+#define ILLEGAL_SEEK ((off_t)-1)
 
-#define uid16touid32(u16)  ((u16)==ILLEGAL_UID16?ILLEGAL_UID:(__uid32_t)(u16))
-#define gid16togid32(g16)  ((g16)==ILLEGAL_GID16?ILLEGAL_GID:(__gid32_t)(g16))
+#ifndef __x86_64__
+#define ILLEGAL_UID16 ((__uid16_t)-1)
+#define ILLEGAL_GID16 ((__gid16_t)-1)
+#define uid16touid32(u16)  ((u16)==ILLEGAL_UID16?ILLEGAL_UID:(uid_t)(u16))
+#define gid16togid32(g16)  ((g16)==ILLEGAL_GID16?ILLEGAL_GID:(gid_t)(g16))
+#endif
 
 /* Convert LARGE_INTEGER into long long */
 #define get_ll(pl)  (((long long) (pl).HighPart << 32) | (pl).LowPart)
 
 /* various events */
 void events_init ();
-void events_terminate ();
 
 void __stdcall close_all_files (bool = false);
 
@@ -196,35 +201,31 @@ extern "C" int try_to_debug (bool waitloop = 1);
 void ld_preload ();
 const char *find_first_notloaded_dll (class path_conv &);
 
-extern bool cygwin_finished_initializing;
-
 /**************************** Miscellaneous ******************************/
 
 void __stdcall set_std_handle (int);
-int __stdcall stat_dev (DWORD, int, unsigned long, struct __stat64 *);
+int __stdcall stat_dev (DWORD, int, unsigned long, struct stat *);
 
-__ino64_t __stdcall hash_path_name (__ino64_t hash, PUNICODE_STRING name) __attribute__ ((regparm(2)));
-__ino64_t __stdcall hash_path_name (__ino64_t hash, PCWSTR name) __attribute__ ((regparm(2)));
-__ino64_t __stdcall hash_path_name (__ino64_t hash, const char *name) __attribute__ ((regparm(2)));
-void __stdcall nofinalslash (const char *src, char *dst) __attribute__ ((regparm(2)));
+ino_t __reg2 hash_path_name (ino_t hash, PUNICODE_STRING name);
+ino_t __reg2 hash_path_name (ino_t hash, PCWSTR name);
+ino_t __reg2 hash_path_name (ino_t hash, const char *name);
+void __reg2 nofinalslash (const char *src, char *dst);
 
-void *hook_or_detect_cygwin (const char *, const void *, WORD&, HANDLE h = NULL) __attribute__ ((regparm (3)));
+void __reg3 *hook_or_detect_cygwin (const char *, const void *, WORD&, HANDLE h = NULL);
 
 /* Time related */
-void __stdcall totimeval (struct timeval *, FILETIME *, int, int);
-long __stdcall to_time_t (FILETIME *);
-void __stdcall to_timestruc_t (FILETIME *, timestruc_t *);
+void __stdcall totimeval (struct timeval *, PLARGE_INTEGER, int, int);
+time_t __stdcall to_time_t (PLARGE_INTEGER);
+void __stdcall to_timestruc_t (PLARGE_INTEGER, timestruc_t *);
 void __stdcall time_as_timestruc_t (timestruc_t *);
-void __stdcall timespec_to_filetime (const struct timespec *, FILETIME *);
-void __stdcall timeval_to_filetime (const struct timeval *, FILETIME *);
+void __stdcall timeval_to_filetime (const struct timeval *, PLARGE_INTEGER);
+void __stdcall timespec_to_filetime (const struct timespec *, PLARGE_INTEGER);
 
 /* Console related */
 void __stdcall set_console_title (char *);
 void init_console_handler (bool);
 
-void init_global_security ();
-
-void __set_winsock_errno (const char *fn, int ln) __attribute__ ((regparm(2)));
+void __reg2 __set_winsock_errno (const char *fn, int ln);
 #define set_winsock_errno() __set_winsock_errno (__FUNCTION__, __LINE__)
 
 extern bool wsock_started;
@@ -232,24 +233,21 @@ extern bool wsock_started;
 /* Printf type functions */
 extern "C" void vapi_fatal (const char *, va_list ap) __attribute__ ((noreturn));
 extern "C" void api_fatal (const char *, ...) __attribute__ ((noreturn));
-int __small_sprintf (char *dst, const char *fmt, ...) /*__attribute__ ((regparm (2)))*/;
-int __small_vsprintf (char *dst, const char *fmt, va_list ap) /*__attribute__ ((regparm (3)))*/;
-int __small_swprintf (PWCHAR dst, const WCHAR *fmt, ...) /*__attribute__ ((regparm (2)))*/;
-int __small_vswprintf (PWCHAR dst, const WCHAR *fmt, va_list ap) /*__attribute__ ((regparm (3)))*/;
-void multiple_cygwin_problem (const char *, unsigned, unsigned);
+int __small_sprintf (char *dst, const char *fmt, ...);
+int __small_vsprintf (char *dst, const char *fmt, va_list ap);
+int __small_swprintf (PWCHAR dst, const WCHAR *fmt, ...);
+int __small_vswprintf (PWCHAR dst, const WCHAR *fmt, va_list ap);
+void multiple_cygwin_problem (const char *, uintptr_t, uintptr_t);
 
 extern "C" void vklog (int priority, const char *message, va_list ap);
 extern "C" void klog (int priority, const char *message, ...);
 bool child_copy (HANDLE, bool, ...);
 
-int symlink_worker (const char *, const char *, bool, bool)
-  __attribute__ ((regparm (3)));
-
 class path_conv;
 
-int __stdcall stat_worker (path_conv &pc, struct __stat64 *buf) __attribute__ ((regparm (2)));
+int __reg2 stat_worker (path_conv &pc, struct stat *buf);
 
-__ino64_t __stdcall readdir_get_ino (const char *path, bool dot_dot) __attribute__ ((regparm (2)));
+ino_t __reg2 readdir_get_ino (const char *path, bool dot_dot);
 
 /* mmap functions. */
 enum mmap_region_status
@@ -261,11 +259,14 @@ enum mmap_region_status
 mmap_region_status mmap_is_attached_or_noreserve (void *addr, size_t len);
 bool is_mmapped_region (caddr_t start_addr, caddr_t end_address);
 
-inline bool flush_file_buffers (HANDLE h)
+extern inline bool flush_file_buffers (HANDLE h)
 {
   return (GetFileType (h) != FILE_TYPE_PIPE) ? FlushFileBuffers (h) : true;
 }
 #define FlushFileBuffers flush_file_buffers
+
+/* Make sure that regular ExitThread is never called */
+#define ExitThread exit_thread
 
 /**************************** Exports ******************************/
 
@@ -288,11 +289,16 @@ int cygwin_gethostname (char *__name, size_t __len);
 #define NO_X ~(S_IXUSR | S_IXGRP | S_IXOTH)
 
 
+#ifdef __x86_64__
+extern "C" char __data_start__, __data_end__, __bss_start__, __bss_end__;
+#else
 extern "C" char _data_start__, _data_end__, _bss_start__, _bss_end__;
+#endif
 extern "C" void (*__CTOR_LIST__) (void);
 extern "C" void (*__DTOR_LIST__) (void);
 
 #ifndef NO_GLOBALS_H
+#define _RDATA	/* See globals.h */
 #include "globals.h"
 
 extern inline void clear_procimptoken ()

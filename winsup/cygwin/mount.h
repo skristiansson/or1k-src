@@ -1,7 +1,7 @@
 /* mount.h: mount definitions.
 
-   Copyright 1996, 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
+   2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -44,6 +44,7 @@ enum fs_info_type
   cifs,
   nwfs,
   ncfsd,
+  afs,
   /* Always last. */
   max_fs_type
 };
@@ -114,6 +115,7 @@ class fs_info
   IMPLEMENT_FS_FLAG (cifs)
   IMPLEMENT_FS_FLAG (nwfs)
   IMPLEMENT_FS_FLAG (ncfsd)
+  IMPLEMENT_FS_FLAG (afs)
   fs_info_type what_fs () const { return status.fs_type; }
   bool got_fs () const { return status.fs_type != none; }
 
@@ -121,7 +123,7 @@ class fs_info
 
   const char *fsname () const { return fsn[0] ? fsn : "unknown"; }
 
-  bool update (PUNICODE_STRING, HANDLE) __attribute__ ((regparm (3)));
+  bool __reg3 update (PUNICODE_STRING, HANDLE);
   bool inited () const { return !!status.flags; }
 };
 

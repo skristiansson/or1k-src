@@ -1738,6 +1738,10 @@ tilegx_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       r_type = tilegx_elf_tls_transition (info, r_type, h == NULL,
@@ -2107,11 +2111,33 @@ tilegx_elf_gc_mark_hook (asection *sec,
   if (h != NULL)
     {
       switch (TILEGX_ELF_R_TYPE (rel->r_info))
-      {
-      case R_TILEGX_GNU_VTINHERIT:
-      case R_TILEGX_GNU_VTENTRY:
-	break;
-      }
+	{
+	case R_TILEGX_GNU_VTINHERIT:
+	case R_TILEGX_GNU_VTENTRY:
+	  return NULL;
+	}
+    }
+
+  /* FIXME: The test here, in check_relocs and in relocate_section
+     dealing with TLS optimization, ought to be !info->executable.  */
+  if (info->shared)
+    {
+      switch (TILEGX_ELF_R_TYPE (rel->r_info))
+	{
+	case R_TILEGX_TLS_GD_CALL:
+	  /* This reloc implicitly references __tls_get_addr.  We know
+	     another reloc will reference the same symbol as the one
+	     on this reloc, so the real symbol and section will be
+	     gc marked when processing the other reloc.  That lets
+	     us handle __tls_get_addr here.  */
+	  h = elf_link_hash_lookup (elf_hash_table (info), "__tls_get_addr",
+				    FALSE, FALSE, TRUE);
+	  BFD_ASSERT (h != NULL);
+	  h->mark = 1;
+	  if (h->u.weakdef != NULL)
+	    h->u.weakdef->mark = 1;
+	  sym = NULL;
+	}
     }
 
   return _bfd_elf_gc_mark_hook (sec, info, rel, h, sym);
@@ -2977,7 +3003,7 @@ static const bfd_byte insn_mask_X1[] = {
 /* Mask to extract the bits corresponding to an instruction in a
    specific pipe of a bundle, minus the destination operand and the
    first source operand.  */
-static const bfd_byte insn_mask_X0_no_dest_no_srca[] = { 
+static const bfd_byte insn_mask_X0_no_dest_no_srca[] = {
   0x00, 0xf0, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00
 };
 
@@ -4348,7 +4374,9 @@ tilegx_elf_plt_sym_val (bfd_vma i, const asection *plt,
 }
 
 enum elf_reloc_type_class
-tilegx_reloc_type_class (const Elf_Internal_Rela *rela)
+tilegx_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			 const asection *rel_sec ATTRIBUTE_UNUSED,
+			 const Elf_Internal_Rela *rela)
 {
   switch ((int) TILEGX_ELF_R_TYPE (rela->r_info))
     {

@@ -232,13 +232,12 @@
   _bfd_elf_canonicalize_dynamic_reloc
 #endif
 
-#ifndef bfd_elfNN_bfd_link_hash_table_free
-#define bfd_elfNN_bfd_link_hash_table_free _bfd_generic_link_hash_table_free
-#endif
-
 #ifdef elf_backend_relocate_section
 #ifndef bfd_elfNN_bfd_link_hash_table_create
 #define bfd_elfNN_bfd_link_hash_table_create _bfd_elf_link_hash_table_create
+#endif
+#ifndef bfd_elfNN_bfd_link_hash_table_free
+#define bfd_elfNN_bfd_link_hash_table_free _bfd_elf_link_hash_table_free
 #endif
 #ifndef bfd_elfNN_bfd_link_add_symbols
 #define bfd_elfNN_bfd_link_add_symbols	bfd_elf_link_add_symbols
@@ -255,6 +254,9 @@
 #ifndef bfd_elfNN_bfd_link_hash_table_create
 #define bfd_elfNN_bfd_link_hash_table_create \
   _bfd_generic_link_hash_table_create
+#endif
+#ifndef bfd_elfNN_bfd_link_hash_table_free
+#define bfd_elfNN_bfd_link_hash_table_free _bfd_generic_link_hash_table_free
 #endif
 #ifndef bfd_elfNN_bfd_link_add_symbols
 #define bfd_elfNN_bfd_link_add_symbols	_bfd_generic_link_add_symbols
@@ -422,8 +424,8 @@
 #ifndef elf_backend_check_directives
 #define elf_backend_check_directives	0
 #endif
-#ifndef elf_backend_as_needed_cleanup
-#define elf_backend_as_needed_cleanup	0
+#ifndef elf_backend_notice_as_needed
+#define elf_backend_notice_as_needed	_bfd_elf_notice_as_needed
 #endif
 #ifndef elf_backend_adjust_dynamic_symbol
 #define elf_backend_adjust_dynamic_symbol 0
@@ -703,7 +705,7 @@ static struct elf_backend_data elfNN_bed =
   elf_backend_relocs_compatible,
   elf_backend_check_relocs,
   elf_backend_check_directives,
-  elf_backend_as_needed_cleanup,
+  elf_backend_notice_as_needed,
   elf_backend_adjust_dynamic_symbol,
   elf_backend_always_size_sections,
   elf_backend_size_dynamic_sections,

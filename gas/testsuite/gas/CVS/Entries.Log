@@ -1,6 +1,8 @@
-R D/vtable////
-R D/tic80////
-R D/ms1////
-R D/maxq20////
-R D/maxq10////
-R D/m88k////
+A D/m88k////
+A D/maxq10////
+A D/maxq20////
+A D/metag////
+A D/ms1////
+A D/nios2////
+A D/tic80////
+A D/vtable////

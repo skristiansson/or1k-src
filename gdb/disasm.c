@@ -1,6 +1,6 @@
 /* Disassemble support for GDB.
 
-   Copyright (C) 2000-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2000-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -122,7 +122,9 @@ dump_insns (struct gdbarch *gdbarch, struct ui_out *uiout,
 	    num_displayed++;
 	}
       ui_out_chain = make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
-      ui_out_text (uiout, pc_prefix (pc));
+
+      if ((flags & DISASSEMBLY_OMIT_PC) == 0)
+	ui_out_text (uiout, pc_prefix (pc));
       ui_out_field_core_addr (uiout, "address", gdbarch, pc);
 
       if (!build_address_symbolic (gdbarch, pc, 0, &name, &offset, &filename,

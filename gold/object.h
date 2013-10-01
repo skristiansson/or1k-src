@@ -1,6 +1,6 @@
 // object.h -- support for an object file for linking in gold  -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012
+// Copyright 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013
 // Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
@@ -103,7 +103,7 @@ struct Symbol_location_info
 {
   std::string source_file;
   std::string enclosing_symbol_name;
-  int line_number;
+  elfcpp::STT enclosing_symbol_type;
 };
 
 // Data about a single relocation section.  This is read in
@@ -551,6 +551,13 @@ class Object
   output_section(unsigned int shndx) const
   { return this->do_output_section(shndx); }
 
+  // Given a section index, return its address.
+  // The return value will be -1U if the section is specially mapped,
+  // such as a merge section.
+  uint64_t
+  output_section_address(unsigned int shndx)
+  { return this->do_output_section_address(shndx); }
+
   // Given a section index, return the offset in the Output_section.
   // The return value will be -1U if the section is specially mapped,
   // such as a merge section.
@@ -852,6 +859,11 @@ class Object
   do_output_section(unsigned int) const
   { gold_unreachable(); }
 
+  // Get the address of a section--implemented by child class.
+  virtual uint64_t
+  do_output_section_address(unsigned int)
+  { gold_unreachable(); }
+
   // Get the offset of a section--implemented by child class.
   virtual uint64_t
   do_output_section_offset(unsigned int) const
@@ -880,6 +892,16 @@ class Object
   void
   read_section_data(elfcpp::Elf_file<size, big_endian, Object>*,
 		    Read_symbols_data*);
+
+  // Find the section header with the given NAME.  If HDR is non-NULL
+  // then it is a section header returned from a previous call to this
+  // function and the next section header with the same name will be
+  // returned.
+  template<int size, bool big_endian>
+  const unsigned char*
+  find_shdr(const unsigned char* pshdrs, const char* name,
+	    const char* names, section_size_type names_size,
+	    const unsigned char* hdr) const;
 
   // Let the child class initialize the xindex object directly.
   void
@@ -1156,7 +1178,7 @@ class Relobj : public Object
     return this->output_sections_[shndx] != NULL;
   }
 
-  // The the output section of the input section with index SHNDX.
+  // The output section of the input section with index SHNDX.
   // This is only used currently to remove a section from the link in
   // relaxation.
   void
@@ -1919,6 +1941,10 @@ class Sized_relobj : public Relobj
   section_offsets()
   { return this->section_offsets_; }
 
+  // Get the address of an output section.
+  uint64_t
+  do_output_section_address(unsigned int shndx);
+
   // Get the offset of a section.
   uint64_t
   do_output_section_offset(unsigned int shndx) const
@@ -2160,15 +2186,6 @@ class Sized_relobj_file : public Sized_relobj<size, big_endian>
   // debugging sections.
   Address
   map_to_kept_section(unsigned int shndx, bool* found) const;
-
-  // Find the section header with the given NAME.  If HDR is non-NULL
-  // then it is a section header returned from a previous call to this
-  // function and the next section header with the same name will be
-  // returned.
-  const unsigned char*
-  find_shdr(const unsigned char* pshdrs, const char* name,
-	    const char* names, section_size_type names_size,
-	    const unsigned char* hdr) const;
 
   // Compute final local symbol value.  R_SYM is the local symbol index.
   // LV_IN points to a local symbol value containing the input value.

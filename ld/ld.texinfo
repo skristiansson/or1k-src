@@ -1,8 +1,6 @@
 \input texinfo
 @setfilename ld.info
-@c Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-@c 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012
-@c Free Software Foundation, Inc.
+@c Copyright 1991-2013 Free Software Foundation, Inc.
 @syncodeindex ky cp
 @c man begin INCLUDE
 @include configdoc.texi
@@ -28,6 +26,7 @@
 @set I960
 @set M68HC11
 @set M68K
+@set MIPS
 @set MMIX
 @set MSP430
 @set POWERPC
@@ -54,8 +53,7 @@ This file documents the @sc{gnu} linker LD
 @end ifset
 version @value{VERSION}.
 
-Copyright @copyright{} 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2012 Free Software Foundation, Inc.
+Copyright @copyright{} 1991-2013 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
@@ -92,9 +90,7 @@ section entitled ``GNU Free Documentation License''.
 
 @vskip 0pt plus 1filll
 @c man begin COPYRIGHT
-Copyright @copyright{} 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2012 Free
-Software Foundation, Inc.
+Copyright @copyright{} 1991-2013 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
@@ -142,14 +138,17 @@ in the section entitled ``GNU Free Documentation License''.
 @ifset ARM
 * ARM::				ld and the ARM family
 @end ifset
-@ifset HPPA
-* HPPA ELF32::                  ld and HPPA 32-bit ELF
-@end ifset
 @ifset M68HC11
 * M68HC11/68HC12::              ld and the Motorola 68HC11 and 68HC12 families
 @end ifset
+@ifset HPPA
+* HPPA ELF32::                  ld and HPPA 32-bit ELF
+@end ifset
 @ifset M68K
 * M68K::                        ld and Motorola 68K family
+@end ifset
+@ifset MIPS
+* MIPS::                        ld and MIPS family
 @end ifset
 @ifset POWERPC
 * PowerPC ELF32::               ld and PowerPC 32-bit ELF Support
@@ -372,9 +371,9 @@ Adds @var{AUDITLIB} to the @code{DT_AUDIT} entry of the dynamic section.
 specified in the library.  If specified multiple times @code{DT_AUDIT}
 will contain a colon separated list of audit interfaces to use. If the linker
 finds an object with an audit entry while searching for shared libraries,
-it will add a corresponding @code{DT_DEPAUDIT} entry in the output file.  
+it will add a corresponding @code{DT_DEPAUDIT} entry in the output file.
 This option is only meaningful on ELF platforms supporting the rtld-audit
-interface.  
+interface.
 
 @ifset I960
 @cindex architectures
@@ -472,7 +471,7 @@ Adds @var{AUDITLIB} to the @code{DT_DEPAUDIT} entry of the dynamic section.
 specified in the library.  If specified multiple times @code{DT_DEPAUDIT}
 will contain a colon separated list of audit interfaces to use.  This
 option is only meaningful on ELF platforms supporting the rtld-audit interface.
-The -P option is provided for Solaris compatibility.  
+The -P option is provided for Solaris compatibility.
 
 @cindex entry point, from command line
 @kindex -e @var{entry}
@@ -624,7 +623,7 @@ Ignored.  Provided for compatibility with other tools.
 @itemx --gpsize=@var{value}
 Set the maximum size of objects to be optimized using the GP register to
 @var{size}.  This is only meaningful for object file formats such as
-MIPS ECOFF which supports putting large and small objects into different
+MIPS ELF that support putting large and small objects into different
 sections.  This is ignored for other object file formats.
 
 @cindex runtime library name
@@ -1148,11 +1147,14 @@ on the command line after the @option{--as-needed} option.  Normally
 the linker will add a DT_NEEDED tag for each dynamic library mentioned
 on the command line, regardless of whether the library is actually
 needed or not.  @option{--as-needed} causes a DT_NEEDED tag to only be
-emitted for a library that satisfies an undefined symbol reference
-from a regular object file or, if the library is not found in the
-DT_NEEDED lists of other libraries linked up to that point, an
-undefined symbol reference from another dynamic library.
-@option{--no-as-needed} restores the default behaviour.
+emitted for a library that @emph{at that point in the link} satisfies a
+non-weak undefined symbol reference from a regular object file or, if
+the library is not found in the DT_NEEDED lists of other libraries, a
+non-weak undefined symbol reference from another dynamic library.
+Object files or libraries appearing on the command line @emph{after}
+the library in question do not affect whether the library is seen as
+needed.  This is similar to the rules for extraction of object files
+from archives.  @option{--no-as-needed} restores the default behaviour.
 
 @kindex --add-needed
 @kindex --no-add-needed
@@ -1266,7 +1268,7 @@ option.
 @kindex --no-copy-dt-needed-entries
 @item --copy-dt-needed-entries
 @itemx --no-copy-dt-needed-entries
-This option affects the treatment of dynamic libraries referred to 
+This option affects the treatment of dynamic libraries referred to
 by DT_NEEDED tags @emph{inside} ELF dynamic libraries mentioned on the
 command line.  Normally the linker won't add a DT_NEEDED tag to the
 output binary for each library mentioned in a DT_NEEDED tag in an
@@ -1295,7 +1297,9 @@ The format of the table is intentionally simple, so that it may be
 easily processed by a script if necessary.  The symbols are printed out,
 sorted by name.  For each symbol, a list of file names is given.  If the
 symbol is defined, the first file listed is the location of the
-definition.  The remaining files contain references to the symbol.
+definition.  If the symbol is defined as a common value then any files
+where this happens appear next.  Finally any files that reference the
+symbol are listed.
 
 @cindex common allocation
 @kindex --no-define-common
@@ -1394,7 +1398,7 @@ the linker recursively marks as used any section referenced by their
 relocations.  See @samp{--entry} and @samp{--undefined}.
 
 This option can be set when doing a partial link (enabled with option
-@samp{-r}).  In this case the root of symbols kept must be explicitly 
+@samp{-r}).  In this case the root of symbols kept must be explicitly
 specified either by an @samp{--entry} or @samp{--undefined} option or by
 a @code{ENTRY} command in the linker script.
 
@@ -1715,7 +1719,7 @@ environment variable @code{LD_RUN_PATH}.
 On SunOS, if the @option{-rpath} option was not used, search any
 directories specified using @option{-L} options.
 @item
-For a native linker, the search the contents of the environment
+For a native linker, search the contents of the environment
 variable @code{LD_LIBRARY_PATH}.
 @item
 For a native ELF linker, the directories in @code{DT_RUNPATH} or
@@ -1836,6 +1840,19 @@ Same as @option{--section-start}, with @code{.bss}, @code{.data} or
 @cindex text segment origin, cmd line
 When creating an ELF executable or shared object, it will set the address
 of the first byte of the text segment.
+
+@kindex -Trodata-segment=@var{org}
+@item -Trodata-segment=@var{org}
+@cindex rodata segment origin, cmd line
+When creating an ELF executable or shared object for a target where
+the read-only data is in its own segment separate from the executable
+text, it will set the address of the first byte of the read-only data segment.
+
+@kindex -Tldata-segment=@var{org}
+@item -Tldata-segment=@var{org}
+@cindex ldata segment origin, cmd line
+When creating an ELF executable or shared object for x86-64 medium memory
+model, it will set the address of the first byte of the ldata segment.
 
 @kindex --unresolved-symbols
 @item --unresolved-symbols=@var{method}
@@ -2097,7 +2114,8 @@ if linker generated unwind info is supported.
 @itemx --disable-new-dtags
 This linker can create the new dynamic tags in ELF. But the older ELF
 systems may not understand them. If you specify
-@option{--enable-new-dtags}, the dynamic tags will be created as needed.
+@option{--enable-new-dtags}, the new dynamic tags will be created as needed
+and older dynamic tags will be omitted.
 If you specify @option{--disable-new-dtags}, no new dynamic tags will be
 created. By default, the new dynamic tags are not created. Note that
 those options are only available for ELF systems.
@@ -2214,8 +2232,8 @@ allow their use in executable images as well, or to (probably pointlessly!)
 disallow it in object files, by using these two options.  Executable images
 generated with these long section names are slightly non-standard, carrying
 as they do a string table, and may generate confusing output when examined
-with non-GNU PE-aware tools, such as file viewers and dumpers.  However, 
-GDB relies on the use of PE long section names to find Dwarf-2 debug 
+with non-GNU PE-aware tools, such as file viewers and dumpers.  However,
+GDB relies on the use of PE long section names to find Dwarf-2 debug
 information sections in an executable image at runtime, and so if neither
 option is specified on the command-line, @command{ld} will enable long
 section names, overriding the default and technically correct behaviour,
@@ -2300,7 +2318,7 @@ file offsets which are multiples of this number.  This defaults to
 @item --heap @var{reserve}
 @itemx --heap @var{reserve},@var{commit}
 Specify the number of bytes of memory to reserve (and optionally commit)
-to be used as heap for this program.  The default is 1Mb reserved, 4K
+to be used as heap for this program.  The default is 1MB reserved, 4K
 committed.
 [This option is specific to the i386 PE targeted port of the linker]
 
@@ -2328,6 +2346,14 @@ header is set to indicate that this executable supports virtual addresses
 greater than 2 gigabytes.  This should be used in conjunction with the /3GB
 or /USERVA=@var{value} megabytes switch in the ``[operating systems]''
 section of the BOOT.INI.  Otherwise, this bit has no effect.
+[This option is specific to PE targeted ports of the linker]
+
+@kindex --disable-large-address-aware
+@item --disable-large-address-aware
+Reverts the effect of a previous @samp{--large-address-aware} option.
+This is useful if @samp{--large-address-aware} is always set by the compiler
+driver (e.g. Cygwin gcc) and the executable does not support virtual
+addresses greater than 2 gigabytes.
 [This option is specific to PE targeted ports of the linker]
 
 @kindex --major-image-version
@@ -2557,7 +2583,7 @@ environment to adjust references to such data in your client code.
 @kindex --disable-runtime-pseudo-reloc
 @item --disable-runtime-pseudo-reloc
 Do not create pseudo relocations for non-zero offset DATA imports from
-DLLs.  This is the default.
+DLLs.
 [This option is specific to the i386 PE targeted port of the linker]
 
 @kindex --enable-extra-pe-debug
@@ -2576,7 +2602,7 @@ addresses which are a multiple of this number.  Defaults to 0x1000.
 @item --stack @var{reserve}
 @itemx --stack @var{reserve},@var{commit}
 Specify the number of bytes of memory to reserve (and optionally commit)
-to be used as stack for this program.  The default is 2Mb reserved, 4K
+to be used as stack for this program.  The default is 2MB reserved, 4K
 committed.
 [This option is specific to the i386 PE targeted port of the linker]
 
@@ -2626,7 +2652,7 @@ Do not bind this image.
 @kindex --wdmdriver
 @item --wdmdriver
 The driver uses the MS Windows Driver Model.
- 
+
 @kindex --tsaware
 @item --tsaware
 The image is Terminal Server aware.
@@ -2712,6 +2738,32 @@ This option tells the linker which GOT generation scheme to use.
 @var{type} should be one of @samp{single}, @samp{negative},
 @samp{multigot} or @samp{target}.  For more information refer to the
 Info entry for @file{ld}.
+
+@end table
+
+@c man end
+@end ifset
+
+@ifset MIPS
+@subsection Options specific to MIPS targets
+
+@c man begin OPTIONS
+
+The following options are supported to control microMIPS instruction
+generation when linking for MIPS targets.
+
+@table @gcctabopt
+
+@kindex --insn32
+@item --insn32
+@kindex --no-insn32
+@itemx --no-insn32
+These options control the choice of microMIPS instructions used in code
+generated by the linker, such as that in the PLT or lazy binding stubs,
+or in relaxation.  If @samp{--insn32} is used, then the linker only uses
+32-bit instruction encodings.  By default or if @samp{--no-insn32} is
+used, all instruction encodings are used, including 16-bit ones where
+possible.
 
 @end table
 
@@ -2830,7 +2882,7 @@ in the output file is an @dfn{output section}.
 
 Each section in an object file has a name and a size.  Most sections
 also have an associated block of data, known as the @dfn{section
-contents}.  A section may be marked as @dfn{loadable}, which mean that
+contents}.  A section may be marked as @dfn{loadable}, which means that
 the contents should be loaded into memory when the output file is run.
 A section with no contents may be @dfn{allocatable}, which means that an
 area in memory should be set aside, but nothing in particular should be
@@ -3197,7 +3249,7 @@ systems come with three different memory setups @code{A}, @code{B} and
 @code{C}:
 @multitable @columnfractions .25 .25 .25 .25
 @item Section @tab Variant A @tab Variant B @tab Variant C
-@item .text @tab RAM @tab ROM @tab ROM 
+@item .text @tab RAM @tab ROM @tab ROM
 @item .rodata @tab RAM @tab ROM @tab ROM2
 @item .data @tab RAM @tab RAM/ROM @tab RAM/ROM2
 @item .bss @tab RAM @tab RAM @tab RAM
@@ -3589,7 +3641,7 @@ value.  So for example the following C declaration, at file scope:
   int foo = 1000;
 @end smallexample
 
-creates a entry called @samp{foo} in the symbol table.  This entry
+creates an entry called @samp{foo} in the symbol table.  This entry
 holds the address of an @samp{int} sized block of memory where the
 number 1000 is initially stored.
 
@@ -3610,7 +3662,7 @@ address.  Whereas:
   int * a = & foo;
 @end smallexample
 
-looks up the symbol @samp{foo} in the symbol table, gets it address
+looks up the symbol @samp{foo} in the symbol table, gets its address
 and then copies this address into the block of memory associated with
 the variable @samp{a}.
 
@@ -3718,7 +3770,7 @@ The full description of an output section looks like this:
 @group
 @var{section} [@var{address}] [(@var{type})] :
   [AT(@var{lma})]
-  [ALIGN(@var{section_align})]
+  [ALIGN(@var{section_align}) | ALIGN_WITH_INPUT]
   [SUBALIGN(@var{subsection_align})]
   [@var{constraint}]
   @{
@@ -4019,7 +4071,9 @@ into ascending order by name before placing them in the output file.
 @cindex SORT_BY_ALIGNMENT
 @code{SORT_BY_ALIGNMENT} is very similar to @code{SORT_BY_NAME}. The
 difference is @code{SORT_BY_ALIGNMENT} will sort sections into
-ascending order by alignment before placing them in the output file.
+descending order by alignment before placing them in the output file.
+Larger alignments are placed before smaller alignments in order to
+reduce the amount of padding necessary.
 
 @cindex SORT_BY_INIT_PRIORITY
 @code{SORT_BY_INIT_PRIORITY} is very similar to @code{SORT_BY_NAME}. The
@@ -4036,11 +4090,11 @@ can be at most 1 level of nesting for section sorting commands.
 @enumerate
 @item
 @code{SORT_BY_NAME} (@code{SORT_BY_ALIGNMENT} (wildcard section pattern)).
-It will sort the input sections by name first, then by alignment if 2
+It will sort the input sections by name first, then by alignment if two
 sections have the same name.
 @item
 @code{SORT_BY_ALIGNMENT} (@code{SORT_BY_NAME} (wildcard section pattern)).
-It will sort the input sections by alignment first, then by name if 2
+It will sort the input sections by alignment first, then by name if two
 sections have the same alignment.
 @item
 @code{SORT_BY_NAME} (@code{SORT_BY_NAME} (wildcard section pattern)) is
@@ -4539,7 +4593,11 @@ for (dst = &_bstart; dst< &_bend; dst++)
 @kindex ALIGN(@var{section_align})
 @cindex forcing output section alignment
 @cindex output section alignment
-You can increase an output section's alignment by using ALIGN.
+You can increase an output section's alignment by using ALIGN.  As an
+alternative you can force the output section alignment to the maximum alignment
+of all its input sections with ALIGN_WITH_INPUT.  The alignment forced by
+ALIGN_WITH_INPUT is used even in case the load and virtual memory regions are
+different.
 
 @node Forced Input Alignment
 @subsubsection Forced Input Alignment
@@ -4675,11 +4733,11 @@ whole (as with normal section definitions, the load address is optional,
 and defaults to the start address; the start address is also optional,
 and defaults to the current value of the location counter).
 
-If the @code{NOCROSSREFS} keyword is used, and there any references
-among the sections, the linker will report an error.  Since the sections
-all run at the same address, it normally does not make sense for one
-section to refer directly to another.  @xref{Miscellaneous Commands,
-NOCROSSREFS}.
+If the @code{NOCROSSREFS} keyword is used, and there are any
+references among the sections, the linker will report an error.  Since
+the sections all run at the same address, it normally does not make
+sense for one section to refer directly to another.
+@xref{Miscellaneous Commands, NOCROSSREFS}.
 
 For each section within the @code{OVERLAY}, the linker automatically
 provides two symbols.  The symbol @code{__load_start_@var{secname}} is
@@ -4775,7 +4833,7 @@ Region names are stored in a separate name space, and will not conflict
 with symbol names, file names, or section names.  Each memory region
 must have a distinct name within the @code{MEMORY} command.  However you can
 add later alias names to existing memory regions with the @ref{REGION_ALIAS}
-command.  
+command.
 
 @cindex memory region attributes
 The @var{attr} string is an optional list of attributes that specify
@@ -5296,7 +5354,7 @@ The target's default page size.
 So for example:
 
 @smallexample
-  .text ALIGN (CONSTANT (MAXPAGESIZE)) : @{ *(.text) @} 
+  .text ALIGN (CONSTANT (MAXPAGESIZE)) : @{ *(.text) @}
 @end smallexample
 
 will create a text section aligned to the largest page boundary
@@ -5897,6 +5955,11 @@ Return the length of the memory region named @var{memory}.
 Return the absolute LMA of the named @var{section}.  (@pxref{Output
 Section LMA}).
 
+@item LOG2CEIL(@var{exp})
+@kindex LOG2CEIL(@var{exp})
+Return the binary logarithm of @var{exp} rounded towards infinity.
+@code{LOG2CEIL(0)} returns 0.
+
 @kindex MAX
 @item MAX(@var{exp1}, @var{exp2})
 Returns the maximum of @var{exp1} and @var{exp2}.
@@ -5920,10 +5983,10 @@ Return the origin of the memory region named @var{memory}.
 @item SEGMENT_START(@var{segment}, @var{default})
 @kindex SEGMENT_START(@var{segment}, @var{default})
 Return the base address of the named @var{segment}.  If an explicit
-value has been given for this segment (with a command-line @samp{-T}
-option) that value will be returned; otherwise the value will be
-@var{default}.  At present, the @samp{-T} command-line option can only
-be used to set the base address for the ``text'', ``data'', and
+value has already been given for this segment (with a command-line
+@samp{-T} option) then that value will be returned otherwise the value
+will be @var{default}.  At present, the @samp{-T} command-line option
+can only be used to set the base address for the ``text'', ``data'', and
 ``bss'' sections, but you can use @code{SEGMENT_START} with any segment
 name.
 
@@ -6005,6 +6068,9 @@ functionality are not listed.
 @ifset I960
 * i960::                        @command{ld} and the Intel 960 family
 @end ifset
+@ifset M68HC11
+* M68HC11/68HC12::		@code{ld} and the Motorola 68HC11 and 68HC12 families
+@end ifset
 @ifset ARM
 * ARM::				@command{ld} and the ARM family
 @end ifset
@@ -6014,14 +6080,14 @@ functionality are not listed.
 @ifset M68K
 * M68K::			@command{ld} and the Motorola 68K family
 @end ifset
+@ifset MIPS
+* MIPS::			@command{ld} and the MIPS family
+@end ifset
 @ifset MMIX
 * MMIX::			@command{ld} and MMIX
 @end ifset
 @ifset MSP430
 * MSP430::			@command{ld} and MSP430
-@end ifset
-@ifset M68HC11
-* M68HC11/68HC12::		@code{ld} and the Motorola 68HC11 and 68HC12 families
 @end ifset
 @ifset POWERPC
 * PowerPC ELF32::		@command{ld} and PowerPC 32-bit ELF Support
@@ -6066,13 +6132,21 @@ respectively.
 
 @cindex synthesizing on H8/300
 @item synthesizing instructions
-@c FIXME: specifically mov.b, or any mov instructions really?
+@c FIXME: specifically mov.b, or any mov instructions really? -> mov.b only, at least on H8, H8H, H8S
 @command{ld} finds all @code{mov.b} instructions which use the
 sixteen-bit absolute address form, but refer to the top
 page of memory, and changes them to use the eight-bit address form.
 (That is: the linker turns @samp{mov.b @code{@@}@var{aa}:16} into
 @samp{mov.b @code{@@}@var{aa}:8} whenever the address @var{aa} is in the
 top page of memory).
+
+@command{ld} finds all @code{mov} instructions which use the register
+indirect with 32-bit displacement addressing mode, but use a small
+displacement inside 16-bit displacement range, and changes them to use
+the 16-bit displacement form.  (That is: the linker turns @samp{mov.b
+@code{@@}@var{d}:32,ERx} into @samp{mov.b @code{@@}@var{d}:16,ERx}
+whenever the displacement @var{d} is in the 16 bit signed integer
+range. Only implemented in ELF-format ld).
 
 @item bit manipulation instructions
 @command{ld} finds all bit manipulation instructions like @code{band, bclr,
@@ -6367,12 +6441,12 @@ are sufficient to avoid the erratum in both the scalar and vector cases.
 @cindex ARM1176 erratum workaround
 @kindex --fix-arm1176
 @kindex --no-fix-arm1176
-The @samp{--fix-arm1176} switch enables a link-time workaround for an erratum 
-in certain ARM1176 processors.  The workaround is enabled by default if you 
-are targeting ARM v6 (excluding ARM v6T2) or earlier.  It can be disabled 
+The @samp{--fix-arm1176} switch enables a link-time workaround for an erratum
+in certain ARM1176 processors.  The workaround is enabled by default if you
+are targeting ARM v6 (excluding ARM v6T2) or earlier.  It can be disabled
 unconditionally by specifying @samp{--no-fix-arm1176}.
 
-Further information is available in the ``ARM1176JZ-S and ARM1176JZF-S 
+Further information is available in the ``ARM1176JZ-S and ARM1176JZF-S
 Programmer Advice Notice'' available on the ARM documentation website at:
 http://infocenter.arm.com/.
 
@@ -6501,6 +6575,29 @@ support such GOTs.
 output file.  All GOT references from a single input object
 file access the same GOT, but references from different input object
 files might access different GOTs.  Not all environments support such GOTs.
+
+@ifclear GENERIC
+@lowersections
+@end ifclear
+@end ifset
+
+@ifset MIPS
+@ifclear GENERIC
+@raisesections
+@end ifclear
+
+@node MIPS
+@section @command{ld} and the MIPS family
+
+@cindex MIPS microMIPS instruction choice selection
+@kindex --insn32
+@kindex --no-insn32
+The @samp{--insn32} and @samp{--no-insn32} options control the choice of
+microMIPS instructions used in code generated by the linker, such as that
+in the PLT or lazy binding stubs, or in relaxation.  If @samp{--insn32} is
+used, then the linker only uses 32-bit instruction encodings.  By default
+or if @samp{--no-insn32} is used, all instruction encodings are used,
+including 16-bit ones where possible.
 
 @ifclear GENERIC
 @lowersections
@@ -6964,7 +7061,7 @@ When auto-export is in operation, @command{ld} will export all the non-local
 symbols known to belong to the system's runtime and libraries.  As it will
 often not be desirable to export all of a DLL's symbols, which may include
 private functions that are not part of any public interface, the command-line
-options listed above may be used to filter symbols out from the list for 
+options listed above may be used to filter symbols out from the list for
 exporting.  The @samp{--output-def} option can be used in order to see the
 final list of exported symbols with all exclusions taken into effect.
 
@@ -7870,7 +7967,7 @@ If you have more than one @code{SECT} statement for the same
 @printindex cp
 
 @tex
-% I think something like @colophon should be in texinfo.  In the
+% I think something like @@colophon should be in texinfo.  In the
 % meantime:
 \long\def\colophon{\hbox to0pt{}\vfill
 \centerline{The body of this manual is set in}
@@ -7881,7 +7978,7 @@ If you have more than one @code{SECT} statement for the same
 \centerline{{\sl\fontname\tensl\/}}
 \centerline{are used for emphasis.}\vfill}
 \page\colophon
-% Blame: doc@cygnus.com, 28mar91.
+% Blame: doc@@cygnus.com, 28mar91.
 @end tex
 
 @bye

@@ -1,7 +1,6 @@
 /* Ada language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1992-1994, 1997-2000, 2003-2005, 2007-2012 Free
-   Software Foundation, Inc.
+   Copyright (C) 1992-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -128,7 +127,7 @@ static struct value *resolve_subexp (struct expression **, int *, int,
                                      struct type *);
 
 static void replace_operator_with_call (struct expression **, int, int, int,
-                                        struct symbol *, struct block *);
+                                        struct symbol *, const struct block *);
 
 static int possible_user_operator_p (enum exp_opcode, struct value **);
 
@@ -150,7 +149,7 @@ static enum ada_renaming_category parse_old_style_renaming (struct type *,
 							    const char **);
 
 static struct symbol *find_old_style_renaming_symbol (const char *,
-						      struct block *);
+						      const struct block *);
 
 static struct type *ada_lookup_struct_elt_type (struct type *, char *,
                                                 int, int, int *);
@@ -582,7 +581,7 @@ coerce_unspec_val_to_type (struct value *val, struct type *type)
       set_value_bitsize (result, value_bitsize (val));
       set_value_bitpos (result, value_bitpos (val));
       set_value_address (result, value_address (val));
-      set_value_optimized_out (result, value_optimized_out (val));
+      set_value_optimized_out (result, value_optimized_out_const (val));
       return result;
     }
 }
@@ -1297,29 +1296,29 @@ static struct htab *decoded_names_store;
    const, but nevertheless modified to a semantically equivalent form
    when a decoded name is cached in it.  */
 
-char *
-ada_decode_symbol (const struct general_symbol_info *gsymbol)
+const char *
+ada_decode_symbol (const struct general_symbol_info *arg)
 {
-  char **resultp =
-    (char **) &gsymbol->language_specific.mangled_lang.demangled_name;
+  struct general_symbol_info *gsymbol = (struct general_symbol_info *) arg;
+  const char **resultp =
+    &gsymbol->language_specific.mangled_lang.demangled_name;
 
-  if (*resultp == NULL)
+  if (!gsymbol->ada_mangled)
     {
       const char *decoded = ada_decode (gsymbol->name);
+      struct obstack *obstack = gsymbol->language_specific.obstack;
 
-      if (gsymbol->obj_section != NULL)
-        {
-	  struct objfile *objf = gsymbol->obj_section->objfile;
+      gsymbol->ada_mangled = 1;
 
-	  *resultp = obsavestring (decoded, strlen (decoded),
-				   &objf->objfile_obstack);
-        }
-      /* Sometimes, we can't find a corresponding objfile, in which
-         case, we put the result on the heap.  Since we only decode
-         when needed, we hope this usually does not cause a
-         significant memory leak (FIXME).  */
-      if (*resultp == NULL)
+      if (obstack != NULL)
+	*resultp = obstack_copy0 (obstack, decoded, strlen (decoded));
+      else
         {
+	  /* Sometimes, we can't find a corresponding objfile, in
+	     which case, we put the result on the heap.  Since we only
+	     decode when needed, we hope this usually does not cause a
+	     significant memory leak (FIXME).  */
+
           char **slot = (char **) htab_find_slot (decoded_names_store,
                                                   decoded, INSERT);
 
@@ -2326,7 +2325,6 @@ ada_value_primitive_packed_val (struct value *obj, const gdb_byte *valaddr,
       /* Also set the parent value.  This is needed when trying to
 	 assign a new value (in inferior memory).  */
       set_value_parent (v, obj);
-      value_incref (obj);
     }
   else
     set_value_bitsize (v, bit_size);
@@ -2519,7 +2517,7 @@ ada_value_assign (struct value *toval, struct value *fromval)
       int len = (value_bitpos (toval)
 		 + bits + HOST_CHAR_BIT - 1) / HOST_CHAR_BIT;
       int from_size;
-      char *buffer = (char *) alloca (len);
+      gdb_byte *buffer = alloca (len);
       struct value *val;
       CORE_ADDR to_addr = value_address (toval);
 
@@ -3111,7 +3109,7 @@ resolve_subexp (struct expression **expp, int *pos, int deprocedure_p,
             ada_lookup_symbol_list (SYMBOL_LINKAGE_NAME
                                     (exp->elts[pc + 2].symbol),
                                     exp->elts[pc + 1].block, VAR_DOMAIN,
-                                    &candidates, 1);
+                                    &candidates);
 
           if (n_candidates > 1)
             {
@@ -3203,7 +3201,7 @@ resolve_subexp (struct expression **expp, int *pos, int deprocedure_p,
               ada_lookup_symbol_list (SYMBOL_LINKAGE_NAME
                                       (exp->elts[pc + 5].symbol),
                                       exp->elts[pc + 4].block, VAR_DOMAIN,
-                                      &candidates, 1);
+                                      &candidates);
             if (n_candidates == 1)
               i = 0;
             else
@@ -3255,7 +3253,7 @@ resolve_subexp (struct expression **expp, int *pos, int deprocedure_p,
           n_candidates =
             ada_lookup_symbol_list (ada_encode (ada_decoded_op_name (op)),
                                     (struct block *) NULL, VAR_DOMAIN,
-                                    &candidates, 1);
+                                    &candidates);
           i = ada_resolve_function (candidates, n_candidates, argvec, nargs,
                                     ada_decoded_op_name (op), NULL);
           if (i < 0)
@@ -3574,7 +3572,8 @@ See set/show multiple-symbol."));
 	  else
 	    printf_unfiltered (_("[%d] %s at %s:%d\n"), i + first_choice,
 			       SYMBOL_PRINT_NAME (syms[i].sym),
-			       sal.symtab->filename, sal.line);
+			       symtab_to_filename_for_display (sal.symtab),
+			       sal.line);
           continue;
         }
       else
@@ -3589,7 +3588,8 @@ See set/show multiple-symbol."));
             printf_unfiltered (_("[%d] %s at %s:%d\n"),
                                i + first_choice,
                                SYMBOL_PRINT_NAME (syms[i].sym),
-                               symtab->filename, SYMBOL_LINE (syms[i].sym));
+			       symtab_to_filename_for_display (symtab),
+			       SYMBOL_LINE (syms[i].sym));
           else if (is_enumeral
                    && TYPE_NAME (SYMBOL_TYPE (syms[i].sym)) != NULL)
             {
@@ -3605,7 +3605,7 @@ See set/show multiple-symbol."));
                                : _("[%d] %s at %s:?\n"),
                                i + first_choice,
                                SYMBOL_PRINT_NAME (syms[i].sym),
-                               symtab->filename);
+                               symtab_to_filename_for_display (symtab));
           else
             printf_unfiltered (is_enumeral
                                ? _("[%d] %s (enumeral)\n")
@@ -3719,7 +3719,7 @@ get_selections (int *choices, int n_choices, int max_results,
 static void
 replace_operator_with_call (struct expression **expp, int pc, int nargs,
                             int oplen, struct symbol *sym,
-                            struct block *block)
+                            const struct block *block)
 {
   /* A new expression, with 6 more elements (3 for funcall, 4 for function
      symbol, -oplen for operator being replaced).  */
@@ -4055,15 +4055,14 @@ static struct value *
 ada_read_renaming_var_value (struct symbol *renaming_sym,
 			     struct block *block)
 {
-  char *sym_name;
+  const char *sym_name;
   struct expression *expr;
   struct value *value;
   struct cleanup *old_chain = NULL;
 
-  sym_name = xstrdup (SYMBOL_LINKAGE_NAME (renaming_sym));
-  old_chain = make_cleanup (xfree, sym_name);
+  sym_name = SYMBOL_LINKAGE_NAME (renaming_sym);
   expr = parse_exp_1 (&sym_name, 0, block, 0);
-  make_cleanup (free_current_contents, &expr);
+  old_chain = make_cleanup (free_current_contents, &expr);
   value = evaluate_expression (expr);
 
   do_cleanups (old_chain);
@@ -4232,7 +4231,7 @@ lookup_cached_symbol (const char *name, domain_enum namespace,
 
 static void
 cache_symbol (const char *name, domain_enum namespace, struct symbol *sym,
-              struct block *block)
+              const struct block *block)
 {
 }
 
@@ -4406,17 +4405,21 @@ defns_collected (struct obstack *obstackp, int finish)
     return (struct ada_symbol_info *) obstack_base (obstackp);
 }
 
-/* Return a minimal symbol matching NAME according to Ada decoding
-   rules.  Returns NULL if there is no such minimal symbol.  Names
-   prefixed with "standard__" are handled specially: "standard__" is
-   first stripped off, and only static and global symbols are searched.  */
+/* Return a bound minimal symbol matching NAME according to Ada
+   decoding rules.  Returns an invalid symbol if there is no such
+   minimal symbol.  Names prefixed with "standard__" are handled
+   specially: "standard__" is first stripped off, and only static and
+   global symbols are searched.  */
 
-struct minimal_symbol *
+struct bound_minimal_symbol
 ada_lookup_simple_minsym (const char *name)
 {
+  struct bound_minimal_symbol result;
   struct objfile *objfile;
   struct minimal_symbol *msymbol;
   const int wild_match_p = should_use_wild_match (name);
+
+  memset (&result, 0, sizeof (result));
 
   /* Special case: If the user specifies a symbol name inside package
      Standard, do a non-wild matching of the symbol name without
@@ -4432,10 +4435,14 @@ ada_lookup_simple_minsym (const char *name)
   {
     if (match_name (SYMBOL_LINKAGE_NAME (msymbol), name, wild_match_p)
         && MSYMBOL_TYPE (msymbol) != mst_solib_trampoline)
-      return msymbol;
+      {
+	result.minsym = msymbol;
+	result.objfile = objfile;
+	break;
+      }
   }
 
-  return NULL;
+  return result;
 }
 
 /* For all subprograms that statically enclose the subprogram of the
@@ -4727,17 +4734,20 @@ static int
 old_renaming_is_invisible (const struct symbol *sym, const char *function_name)
 {
   char *scope;
+  struct cleanup *old_chain;
 
   if (SYMBOL_CLASS (sym) != LOC_TYPEDEF)
     return 0;
 
   scope = xget_renaming_scope (SYMBOL_TYPE (sym));
-
-  make_cleanup (xfree, scope);
+  old_chain = make_cleanup (xfree, scope);
 
   /* If the rename has been defined in a package, then it is visible.  */
   if (is_package_name (scope))
-    return 0;
+    {
+      do_cleanups (old_chain);
+      return 0;
+    }
 
   /* Check that the rename is in the current function scope by checking
      that its name starts with SCOPE.  */
@@ -4749,7 +4759,12 @@ old_renaming_is_invisible (const struct symbol *sym, const char *function_name)
   if (strncmp (function_name, "_ada_", 5) == 0)
     function_name += 5;
 
-  return (strncmp (function_name, scope, strlen (scope)) != 0);
+  {
+    int is_invisible = strncmp (function_name, scope, strlen (scope)) != 0;
+
+    do_cleanups (old_chain);
+    return is_invisible;
+  }
 }
 
 /* Remove entries from SYMS that corresponds to a renaming entity that
@@ -4805,7 +4820,7 @@ remove_irrelevant_renamings (struct ada_symbol_info *syms,
   for (i = 0; i < nsyms; i += 1)
     {
       struct symbol *sym = syms[i].sym;
-      struct block *block = syms[i].block;
+      const struct block *block = syms[i].block;
       const char *name;
       const char *suffix;
 
@@ -5025,11 +5040,11 @@ add_nonlocal_symbols (struct obstack *obstackp, const char *name,
       data.objfile = objfile;
 
       if (is_wild_match)
-	objfile->sf->qf->map_matching_symbols (name, domain, objfile, global,
+	objfile->sf->qf->map_matching_symbols (objfile, name, domain, global,
 					       aux_add_nonlocal_symbols, &data,
 					       wild_match, NULL);
       else
-	objfile->sf->qf->map_matching_symbols (name, domain, objfile, global,
+	objfile->sf->qf->map_matching_symbols (objfile, name, domain, global,
 					       aux_add_nonlocal_symbols, &data,
 					       full_match, compare_names);
     }
@@ -5042,8 +5057,8 @@ add_nonlocal_symbols (struct obstack *obstackp, const char *name,
 	  strcpy (name1, "_ada_");
 	  strcpy (name1 + sizeof ("_ada_") - 1, name);
 	  data.objfile = objfile;
-	  objfile->sf->qf->map_matching_symbols (name1, domain,
-						 objfile, global,
+	  objfile->sf->qf->map_matching_symbols (objfile, name1, domain,
+						 global,
 						 aux_add_nonlocal_symbols,
 						 &data,
 						 full_match, compare_names);
@@ -5051,26 +5066,28 @@ add_nonlocal_symbols (struct obstack *obstackp, const char *name,
     }      	
 }
 
-/* Find symbols in DOMAIN matching NAME0, in BLOCK0 and enclosing
-   scope and in global scopes, returning the number of matches.
+/* Find symbols in DOMAIN matching NAME0, in BLOCK0 and, if full_search is
+   non-zero, enclosing scope and in global scopes, returning the number of
+   matches.
    Sets *RESULTS to point to a vector of (SYM,BLOCK) tuples,
    indicating the symbols found and the blocks and symbol tables (if
-   any) in which they were found.  This vector are transient---good only to
-   the next call of ada_lookup_symbol_list.  Any non-function/non-enumeral
+   any) in which they were found.  This vector is transient---good only to
+   the next call of ada_lookup_symbol_list.
+
+   When full_search is non-zero, any non-function/non-enumeral
    symbol match within the nest of blocks whose innermost member is BLOCK0,
    is the one match returned (no other matches in that or
    enclosing blocks is returned).  If there are any matches in or
-   surrounding BLOCK0, then these alone are returned.  Otherwise, if
-   FULL_SEARCH is non-zero, then the search extends to global and
-   file-scope (static) symbol tables.
+   surrounding BLOCK0, then these alone are returned.
+
    Names prefixed with "standard__" are handled specially: "standard__"
    is first stripped off, and only static and global symbols are searched.  */
 
-int
-ada_lookup_symbol_list (const char *name0, const struct block *block0,
-			domain_enum namespace,
-			struct ada_symbol_info **results,
-			int full_search)
+static int
+ada_lookup_symbol_list_worker (const char *name0, const struct block *block0,
+			       domain_enum namespace,
+			       struct ada_symbol_info **results,
+			       int full_search)
 {
   struct symbol *sym;
   struct block *block;
@@ -5106,10 +5123,24 @@ ada_lookup_symbol_list (const char *name0, const struct block *block0,
 
   /* Check the non-global symbols.  If we have ANY match, then we're done.  */
 
-  ada_add_local_symbols (&symbol_list_obstack, name, block, namespace,
-                         wild_match_p);
-  if (num_defns_collected (&symbol_list_obstack) > 0 || !full_search)
-    goto done;
+  if (block != NULL)
+    {
+      if (full_search)
+	{
+	  ada_add_local_symbols (&symbol_list_obstack, name, block,
+				 namespace, wild_match_p);
+	}
+      else
+	{
+	  /* In the !full_search case we're are being called by
+	     ada_iterate_over_symbols, and we don't want to search
+	     superblocks.  */
+	  ada_add_block_symbols (&symbol_list_obstack, block, name,
+				 namespace, NULL, wild_match_p);
+	}
+      if (num_defns_collected (&symbol_list_obstack) > 0 || !full_search)
+	goto done;
+    }
 
   /* No non-global symbols found.  Check our cache to see if we have
      already performed this search before.  If we have, then return
@@ -5152,6 +5183,37 @@ done:
   return ndefns;
 }
 
+/* Find symbols in DOMAIN matching NAME0, in BLOCK0 and enclosing scope and
+   in global scopes, returning the number of matches, and setting *RESULTS
+   to a vector of (SYM,BLOCK) tuples.
+   See ada_lookup_symbol_list_worker for further details.  */
+
+int
+ada_lookup_symbol_list (const char *name0, const struct block *block0,
+			domain_enum domain, struct ada_symbol_info **results)
+{
+  return ada_lookup_symbol_list_worker (name0, block0, domain, results, 1);
+}
+
+/* Implementation of the la_iterate_over_symbols method.  */
+
+static void
+ada_iterate_over_symbols (const struct block *block,
+			  const char *name, domain_enum domain,
+			  symbol_found_callback_ftype *callback,
+			  void *data)
+{
+  int ndefs, i;
+  struct ada_symbol_info *results;
+
+  ndefs = ada_lookup_symbol_list_worker (name, block, domain, &results, 0);
+  for (i = 0; i < ndefs; ++i)
+    {
+      if (! (*callback) (results[i].sym, data))
+	break;
+    }
+}
+
 /* If NAME is the name of an entity, return a string that should
    be used to look that entity up in Ada units.  This string should
    be deallocated after use using xfree.
@@ -5177,25 +5239,6 @@ ada_name_for_lookup (const char *name)
   return canon;
 }
 
-/* Implementation of the la_iterate_over_symbols method.  */
-
-static void
-ada_iterate_over_symbols (const struct block *block,
-			  const char *name, domain_enum domain,
-			  symbol_found_callback_ftype *callback,
-			  void *data)
-{
-  int ndefs, i;
-  struct ada_symbol_info *results;
-
-  ndefs = ada_lookup_symbol_list (name, block, domain, &results, 0);
-  for (i = 0; i < ndefs; ++i)
-    {
-      if (! (*callback) (results[i].sym, data))
-	break;
-    }
-}
-
 /* The result is as for ada_lookup_symbol_list with FULL_SEARCH set
    to 1, but choosing the first symbol found if there are multiple
    choices.
@@ -5214,9 +5257,7 @@ ada_lookup_encoded_symbol (const char *name, const struct block *block,
   gdb_assert (info != NULL);
   memset (info, 0, sizeof (struct ada_symbol_info));
 
-  n_candidates = ada_lookup_symbol_list (name, block, namespace, &candidates,
-					 1);
-
+  n_candidates = ada_lookup_symbol_list (name, block, namespace, &candidates);
   if (n_candidates == 0)
     return;
 
@@ -5508,8 +5549,7 @@ full_match (const char *sym_name, const char *search_name)
 /* Add symbols from BLOCK matching identifier NAME in DOMAIN to
    vector *defn_symbols, updating the list of symbols in OBSTACKP 
    (if necessary).  If WILD, treat as NAME with a wildcard prefix.
-   OBJFILE is the section containing BLOCK.
-   SYMTAB is recorded with each symbol added.  */
+   OBJFILE is the section containing BLOCK.  */
 
 static void
 ada_add_block_symbols (struct obstack *obstackp,
@@ -5780,10 +5820,10 @@ symbol_completion_add (VEC(char_ptr) **sv,
 struct add_partial_datum
 {
   VEC(char_ptr) **completions;
-  char *text;
+  const char *text;
   int text_len;
-  char *text0;
-  char *word;
+  const char *text0;
+  const char *word;
   int wild_match;
   int encoded;
 };
@@ -5802,7 +5842,8 @@ ada_expand_partial_symbol_name (const char *name, void *user_data)
    the entire command on which completion is made.  */
 
 static VEC (char_ptr) *
-ada_make_symbol_completion_list (char *text0, char *word)
+ada_make_symbol_completion_list (const char *text0, const char *word,
+				 enum type_code code)
 {
   char *text;
   int text_len;
@@ -5816,6 +5857,9 @@ ada_make_symbol_completion_list (char *text0, char *word)
   struct block *b, *surrounding_static_block = 0;
   int i;
   struct block_iterator iter;
+  struct cleanup *old_chain = make_cleanup (null_cleanup, NULL);
+
+  gdb_assert (code == TYPE_CODE_UNDEF);
 
   if (text0[0] == '<')
     {
@@ -5914,6 +5958,7 @@ ada_make_symbol_completion_list (char *text0, char *word)
     }
   }
 
+  do_cleanups (old_chain);
   return completions;
 }
 
@@ -5935,6 +5980,19 @@ ada_is_dispatch_table_ptr_type (struct type *type)
     return 0;
 
   return (strcmp (name, "ada__tags__dispatch_table") == 0);
+}
+
+/* Return non-zero if TYPE is an interface tag.  */
+
+static int
+ada_is_interface_tag (struct type *type)
+{
+  const char *name = TYPE_NAME (type);
+
+  if (name == NULL)
+    return 0;
+
+  return (strcmp (name, "ada__tags__interface_tag") == 0);
 }
 
 /* True if field number FIELD_NUM in struct or union type TYPE is supposed
@@ -5967,9 +6025,11 @@ ada_is_ignored_field (struct type *type, int field_num)
       return 1;
   }
 
-  /* If this is the dispatch table of a tagged type, then ignore.  */
+  /* If this is the dispatch table of a tagged type or an interface tag,
+     then ignore.  */
   if (ada_is_tagged_type (type, 1)
-      && ada_is_dispatch_table_ptr_type (TYPE_FIELD_TYPE (type, field_num)))
+      && (ada_is_dispatch_table_ptr_type (TYPE_FIELD_TYPE (type, field_num))
+	  || ada_is_interface_tag (TYPE_FIELD_TYPE (type, field_num))))
     return 1;
 
   /* Not a special field, so it should not be ignored.  */
@@ -6007,6 +6067,15 @@ struct type *
 ada_tag_type (struct value *val)
 {
   return ada_lookup_struct_elt_type (value_type (val), "_tag", 1, 0, NULL);
+}
+
+/* Return 1 if TAG follows the old scheme for Ada tags (used for Ada 95,
+   retired at Ada 05).  */
+
+static int
+is_ada95_tag (struct value *tag)
+{
+  return ada_value_struct_elt (tag, "tsd", 1) != NULL;
 }
 
 /* The value of the tag on VAL.  */
@@ -6050,6 +6119,88 @@ type_from_tag (struct value *tag)
   if (type_name != NULL)
     return ada_find_any_type (ada_encode (type_name));
   return NULL;
+}
+
+/* Given a value OBJ of a tagged type, return a value of this
+   type at the base address of the object.  The base address, as
+   defined in Ada.Tags, it is the address of the primary tag of
+   the object, and therefore where the field values of its full
+   view can be fetched.  */
+
+struct value *
+ada_tag_value_at_base_address (struct value *obj)
+{
+  volatile struct gdb_exception e;
+  struct value *val;
+  LONGEST offset_to_top = 0;
+  struct type *ptr_type, *obj_type;
+  struct value *tag;
+  CORE_ADDR base_address;
+
+  obj_type = value_type (obj);
+
+  /* It is the responsability of the caller to deref pointers.  */
+
+  if (TYPE_CODE (obj_type) == TYPE_CODE_PTR
+      || TYPE_CODE (obj_type) == TYPE_CODE_REF)
+    return obj;
+
+  tag = ada_value_tag (obj);
+  if (!tag)
+    return obj;
+
+  /* Base addresses only appeared with Ada 05 and multiple inheritance.  */
+
+  if (is_ada95_tag (tag))
+    return obj;
+
+  ptr_type = builtin_type (target_gdbarch ())->builtin_data_ptr;
+  ptr_type = lookup_pointer_type (ptr_type);
+  val = value_cast (ptr_type, tag);
+  if (!val)
+    return obj;
+
+  /* It is perfectly possible that an exception be raised while
+     trying to determine the base address, just like for the tag;
+     see ada_tag_name for more details.  We do not print the error
+     message for the same reason.  */
+
+  TRY_CATCH (e, RETURN_MASK_ERROR)
+    {
+      offset_to_top = value_as_long (value_ind (value_ptradd (val, -2)));
+    }
+
+  if (e.reason < 0)
+    return obj;
+
+  /* If offset is null, nothing to do.  */
+
+  if (offset_to_top == 0)
+    return obj;
+
+  /* -1 is a special case in Ada.Tags; however, what should be done
+     is not quite clear from the documentation.  So do nothing for
+     now.  */
+
+  if (offset_to_top == -1)
+    return obj;
+
+  base_address = value_address (obj) - offset_to_top;
+  tag = value_tag_from_contents_and_address (obj_type, NULL, base_address);
+
+  /* Make sure that we have a proper tag at the new address.
+     Otherwise, offset_to_top is bogus (which can happen when
+     the object is not initialized yet).  */
+
+  if (!tag)
+    return obj;
+
+  obj_type = type_from_tag (tag);
+
+  if (!obj_type)
+    return obj;
+
+  return value_from_contents_and_address (obj_type, NULL, base_address);
 }
 
 /* Return the "ada__tags__type_specific_data" type.  */
@@ -6707,9 +6858,9 @@ ada_value_struct_elt (struct value *arg, char *name, int no_err)
       CORE_ADDR address;
 
       if (TYPE_CODE (t) == TYPE_CODE_PTR)
-        address = value_as_address (arg);
+	address = value_address (ada_value_ind (arg));
       else
-        address = unpack_pointer (t, value_contents (arg));
+	address = value_address (ada_coerce_ref (arg));
 
       t1 = ada_to_fixed_type (ada_get_base_type (t1), NULL, address, NULL, 1);
       if (find_struct_field (name, t1, 0,
@@ -6985,6 +7136,9 @@ ada_value_ind (struct value *val0)
 {
   struct value *val = value_ind (val0);
 
+  if (ada_is_tagged_type (value_type (val), 0))
+    val = ada_tag_value_at_base_address (val);
+
   return ada_to_fixed_value (val);
 }
 
@@ -6999,6 +7153,10 @@ ada_coerce_ref (struct value *val0)
       struct value *val = val0;
 
       val = coerce_ref (val);
+
+      if (ada_is_tagged_type (value_type (val), 0))
+	val = ada_tag_value_at_base_address (val);
+
       return ada_to_fixed_value (val);
     }
   else
@@ -7082,7 +7240,7 @@ ada_find_any_type (const char *name)
    Return symbol if found, and NULL otherwise.  */
 
 struct symbol *
-ada_find_renaming_symbol (struct symbol *name_sym, struct block *block)
+ada_find_renaming_symbol (struct symbol *name_sym, const struct block *block)
 {
   const char *name = SYMBOL_LINKAGE_NAME (name_sym);
   struct symbol *sym;
@@ -7104,7 +7262,7 @@ ada_find_renaming_symbol (struct symbol *name_sym, struct block *block)
 }
 
 static struct symbol *
-find_old_style_renaming_symbol (const char *name, struct block *block)
+find_old_style_renaming_symbol (const char *name, const struct block *block)
 {
   const struct symbol *function_sym = block_linkage_function (block);
   char *rename;
@@ -7982,14 +8140,20 @@ ada_to_fixed_type_1 (struct type *type, const gdb_byte *valaddr,
 
         if (check_tag && address != 0 && ada_is_tagged_type (static_type, 0))
           {
-            struct type *real_type =
-              type_from_tag (value_tag_from_contents_and_address
-                             (fixed_record_type,
-                              valaddr,
-                              address));
-
+	    struct value *tag =
+	      value_tag_from_contents_and_address
+	      (fixed_record_type,
+	       valaddr,
+	       address);
+	    struct type *real_type = type_from_tag (tag);
+	    struct value *obj =
+	      value_from_contents_and_address (fixed_record_type,
+					       valaddr,
+					       address);
             if (real_type != NULL)
-              return to_fixed_record_type (real_type, valaddr, address, NULL);
+              return to_fixed_record_type
+		(real_type, NULL,
+		 value_address (ada_tag_value_at_base_address (obj)), NULL);
           }
 
         /* Check to see if there is a parallel ___XVZ variable.
@@ -8909,7 +9073,6 @@ assign_aggregate (struct value *container,
   int num_specs;
   LONGEST *indices;
   int max_indices, num_indices;
-  int is_array_aggregate;
   int i;
 
   *pos += 3;
@@ -8934,13 +9097,11 @@ assign_aggregate (struct value *container,
       lhs_type = value_type (lhs);
       low_index = TYPE_ARRAY_LOWER_BOUND_VALUE (lhs_type);
       high_index = TYPE_ARRAY_UPPER_BOUND_VALUE (lhs_type);
-      is_array_aggregate = 1;
     }
   else if (TYPE_CODE (lhs_type) == TYPE_CODE_STRUCT)
     {
       low_index = 0;
       high_index = num_visible_fields (lhs_type) - 1;
-      is_array_aggregate = 0;
     }
   else
     error (_("Left-hand side must be array or record."));
@@ -9453,7 +9614,9 @@ ada_evaluate_subexp (struct type *expect_type, struct expression *exp,
     default:
       *pos -= 1;
       arg1 = evaluate_subexp_standard (expect_type, exp, pos, noside);
-      arg1 = unwrap_value (arg1);
+
+      if (noside == EVAL_NORMAL)
+	arg1 = unwrap_value (arg1);
 
       /* If evaluating an OP_DOUBLE and an EXPECT_TYPE was provided,
          then we need to perform the conversion manually, because
@@ -9690,19 +9853,31 @@ ada_evaluate_subexp (struct type *expect_type, struct expression *exp,
                a fixed type would result in the loss of that type name,
                thus preventing us from printing the name of the ancestor
                type in the type description.  */
-            struct type *actual_type;
-
             arg1 = evaluate_subexp (NULL_TYPE, exp, pos, EVAL_NORMAL);
-            actual_type = type_from_tag (ada_value_tag (arg1));
-            if (actual_type == NULL)
-              /* If, for some reason, we were unable to determine
-                 the actual type from the tag, then use the static
-                 approximation that we just computed as a fallback.
-                 This can happen if the debugging information is
-                 incomplete, for instance.  */
-              actual_type = type;
 
-            return value_zero (actual_type, not_lval);
+	    if (TYPE_CODE (type) != TYPE_CODE_REF)
+	      {
+		struct type *actual_type;
+
+		actual_type = type_from_tag (ada_value_tag (arg1));
+		if (actual_type == NULL)
+		  /* If, for some reason, we were unable to determine
+		     the actual type from the tag, then use the static
+		     approximation that we just computed as a fallback.
+		     This can happen if the debugging information is
+		     incomplete, for instance.  */
+		  actual_type = type;
+		return value_zero (actual_type, not_lval);
+	      }
+	    else
+	      {
+		/* In the case of a ref, ada_coerce_ref takes care
+		   of determining the actual type.  But the evaluation
+		   should return a ref as it should be valid to ask
+		   for its address; so rebuild a ref after coerce.  */
+		arg1 = ada_coerce_ref (arg1);
+		return value_ref (arg1);
+	      }
           }
 
           *pos += 4;
@@ -10559,7 +10734,7 @@ get_var_value (char *name, char *err_msg)
   int nsyms;
 
   nsyms = ada_lookup_symbol_list (name, get_selected_block (0), VAR_DOMAIN,
-                                  &syms, 1);
+                                  &syms);
 
   if (nsyms != 1)
     {
@@ -10946,9 +11121,10 @@ static int
 is_known_support_routine (struct frame_info *frame)
 {
   struct symtab_and_line sal;
-  const char *func_name;
+  char *func_name;
   enum language func_lang;
   int i;
+  const char *fullname;
 
   /* If this code does not have any debugging information (no symtab),
      This cannot be any user code.  */
@@ -10963,7 +11139,8 @@ is_known_support_routine (struct frame_info *frame)
      for the user.  This should also take care of case such as VxWorks
      where the kernel has some debugging info provided for a few units.  */
 
-  if (symtab_to_fullname (sal.symtab) == NULL)
+  fullname = symtab_to_fullname (sal.symtab);
+  if (access (fullname, R_OK) != 0)
     return 1;
 
   /* Check the unit filename againt the Ada runtime file naming.
@@ -10977,7 +11154,7 @@ is_known_support_routine (struct frame_info *frame)
       if (re_exec (lbasename (sal.symtab->filename)))
         return 1;
       if (sal.symtab->objfile != NULL
-          && re_exec (sal.symtab->objfile->name))
+          && re_exec (objfile_name (sal.symtab->objfile)))
         return 1;
     }
 
@@ -10991,9 +11168,13 @@ is_known_support_routine (struct frame_info *frame)
     {
       re_comp (known_auxiliary_function_name_patterns[i]);
       if (re_exec (func_name))
-        return 1;
+	{
+	  xfree (func_name);
+	  return 1;
+	}
     }
 
+  xfree (func_name);
   return 0;
 }
 
@@ -11037,6 +11218,7 @@ ada_unhandled_exception_name_addr_from_raise (void)
   int frame_level;
   struct frame_info *fi;
   struct ada_inferior_data *data = get_ada_inferior_data (current_inferior ());
+  struct cleanup *old_chain;
 
   /* To determine the name of this exception, we need to select
      the frame corresponding to RAISE_SYM_NAME.  This frame is
@@ -11047,17 +11229,24 @@ ada_unhandled_exception_name_addr_from_raise (void)
     if (fi != NULL)
       fi = get_prev_frame (fi); 
 
+  old_chain = make_cleanup (null_cleanup, NULL);
   while (fi != NULL)
     {
-      const char *func_name;
+      char *func_name;
       enum language func_lang;
 
       find_frame_funname (fi, &func_name, &func_lang, NULL);
-      if (func_name != NULL
-          && strcmp (func_name, data->exception_info->catch_exception_sym) == 0)
-        break; /* We found the frame we were looking for...  */
-      fi = get_prev_frame (fi);
+      if (func_name != NULL)
+	{
+	  make_cleanup (xfree, func_name);
+
+          if (strcmp (func_name,
+		      data->exception_info->catch_exception_sym) == 0)
+	    break; /* We found the frame we were looking for...  */
+	  fi = get_prev_frame (fi);
+	}
     }
+  do_cleanups (old_chain);
 
   if (fi == NULL)
     return 0;
@@ -11225,7 +11414,7 @@ create_excep_cond_exprs (struct ada_catchpoint *c)
       if (!bl->shlib_disabled)
 	{
 	  volatile struct gdb_exception e;
-	  char *s;
+	  const char *s;
 
 	  s = cond_string;
 	  TRY_CATCH (e, RETURN_MASK_ERROR)
@@ -11372,7 +11561,8 @@ print_it_exception (enum exception_catchpoint_kind ex, bpstat bs)
 
 	  if (addr != 0)
 	    {
-	      read_memory (addr, exception_name, sizeof (exception_name) - 1);
+	      read_memory (addr, (gdb_byte *) exception_name,
+			   sizeof (exception_name) - 1);
 	      exception_name [sizeof (exception_name) - 1] = '\0';
 	    }
 	  else
@@ -11657,7 +11847,7 @@ allocate_location_catch_assert (struct breakpoint *self)
 static void
 re_set_catch_assert (struct breakpoint *b)
 {
-  return re_set_exception (ex_catch_assert, b);
+  re_set_exception (ex_catch_assert, b);
 }
 
 static void

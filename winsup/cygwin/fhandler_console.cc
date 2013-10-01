@@ -1,7 +1,7 @@
 /* fhandler_console.cc
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -216,7 +216,7 @@ fhandler_console::setup ()
 tty_min *
 tty_list::get_cttyp ()
 {
-  _dev_t n = myself->ctty;
+  dev_t n = myself->ctty;
   if (iscons_dev (n))
     return fhandler_console::shared_console_info ?
       &fhandler_console::shared_console_info->tty_min_state : NULL;
@@ -318,7 +318,7 @@ fhandler_console::mouse_aware (MOUSE_EVENT_RECORD& mouse_event)
 		 || dev_state.use_mouse >= 3));
 }
 
-void __stdcall
+void __reg3
 fhandler_console::read (void *pv, size_t& buflen)
 {
   push_process_state process_state (PID_TTYIN);
@@ -944,9 +944,9 @@ fhandler_console::ioctl (unsigned int cmd, void *arg)
 	*(int *) arg = (dev_state.metabit) ? K_METABIT : K_ESCPREFIX;
 	return 0;
       case KDSKBMETA:
-	if ((int) arg == K_METABIT)
+	if ((intptr_t) arg == K_METABIT)
 	  dev_state.metabit = TRUE;
-	else if ((int) arg == K_ESCPREFIX)
+	else if ((intptr_t) arg == K_ESCPREFIX)
 	  dev_state.metabit = FALSE;
 	else
 	  {
@@ -1013,7 +1013,7 @@ fhandler_console::output_tcsetattr (int, struct termios const *t)
   int res = SetConsoleMode (get_output_handle (), flags) ? 0 : -1;
   if (res)
     __seterrno_from_win_error (GetLastError ());
-  syscall_printf ("%d = tcsetattr(,%x) (ENABLE FLAGS %x) (lflag %x oflag %x)",
+  syscall_printf ("%d = tcsetattr(,%p) (ENABLE FLAGS %y) (lflag %y oflag %y)",
 		  res, t, flags, t->c_lflag, t->c_oflag);
   return res;
 }
@@ -1075,7 +1075,7 @@ fhandler_console::input_tcsetattr (int, struct termios const *t)
       res = SetConsoleMode (get_io_handle (), flags) ? 0 : -1;
       if (res < 0)
 	__seterrno ();
-      syscall_printf ("%d = tcsetattr(,%x) enable flags %p, c_lflag %p iflag %p",
+      syscall_printf ("%d = tcsetattr(,%p) enable flags %y, c_lflag %y iflag %y",
 		      res, t, flags, t->c_lflag, t->c_iflag);
     }
 
@@ -1126,7 +1126,7 @@ fhandler_console::tcgetattr (struct termios *t)
       /* All the output bits we can ignore */
       res = 0;
     }
-  syscall_printf ("%d = tcgetattr(%p) enable flags %p, t->lflag %p, t->iflag %p",
+  syscall_printf ("%d = tcgetattr(%p) enable flags %y, t->lflag %y, t->iflag %y",
 		 res, t, flags, t->c_lflag, t->c_iflag);
   return res;
 }
@@ -1510,6 +1510,31 @@ fhandler_console::char_command (char c)
 	   }
        dev_state.set_color (get_output_handle ());
       break;
+    case 'q': /* Set cursor style (DECSCUSR) */
+      if (dev_state.saw_space)
+	{
+	    CONSOLE_CURSOR_INFO console_cursor_info;
+	    GetConsoleCursorInfo (get_output_handle (), & console_cursor_info);
+	    switch (dev_state.args_[0])
+	      {
+		case 0: /* blinking block */
+		case 1: /* blinking block (default) */
+		case 2: /* steady block */
+		  console_cursor_info.dwSize = 100;
+		  SetConsoleCursorInfo (get_output_handle (), & console_cursor_info);
+		  break;
+		case 3: /* blinking underline */
+		case 4: /* steady underline */
+		  console_cursor_info.dwSize = 10;	/* or Windows default 25? */
+		  SetConsoleCursorInfo (get_output_handle (), & console_cursor_info);
+		  break;
+		default: /* use value as percentage */
+		  console_cursor_info.dwSize = dev_state.args_[0];
+		  SetConsoleCursorInfo (get_output_handle (), & console_cursor_info);
+		  break;
+	      }
+	}
+      break;
     case 'h':
     case 'l':
       if (!dev_state.saw_question_mark)
@@ -1525,6 +1550,17 @@ fhandler_console::char_command (char c)
 	}
       switch (dev_state.args_[0])
 	{
+	case 25: /* Show/Hide Cursor (DECTCEM) */
+	  {
+	    CONSOLE_CURSOR_INFO console_cursor_info;
+	    GetConsoleCursorInfo (get_output_handle (), & console_cursor_info);
+	    if (c == 'h')
+	      console_cursor_info.bVisible = TRUE;
+	    else
+	      console_cursor_info.bVisible = FALSE;
+	    SetConsoleCursorInfo (get_output_handle (), & console_cursor_info);
+	    break;
+	  }
 	case 47:   /* Save/Restore screen */
 	  if (c == 'h') /* save */
 	    {
@@ -1752,7 +1788,7 @@ fhandler_console::char_command (char c)
 	  __small_sprintf (buf, "\033[%d;%dR", y + 1, x + 1);
 	  puts_readahead (buf);
 	  break;
-    default:
+      default:
 	  goto bad_escape;
 	}
       break;
@@ -2008,7 +2044,7 @@ fhandler_console::write (const void *vsrc, size_t len)
   tmp_pathbuf tp;
   write_buf = tp.w_get ();
 
-  debug_printf ("%x, %d", vsrc, len);
+  debug_printf ("%p, %ld", vsrc, len);
 
   while (src < end)
     {
@@ -2026,6 +2062,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 	      dev_state.state_ = gotsquare;
 	      dev_state.saw_question_mark = false;
 	      dev_state.saw_greater_than_sign = false;
+	      dev_state.saw_space = false;
 	      for (dev_state.nargs_ = 0; dev_state.nargs_ < MAXARGS; dev_state.nargs_++)
 		dev_state.args_[dev_state.nargs_] = 0;
 	      dev_state.nargs_ = 0;
@@ -2091,6 +2128,12 @@ fhandler_console::write (const void *vsrc, size_t len)
 	      dev_state.nargs_++;
 	      if (dev_state.nargs_ >= MAXARGS)
 		dev_state.nargs_--;
+	    }
+	  else if (*src == ' ')
+	    {
+	      src++;
+	      dev_state.saw_space = true;
+	      dev_state.state_ = gotcommand;
 	    }
 	  else
 	    {
@@ -2168,15 +2211,15 @@ fhandler_console::write (const void *vsrc, size_t len)
 	}
     }
 
-  syscall_printf ("%d = fhandler_console::write(...)", len);
+  syscall_printf ("%ld = fhandler_console::write(...)", len);
 
   return len;
 }
 
-static struct {
+static const struct {
   int vk;
   const char *val[4];
-} keytable[] NO_COPY = {
+} keytable[] = {
 	       /* NORMAL */    /* SHIFT */     /* CTRL */     /* CTRL-SHIFT */
   /* Unmodified and Alt-modified keypad keys comply with linux console
      SHIFT, CTRL, CTRL-SHIFT modifiers comply with xterm modifier usage */
@@ -2323,7 +2366,7 @@ fhandler_console::create_invisible_console (HWINSTA horig)
   return b;
 }
 
-/* Ugly workaround for Windows 7.
+/* Ugly workaround for Windows 7 and later.
 
    First try to just attach to any console which may have started this
    app.  If that works use this as our "invisible console".

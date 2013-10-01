@@ -1,6 +1,6 @@
 /* libcmain.c
 
-   Copyright 1996, 1997, 1998, 2000, 2001, 2006, 2009 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 2000, 2001, 2004, 2006, 2009 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -31,8 +31,8 @@ main ()
 
   if (!nexts)
     nexts = strchr (s, '\0');
-  else
-    nexts += strspn (nexts + 1, SP);
+  else if (*++nexts)
+    nexts += strspn (nexts, SP);
 
   GetStartupInfo (&si);
 

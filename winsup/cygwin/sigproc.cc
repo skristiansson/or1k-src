@@ -1,7 +1,7 @@
 /* sigproc.cc: inter/intra signal and sub process handler
 
-   Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
+   2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -31,8 +31,6 @@ details. */
 #define WSSC		  60000	// Wait for signal completion
 #define WPSP		  40000	// Wait for proc_subproc mutex
 
-#define no_signals_available(x) (!my_sendsig || ((x) && myself->exitcode & EXITCODE_SET) || (&_my_tls == _sig_tls))
-
 /*
  * Global variables
  */
@@ -46,8 +44,6 @@ char NO_COPY myself_nowait_dummy[1] = {'0'};// Flag to sig_send that signal goes
 
 #define Static static NO_COPY
 
-Static HANDLE sig_hold;			// Used to stop signal processing
-Static bool sigheld;			// True if holding signals
 
 Static int nprocs;			// Number of deceased children
 Static char cprocs[(NPROCS + 1) * sizeof (pinfo)];// All my children info
@@ -63,7 +59,7 @@ Static HANDLE my_sendsig;
 Static HANDLE my_readsig;
 
 /* Function declarations */
-static int __stdcall checkstate (waitq *) __attribute__ ((regparm (1)));
+static int __reg1 checkstate (waitq *);
 static __inline__ bool get_proc_lock (DWORD, DWORD);
 static bool __stdcall remove_proc (int);
 static bool __stdcall stopped_or_terminated (waitq *, _pinfo *);
@@ -75,19 +71,15 @@ class pending_signals
 {
   sigpacket sigs[NSIG + 1];
   sigpacket start;
-  sigpacket *end;
-  sigpacket *prev;
-  sigpacket *curr;
+  bool retry;
+
 public:
-  void reset () {curr = &start; prev = &start;}
   void add (sigpacket&);
-  void del ();
-  bool pending () const {return !!start.next;}
-  sigpacket *next ();
-  sigpacket *save () const {return curr;}
-  void restore (sigpacket *saved) {curr = saved;}
-  friend void __stdcall sig_dispatch_pending (bool);
+  bool pending () {retry = true; return !!start.next;}
+  void clear (int sig) {sigs[sig].si.si_signo = 0;}
+  friend void __reg1 sig_dispatch_pending (bool);;
   friend void WINAPI wait_sig (VOID *arg);
+  friend void sigproc_init ();
 };
 
 Static pending_signals sigq;
@@ -158,7 +150,7 @@ proc_can_be_signalled (_pinfo *p)
   return false;
 }
 
-bool __stdcall
+bool __reg1
 pid_exists (pid_t pid)
 {
   return pinfo (pid)->exists ();
@@ -176,8 +168,8 @@ mychild (int pid)
 
 /* Handle all subprocess requests
  */
-int __stdcall
-proc_subproc (DWORD what, DWORD val)
+int __reg2
+proc_subproc (DWORD what, uintptr_t val)
 {
   int rc = 1;
   int potential_match;
@@ -339,85 +331,22 @@ out1:
 void
 _cygtls::remove_wq (DWORD wait)
 {
-  if (exit_state < ES_FINAL && waitq_head.next && sync_proc_subproc
-      && sync_proc_subproc.acquire (wait))
+  if (wq.thread_ev)
     {
-      for (waitq *w = &waitq_head; w->next != NULL; w = w->next)
-	if (w->next == &wq)
-	  {
-	    ForceCloseHandle1 (wq.thread_ev, wq_ev);
-	    w->next = wq.next;
-	    break;
-	  }
-      sync_proc_subproc.release ();
-    }
-}
-
-inline void
-close_my_readsig ()
-{
-  HANDLE h;
-  if ((h = InterlockedExchangePointer (&my_readsig, NULL)))
-    ForceCloseHandle1 (h, my_readsig);
-}
-
-/* Cover function to `do_exit' to handle exiting even in presence of more
-   exceptions.  We used to call exit, but a SIGSEGV shouldn't cause atexit
-   routines to run.  */
-void
-_cygtls::signal_exit (int rc)
-{
-  HANDLE myss = my_sendsig;
-  my_sendsig = NULL;		 /* Make no_signals_allowed return true */
-
-  /* This code used to try to always close my_readsig but it ended up
-     blocking for reasons that people in google think make sense.
-     It's possible that it was blocking because ReadFile was still active
-     but it isn't clear why this only caused random hangs rather than
-     consistent hangs.  So, for now at least, avoid closing my_readsig
-     unless this is the signal thread.  */
-  if (&_my_tls == _sig_tls)
-    close_my_readsig ();	/* Stop any currently executing sig_sends */
-  else
-    {
-      sigpacket sp = {};
-      sp.si.si_signo = __SIGEXIT;
-      DWORD len;
-      /* Write a packet to the wait_sig thread which tells it to exit and
-	 close my_readsig.  */
-      WriteFile (myss, &sp, sizeof (sp), &len, NULL);
-    }
-  signal_debugger (rc & 0x7f);
-
-  if (rc == SIGQUIT || rc == SIGABRT)
-    {
-      CONTEXT c;
-      c.ContextFlags = CONTEXT_FULL;
-      GetThreadContext (hMainThread, &c);
-      copy_context (&c);
-      if (cygheap->rlim_core > 0UL)
-	rc |= 0x80;
+      if (exit_state < ES_FINAL && waitq_head.next && sync_proc_subproc
+	  && sync_proc_subproc.acquire (wait))
+	{
+	  for (waitq *w = &waitq_head; w->next != NULL; w = w->next)
+	    if (w->next == &wq)
+	      {
+		w->next = wq.next;
+		break;
+	      }
+	  sync_proc_subproc.release ();
+	}
+      ForceCloseHandle1 (wq.thread_ev, wq_ev);
     }
 
-  if (have_execed)
-    {
-      sigproc_printf ("terminating captive process");
-      TerminateProcess (ch_spawn, sigExeced = rc);
-    }
-
-  if ((rc & 0x80) && !try_to_debug ())
-    stackdump (thread_context.ebp, true);
-
-  lock_process until_exit (true);
-  if (have_execed || exit_state > ES_PROCESS_LOCKED)
-    myself.exit (rc);
-
-  /* Starve other threads in a vain attempt to stop them from doing something
-     stupid. */
-  SetThreadPriority (GetCurrentThread (), THREAD_PRIORITY_TIME_CRITICAL);
-
-  sigproc_printf ("about to call do_exit (%x)", rc);
-  do_exit (rc);
 }
 
 /* Terminate the wait_subproc thread.
@@ -459,30 +388,16 @@ proc_terminate ()
 }
 
 /* Clear pending signal */
-void __stdcall
-sig_clear (int target_sig)
+void __reg1
+sig_clear (int sig)
 {
-  if (&_my_tls != _sig_tls)
-    sig_send (myself, -target_sig);
-  else
-    {
-      sigpacket *q;
-      sigpacket *save = sigq.save ();
-      sigq.reset ();
-      while ((q = sigq.next ()))
-	if (q->si.si_signo == target_sig)
-	  {
-	    q->si.si_signo = __SIGDELETE;
-	    break;
-	  }
-      sigq.restore (save);
-    }
+  sigq.clear (sig);
 }
 
 extern "C" int
 sigpending (sigset_t *mask)
 {
-  sigset_t outset = (sigset_t) sig_send (myself, __SIGPENDING);
+  sigset_t outset = (sigset_t) sig_send (myself, __SIGPENDING, &_my_tls);
   if (outset == SIG_BAD_MASK)
     return -1;
   *mask = outset;
@@ -490,24 +405,13 @@ sigpending (sigset_t *mask)
 }
 
 /* Force the wait_sig thread to wake up and scan for pending signals */
-void __stdcall
+void __reg1
 sig_dispatch_pending (bool fast)
 {
-  if (exit_state || &_my_tls == _sig_tls)
-    {
-#ifdef DEBUGGING
-      sigproc_printf ("exit_state %d, cur thread id %p, _sig_tls %p, sigq.start.next %p",
-		      exit_state, GetCurrentThreadId (), _sig_tls, sigq.start.next);
-#endif
-      return;
-    }
-
   /* Non-atomically test for any signals pending and wake up wait_sig if any are
      found.  It's ok if there's a race here since the next call to this function
-     should catch it.
-     FIXME: Eventually, wait_sig should wake up on its own to deal with pending
-     signals. */
-  if (sigq.pending ())
+     should catch it.  */
+  if (sigq.pending () && &_my_tls != _sig_tls)
     sig_send (myself, fast ? __SIGFLUSHFAST : __SIGFLUSH);
 }
 
@@ -534,58 +438,49 @@ sigproc_init ()
   new cygthread (wait_sig, cygself, "sig");
 }
 
-/* Called on process termination to terminate signal and process threads.
- */
-void __stdcall
-sigproc_terminate (exit_states es)
+/* Exit the current thread very carefully.
+   See cgf-000017 in DevNotes for more details on why this is
+   necessary.  */
+void
+exit_thread (DWORD res)
 {
-  exit_states prior_exit_state = exit_state;
-  exit_state = es;
-  if (!cygwin_finished_initializing)
-    sigproc_printf ("don't worry about signal thread");
-  else if (prior_exit_state >= ES_FINAL)
-    sigproc_printf ("already performed");
-  else
-    {
-      sigproc_printf ("entering");
-      sig_send (myself_nowait, __SIGEXIT);
-      proc_terminate ();		// clean up process stuff
-    }
-}
-
-int __stdcall
-sig_send (_pinfo *p, int sig)
-{
-  if (sig == __SIGHOLD)
-    sigheld = true;
-  else if (!sigheld)
-    /* nothing */;
-  else if (sig == __SIGFLUSH || sig == __SIGFLUSHFAST)
-    return 0;
-  else if (sig == __SIGNOHOLD || sig == __SIGEXIT)
-    {
-      SetEvent (sig_hold);
-      sigheld = false;
-    }
-  else if (&_my_tls == _main_tls)
+# undef ExitThread
+  sigfillset (&_my_tls.sigmask);	/* No signals wanted */
+  lock_process for_now;			/* May block indefinitely when exiting. */
+  HANDLE h;
+  if (!DuplicateHandle (GetCurrentProcess (), GetCurrentThread (),
+                        GetCurrentProcess (), &h,
+                        0, FALSE, DUPLICATE_SAME_ACCESS))
     {
 #ifdef DEBUGGING
-      system_printf ("signal %d sent to %p while signals are on hold", sig, p);
+      system_printf ("couldn't duplicate the current thread, %E");
 #endif
-      return -1;
+      for_now.release ();
+      ExitThread (res);
     }
-  siginfo_t si = {0};
+  ProtectHandle1 (h, exit_thread);
+  /* Tell wait_sig to wait for this thread to exit.  It can then release
+     the lock below and close the above-opened handle. */
+  siginfo_t si = {__SIGTHREADEXIT, SI_KERNEL};
+  si.si_cyg = h;
+  sig_send (myself_nowait, si, &_my_tls);
+  ExitThread (0);
+}
+
+int __reg3
+sig_send (_pinfo *p, int sig, _cygtls *tid)
+{
+  siginfo_t si = {};
   si.si_signo = sig;
   si.si_code = SI_KERNEL;
-  si.si_pid = si.si_uid = si.si_errno = 0;
-  return sig_send (p, si);
+  return sig_send (p, si, tid);
 }
 
 /* Send a signal to another process by raising its signal semaphore.
    If pinfo *p == NULL, send to the current process.
    If sending to this process, wait for notification that a signal has
    completed before returning.  */
-int __stdcall
+int __reg3
 sig_send (_pinfo *p, siginfo_t& si, _cygtls *tls)
 {
   int rc = 1;
@@ -596,7 +491,7 @@ sig_send (_pinfo *p, siginfo_t& si, _cygtls *tls)
 
   pack.wakeup = NULL;
   bool wait_for_completion;
-  if (!(its_me = (!have_execed && (p == NULL || p == myself || p == myself_nowait))))
+  if (!(its_me = p == NULL || p == myself || p == myself_nowait))
     {
       /* It is possible that the process is not yet ready to receive messages
        * or that it has exited.  Detect this.
@@ -611,12 +506,7 @@ sig_send (_pinfo *p, siginfo_t& si, _cygtls *tls)
     }
   else
     {
-      if (no_signals_available (si.si_signo != __SIGEXIT))
-	{
-	  set_errno (EAGAIN);
-	  goto out;		// Either exiting or not yet initializing
-	}
-      wait_for_completion = p != myself_nowait && _my_tls.isinitialized () && !exit_state;
+      wait_for_completion = p != myself_nowait;
       p = myself;
     }
 
@@ -686,7 +576,8 @@ sig_send (_pinfo *p, siginfo_t& si, _cygtls *tls)
 	}
     }
 
-  sigproc_printf ("sendsig %p, pid %d, signal %d, its_me %d", sendsig, p->pid, si.si_signo, its_me);
+  sigproc_printf ("sendsig %p, pid %d, signal %d, its_me %d", sendsig, p->pid,
+		  si.si_signo, its_me);
 
   sigset_t pending;
   if (!its_me)
@@ -704,7 +595,7 @@ sig_send (_pinfo *p, siginfo_t& si, _cygtls *tls)
   if (!pack.si.si_uid)
     pack.si.si_uid = myself->uid;
   pack.pid = myself->pid;
-  pack.tls = tls;
+  pack.sigtls = tls;
   if (wait_for_completion)
     {
       pack.wakeup = CreateEvent (&sec_none_nih, FALSE, FALSE, NULL);
@@ -741,9 +632,7 @@ sig_send (_pinfo *p, siginfo_t& si, _cygtls *tls)
 	}
       else
 	{
-	  if (no_signals_available (true))
-	    sigproc_printf ("I'm going away now");
-	  else if (!p->exec_sendsig)
+	  if (!p->exec_sendsig)
 	    system_printf ("error sending signal %d to pid %d, pipe handle %p, %E",
 			   si.si_signo, p->pid, sendsig);
 	}
@@ -781,16 +670,12 @@ sig_send (_pinfo *p, siginfo_t& si, _cygtls *tls)
     rc = 0;		// Successful exit
   else
     {
-      if (!no_signals_available (true))
-	system_printf ("wait for sig_complete event failed, signal %d, rc %d, %E",
-		       si.si_signo, rc);
       set_errno (ENOSYS);
       rc = -1;
     }
 
   if (wait_for_completion && si.si_signo != __SIGFLUSHFAST)
     _my_tls.call_signal_handler ();
-  goto out;
 
 out:
   if (communing && rc)
@@ -890,7 +775,6 @@ child_info_spawn::child_info_spawn (child_info_types chtype, bool need_subproc_r
 	api_fatal ("couldn't create signalling event for exec, %E");
 
       get_proc_lock (PROC_EXECING, 0);
-      lock = &sync_proc_subproc;
       /* exit with lock held */
     }
 }
@@ -898,9 +782,12 @@ child_info_spawn::child_info_spawn (child_info_types chtype, bool need_subproc_r
 cygheap_exec_info *
 cygheap_exec_info::alloc ()
 {
- return (cygheap_exec_info *) ccalloc_abort (HEAP_1_EXEC, 1,
-					     sizeof (cygheap_exec_info)
-					     + (nprocs * sizeof (children[0])));
+  cygheap_exec_info *res =
+    (cygheap_exec_info *) ccalloc_abort (HEAP_1_EXEC, 1,
+					 sizeof (cygheap_exec_info)
+					 + (nprocs * sizeof (children[0])));
+  res->sigmask = _my_tls.sigmask;
+  return res;
 }
 
 void
@@ -1078,7 +965,7 @@ child_info::sync (pid_t pid, HANDLE& hProcess, DWORD howlong)
 	      hProcess = NULL;
 	    }
 	}
-      sigproc_printf ("pid %u, WFMO returned %d, exit_code %p, res %d", pid, x,
+      sigproc_printf ("pid %u, WFMO returned %d, exit_code %y, res %d", pid, x,
 		      exit_code, res);
     }
   return res;
@@ -1089,7 +976,7 @@ child_info::proc_retry (HANDLE h)
 {
   if (!exit_code)
     return EXITCODE_OK;
-  sigproc_printf ("exit_code %p", exit_code);
+  sigproc_printf ("exit_code %y", exit_code);
   switch (exit_code)
     {
     case STILL_ACTIVE:	/* shouldn't happen */
@@ -1146,7 +1033,7 @@ child_info_fork::abort (const char *fmt, ...)
 /* Check the state of all of our children to see if any are stopped or
  * terminated.
  */
-static int __stdcall
+static int __reg1
 checkstate (waitq *parent_w)
 {
   int potential_match = 0;
@@ -1292,47 +1179,19 @@ talktome (siginfo_t *si)
     new cygthread (commune_process, size, si, "commune");
 }
 
+/* Add a packet to the beginning of the queue.
+   Should only be called from signal thread.  */
 void
 pending_signals::add (sigpacket& pack)
 {
   sigpacket *se;
-  if (sigs[pack.si.si_signo].si.si_signo)
-    return;
+
   se = sigs + pack.si.si_signo;
+  if (se->si.si_signo)
+    return;
   *se = pack;
-  se->mask = &pack.tls->sigmask;
-  se->next = NULL;
-  if (end)
-    end->next = se;
-  end = se;
-  if (!start.next)
-    start.next = se;
-}
-
-void
-pending_signals::del ()
-{
-  sigpacket *next = curr->next;
-  prev->next = next;
-  curr->si.si_signo = 0;
-#ifdef DEBUGGING
-  curr->next = NULL;
-#endif
-  if (end == curr)
-    end = prev;
-  curr = next;
-}
-
-sigpacket *
-pending_signals::next ()
-{
-  sigpacket *res;
-  prev = curr;
-  if (!curr || !(curr = curr->next))
-    res = NULL;
-  else
-    res = curr;
-  return res;
+  se->next = start.next;
+  start.next = se;
 }
 
 /* Process signals by waiting for signal data to arrive in a pipe.
@@ -1341,36 +1200,29 @@ static void WINAPI
 wait_sig (VOID *)
 {
   _sig_tls = &_my_tls;
-  sig_hold = CreateEvent (&sec_none_nih, FALSE, FALSE, NULL);
+  bool sig_held = false;
 
   sigproc_printf ("entering ReadFile loop, my_readsig %p, my_sendsig %p",
 		  my_readsig, my_sendsig);
 
-  sigpacket pack;
-  pack.si.si_signo = 0;
   for (;;)
     {
-      if (pack.si.si_signo == __SIGHOLD)
-	WaitForSingleObject (sig_hold, INFINITE);
       DWORD nb;
-      pack.tls = NULL;
-      if (!ReadFile (my_readsig, &pack, sizeof (pack), &nb, NULL))
-	break;
-
-      if (nb != sizeof (pack))
+      sigpacket pack = {};
+      if (sigq.retry)
+	pack.si.si_signo = __SIGFLUSH;
+      else if (!ReadFile (my_readsig, &pack, sizeof (pack), &nb, NULL))
+	Sleep (INFINITE);	/* Assume were exiting.  Never exit this thread */
+      else if (nb != sizeof (pack) || !pack.si.si_signo)
 	{
-	  system_printf ("short read from signal pipe: %d != %d", nb,
-			 sizeof (pack));
+	  system_printf ("garbled signal pipe data nb %u, sig %d", nb, pack.si.si_signo);
 	  continue;
 	}
 
-      if (!pack.si.si_signo)
-	{
-#ifdef DEBUGGING
-	  system_printf ("zero signal?");
-#endif
-	  continue;
-	}
+      sigq.retry = false;
+      /* Don't process signals when we start exiting */
+      if (exit_state > ES_EXIT_STARTING && pack.si.si_signo > 0)
+	continue;
 
       sigset_t dummy_mask;
       if (!pack.mask)
@@ -1379,7 +1231,7 @@ wait_sig (VOID *)
 	  pack.mask = &dummy_mask;
 	}
 
-      sigpacket *q;
+      sigpacket *q = &sigq.start;
       bool clearwait = false;
       switch (pack.si.si_signo)
 	{
@@ -1392,75 +1244,73 @@ wait_sig (VOID *)
 	case __SIGPENDING:
 	  *pack.mask = 0;
 	  unsigned bit;
-	  sigq.reset ();
-	  while ((q = sigq.next ()))
-	    if (pack.tls->sigmask & (bit = SIGTOMASK (q->si.si_signo)))
+	  while ((q = q->next))
+	    if (pack.sigtls->sigmask & (bit = SIGTOMASK (q->si.si_signo)))
 	      *pack.mask |= bit;
 	  break;
 	case __SIGHOLD:
-	  goto loop;
+	  sig_held = true;
 	  break;
-	case __SIGNOHOLD:
-	case __SIGFLUSH:
-	case __SIGFLUSHFAST:
-	  sigq.reset ();
-	  while ((q = sigq.next ()))
-	    {
-	      int sig = q->si.si_signo;
-	      if (sig == __SIGDELETE || q->process () > 0)
-		sigq.del ();
-	      if (sig == __SIGNOHOLD && q->si.si_signo == SIGCHLD)
-		clearwait = true;
-	    }
-	  break;
-	case __SIGEXIT:
-	  my_sendsig = NULL;
-	  sigproc_printf ("saw __SIGEXIT");
-	  break;	/* handle below */
 	case __SIGSETPGRP:
 	  init_console_handler (true);
 	  break;
-	default:
+	case __SIGTHREADEXIT:
+	  {
+	    /* Serialize thread exit as the thread exit code can be interpreted
+	       as the process exit code in some cases when racing with
+	       ExitProcess/TerminateProcess.
+	       So, wait for the thread which sent this signal to exit, then
+	       release the process lock which it held and close it's handle.
+	       See cgf-000017 in DevNotes for more details.
+	       */
+	    HANDLE h = (HANDLE) pack.si.si_cyg;
+	    DWORD res = WaitForSingleObject (h, 5000);
+	    lock_process::force_release (pack.sigtls);
+	    ForceCloseHandle1 (h, exit_thread);
+	    if (res != WAIT_OBJECT_0)
+	      {
+#ifdef DEBUGGING
+		try_to_debug();
+#endif
+		system_printf ("WaitForSingleObject(%p) for thread exit returned %u", h, res);
+	      }
+	  }
+	  break;
+	default:	/* Normal (positive) signal */
 	  if (pack.si.si_signo < 0)
 	    sig_clear (-pack.si.si_signo);
 	  else
+	    sigq.add (pack);
+	case __SIGNOHOLD:
+	  sig_held = false;
+	case __SIGFLUSH:
+	case __SIGFLUSHFAST:
+	  if (!sig_held)
 	    {
-	      int sig = pack.si.si_signo;
-	      // FIXME: REALLY not right when taking threads into consideration.
-	      // We need a per-thread queue since each thread can have its own
-	      // list of blocked signals.  CGF 2005-08-24
-	      if (sigq.sigs[sig].si.si_signo && sigq.sigs[sig].tls == pack.tls)
-		sigproc_printf ("signal %d already queued", pack.si.si_signo);
-	      else
+	      sigpacket *qnext;
+	      /* Check the queue for signals.  There will always be at least one
+		 thing on the queue if this was a valid signal.  */
+	      while ((qnext = q->next))
 		{
-		  int sigres = pack.process ();
-		  if (sigres <= 0)
+		  if (qnext->si.si_signo && qnext->process () <= 0)
+		    q = qnext;
+		  else
 		    {
-#ifdef DEBUGGING2
-		      if (!sigres)
-			system_printf ("Failed to arm signal %d from pid %d", pack.si.si_signo, pack.pid);
-#endif
-		      sigq.add (pack);	// FIXME: Shouldn't add this in !sh condition
+		      q->next = qnext->next;
+		      qnext->si.si_signo = 0;
 		    }
 		}
-	      if (sig == SIGCHLD)
+	      if (pack.si.si_signo == SIGCHLD)
 		clearwait = true;
 	    }
 	  break;
 	}
-      if (clearwait)
+      if (clearwait && !have_execed)
 	proc_subproc (PROC_CLEARWAIT, 0);
-    loop:
       if (pack.wakeup)
 	{
 	  sigproc_printf ("signalling pack.wakeup %p", pack.wakeup);
 	  SetEvent (pack.wakeup);
 	}
-      if (pack.si.si_signo == __SIGEXIT)
-	break;
     }
-
-  close_my_readsig ();
-  sigproc_printf ("signal thread exiting");
-  ExitThread (0);
 }

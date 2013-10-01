@@ -1,6 +1,6 @@
 /* Remote debugging interface for boot monitors, for GDB.
 
-   Copyright (C) 1990-2002, 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 1990-2013 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.  Written by Rob Savoye for Cygnus.
    Resurrected from the ashes by Stu Grossman.
@@ -54,6 +54,7 @@
 #include "srec.h"
 #include "regcache.h"
 #include "gdbthread.h"
+#include "readline/readline.h"
 
 static char *dev_name;
 static struct target_ops *targ_ops;
@@ -852,7 +853,7 @@ monitor_open (char *args, struct monitor_ops *mon_ops, int from_tty)
    control.  */
 
 void
-monitor_close (int quitting)
+monitor_close (void)
 {
   if (monitor_desc)
     serial_close (monitor_desc);
@@ -876,7 +877,7 @@ monitor_close (int quitting)
 static void
 monitor_detach (struct target_ops *ops, char *args, int from_tty)
 {
-  pop_target ();		/* calls monitor_close to do the real work.  */
+  unpush_target (ops);		/* calls monitor_close to do the real work.  */
   if (from_tty)
     printf_unfiltered (_("Ending remote %s debugging\n"), target_shortname);
 }
@@ -1035,7 +1036,7 @@ monitor_interrupt_query (void)
 Give up (and stop debugging it)? ")))
     {
       target_mourn_inferior ();
-      deprecated_throw_reason (RETURN_QUIT);
+      quit ();
     }
 
   target_terminal_inferior ();
@@ -1438,7 +1439,7 @@ monitor_files_info (struct target_ops *ops)
 }
 
 static int
-monitor_write_memory (CORE_ADDR memaddr, char *myaddr, int len)
+monitor_write_memory (CORE_ADDR memaddr, gdb_byte *myaddr, int len)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
   unsigned int val, hostval;
@@ -1541,7 +1542,7 @@ monitor_write_memory (CORE_ADDR memaddr, char *myaddr, int len)
 
 
 static int
-monitor_write_memory_bytes (CORE_ADDR memaddr, char *myaddr, int len)
+monitor_write_memory_bytes (CORE_ADDR memaddr, gdb_byte *myaddr, int len)
 {
   unsigned char val;
   int written = 0;
@@ -1637,7 +1638,7 @@ longlong_hexchars (unsigned long long value,
    Which possably entails endian conversions.  */
 
 static int
-monitor_write_memory_longlongs (CORE_ADDR memaddr, char *myaddr, int len)
+monitor_write_memory_longlongs (CORE_ADDR memaddr, gdb_byte *myaddr, int len)
 {
   static char hexstage[20];	/* At least 16 digits required, plus null.  */
   char *endstring;
@@ -1645,7 +1646,7 @@ monitor_write_memory_longlongs (CORE_ADDR memaddr, char *myaddr, int len)
   long long value;
   int written = 0;
 
-  llptr = (unsigned long long *) myaddr;
+  llptr = (long long *) myaddr;
   if (len == 0)
     return 0;
   monitor_printf (current_monitor->setmem.cmdll, memaddr);
@@ -1685,7 +1686,7 @@ monitor_write_memory_longlongs (CORE_ADDR memaddr, char *myaddr, int len)
    monitor variations.  */
 
 static int
-monitor_write_memory_block (CORE_ADDR memaddr, char *myaddr, int len)
+monitor_write_memory_block (CORE_ADDR memaddr, gdb_byte *myaddr, int len)
 {
   int written;
 
@@ -1705,7 +1706,7 @@ monitor_write_memory_block (CORE_ADDR memaddr, char *myaddr, int len)
    which can only read a single byte/word/etc. at a time.  */
 
 static int
-monitor_read_memory_single (CORE_ADDR memaddr, char *myaddr, int len)
+monitor_read_memory_single (CORE_ADDR memaddr, gdb_byte *myaddr, int len)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
   unsigned int val;
@@ -1836,7 +1837,7 @@ monitor_read_memory_single (CORE_ADDR memaddr, char *myaddr, int len)
    than 16 bytes at a time.  */
 
 static int
-monitor_read_memory (CORE_ADDR memaddr, char *myaddr, int len)
+monitor_read_memory (CORE_ADDR memaddr, gdb_byte *myaddr, int len)
 {
   unsigned int val;
   char buf[512];
@@ -2175,36 +2176,52 @@ monitor_wait_srec_ack (void)
 /* monitor_load -- download a file.  */
 
 static void
-monitor_load (char *file, int from_tty)
+monitor_load (char *args, int from_tty)
 {
+  CORE_ADDR load_offset = 0;
+  char **argv;
+  struct cleanup *old_cleanups;
+  char *filename;
+
   monitor_debug ("MON load\n");
 
-  if (current_monitor->load_routine)
-    current_monitor->load_routine (monitor_desc, file, hashmark);
-  else
-    {				/* The default is ascii S-records.  */
-      int n;
-      unsigned long load_offset;
-      char buf[128];
+  if (args == NULL)
+    error_no_arg (_("file to load"));
 
-      /* Enable user to specify address for downloading as 2nd arg to load.  */
-      n = sscanf (file, "%s 0x%lx", buf, &load_offset);
-      if (n > 1)
-	file = buf;
-      else
-	load_offset = 0;
+  argv = gdb_buildargv (args);
+  old_cleanups = make_cleanup_freeargv (argv);
 
-      monitor_printf (current_monitor->load);
-      if (current_monitor->loadresp)
-	monitor_expect (current_monitor->loadresp, NULL, 0);
+  filename = tilde_expand (argv[0]);
+  make_cleanup (xfree, filename);
 
-      load_srec (monitor_desc, file, (bfd_vma) load_offset,
-		 32, SREC_ALL, hashmark,
-		 current_monitor->flags & MO_SREC_ACK ?
-		 monitor_wait_srec_ack : NULL);
+  /* Enable user to specify address for downloading as 2nd arg to load.  */
+  if (argv[1] != NULL)
+    {
+      const char *endptr;
 
-      monitor_expect_prompt (NULL, 0);
+      load_offset = strtoulst (argv[1], &endptr, 0);
+
+      /* If the last word was not a valid number then
+	 treat it as a file name with spaces in.  */
+      if (argv[1] == endptr)
+	error (_("Invalid download offset:%s."), argv[1]);
+
+      if (argv[2] != NULL)
+	error (_("Too many parameters."));
     }
+
+  monitor_printf (current_monitor->load);
+  if (current_monitor->loadresp)
+    monitor_expect (current_monitor->loadresp, NULL, 0);
+
+  load_srec (monitor_desc, filename, load_offset,
+	     32, SREC_ALL, hashmark,
+	     current_monitor->flags & MO_SREC_ACK ?
+	     monitor_wait_srec_ack : NULL);
+
+  monitor_expect_prompt (NULL, 0);
+
+  do_cleanups (old_cleanups);
 
   /* Finally, make the PC point at the start address.  */
   if (exec_bfd)

@@ -1,4 +1,4 @@
-# Copyright 2007-2012 Free Software Foundation, Inc.
+# Copyright 2007-2013 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,6 +35,9 @@ switch -glob -- [istarget] {
     }
     "mips*-*-*" {
 	set core-regs {mips-cpu.xml mips-cp0.xml mips-fpu.xml mips-dsp.xml}
+    }
+    "nios2-*-*" {
+	set core-regs {nios2-cpu.xml}
     }
     "powerpc*-*-*" {
 	set regdir "rs6000/"

@@ -737,6 +737,16 @@ struct _bfd_tilepro_elf_obj_tdata
    && elf_tdata (bfd) != NULL				\
    && elf_object_id (bfd) == TILEPRO_ELF_DATA)
 
+/* Allocate TILEPro ELF private object data.  */
+
+static bfd_boolean
+tilepro_elf_mkobject (bfd *abfd)
+{
+  return bfd_elf_allocate_object (abfd,
+				  sizeof (struct _bfd_tilepro_elf_obj_tdata),
+				  TILEPRO_ELF_DATA);
+}
+
 #include "elf/common.h"
 #include "elf/internal.h"
 
@@ -934,11 +944,11 @@ tilepro_elf_grok_prstatus (bfd *abfd, Elf_Internal_Note *note)
     return FALSE;
 
   /* pr_cursig */
-  elf_tdata (abfd)->core_signal =
+  elf_tdata (abfd)->core->signal =
     bfd_get_16 (abfd, note->descdata + TILEPRO_PRSTATUS_OFFSET_PR_CURSIG);
 
   /* pr_pid */
-  elf_tdata (abfd)->core_pid =
+  elf_tdata (abfd)->core->pid =
     bfd_get_32 (abfd, note->descdata + TILEPRO_PRSTATUS_OFFSET_PR_PID);
 
   /* pr_reg */
@@ -956,11 +966,11 @@ tilepro_elf_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
   if (note->descsz != TILEPRO_PRPSINFO_SIZEOF)
     return FALSE;
 
-  elf_tdata (abfd)->core_program
+  elf_tdata (abfd)->core->program
     = _bfd_elfcore_strndup (abfd,
 			    note->descdata + TILEPRO_PRPSINFO_OFFSET_PR_FNAME,
 			    16);
-  elf_tdata (abfd)->core_command
+  elf_tdata (abfd)->core->command
     = _bfd_elfcore_strndup (abfd,
 			    note->descdata + TILEPRO_PRPSINFO_OFFSET_PR_PSARGS,
 			    ELF_PR_PSARGS_SIZE);
@@ -970,7 +980,7 @@ tilepro_elf_grok_psinfo (bfd *abfd, Elf_Internal_Note *note)
      onto the end of the args in some (at least one anyway)
      implementations, so strip it off if it exists.  */
   {
-    char *command = elf_tdata (abfd)->core_command;
+    char *command = elf_tdata (abfd)->core->command;
     int n = strlen (command);
 
     if (0 < n && command[n - 1] == ' ')
@@ -1511,6 +1521,10 @@ tilepro_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       r_type = tilepro_elf_tls_transition (info, r_type, h == NULL);
@@ -1858,11 +1872,33 @@ tilepro_elf_gc_mark_hook (asection *sec,
   if (h != NULL)
     {
       switch (ELF32_R_TYPE (rel->r_info))
-      {
-      case R_TILEPRO_GNU_VTINHERIT:
-      case R_TILEPRO_GNU_VTENTRY:
-	break;
-      }
+	{
+	case R_TILEPRO_GNU_VTINHERIT:
+	case R_TILEPRO_GNU_VTENTRY:
+	  return NULL;
+	}
+    }
+
+  /* FIXME: The test here, in check_relocs and in relocate_section
+     dealing with TLS optimization, ought to be !info->executable.  */
+  if (info->shared)
+    {
+      switch (ELF32_R_TYPE (rel->r_info))
+	{
+	case R_TILEPRO_TLS_GD_CALL:
+	  /* This reloc implicitly references __tls_get_addr.  We know
+	     another reloc will reference the same symbol as the one
+	     on this reloc, so the real symbol and section will be
+	     gc marked when processing the other reloc.  That lets
+	     us handle __tls_get_addr here.  */
+	  h = elf_link_hash_lookup (elf_hash_table (info), "__tls_get_addr",
+				    FALSE, FALSE, TRUE);
+	  BFD_ASSERT (h != NULL);
+	  h->mark = 1;
+	  if (h->u.weakdef != NULL)
+	    h->u.weakdef->mark = 1;
+	  sym = NULL;
+	}
     }
 
   return _bfd_elf_gc_mark_hook (sec, info, rel, h, sym);
@@ -3873,8 +3909,9 @@ tilepro_elf_finish_dynamic_sections (bfd *output_bfd,
 		  PLT_ENTRY_SIZE - PLT_HEADER_SIZE);
 	}
 
-      elf_section_data (splt->output_section)->this_hdr.sh_entsize
-	= PLT_ENTRY_SIZE;
+      if (elf_section_data (splt->output_section) != NULL)
+	elf_section_data (splt->output_section)->this_hdr.sh_entsize
+	  = PLT_ENTRY_SIZE;
     }
 
   if (htab->elf.sgotplt)
@@ -3932,7 +3969,9 @@ tilepro_elf_plt_sym_val (bfd_vma i, const asection *plt,
 }
 
 static enum elf_reloc_type_class
-tilepro_reloc_type_class (const Elf_Internal_Rela *rela)
+tilepro_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			  const asection *rel_sec ATTRIBUTE_UNUSED,
+			  const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {
@@ -4007,6 +4046,8 @@ tilepro_additional_program_headers (bfd *abfd,
 #define elf_backend_grok_prstatus            tilepro_elf_grok_prstatus
 #define elf_backend_grok_psinfo              tilepro_elf_grok_psinfo
 #define elf_backend_additional_program_headers tilepro_additional_program_headers
+
+#define bfd_elf32_mkobject		     tilepro_elf_mkobject
 
 #define elf_backend_init_index_section	_bfd_elf_init_1_index_section
 

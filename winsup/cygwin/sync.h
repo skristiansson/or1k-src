@@ -1,7 +1,7 @@
 /* sync.h: Header file for cygwin synchronization primitives.
 
-   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2011, 2012
-   Red Hat, Inc.
+   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2010, 2011,
+   2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -16,7 +16,7 @@ details. */
 class muto
 {
 public:
-  const char *name;
+  char *name;
 private:
   LONG sync;	/* Used to serialize access to this class. */
   LONG waiters;	/* Number of threads waiting for lock. */
@@ -27,17 +27,17 @@ public:
   // class muto *next;
 
   /* The real constructor. */
-  muto *init (const char *) __attribute__ ((regparm (2)));
+  muto __reg2 *init (const char *);
 
 #if 0	/* FIXME: See comment in sync.cc */
   ~muto ()
 #endif
-  int acquire (DWORD ms = INFINITE) __attribute__ ((regparm (2))); /* Acquire the lock. */
-  int release () __attribute__ ((regparm (1)));		     /* Release the lock. */
+  int __reg2 acquire (DWORD ms = INFINITE); /* Acquire the lock. */
+  int __reg2 release (_cygtls * = &_my_tls); /* Release the lock. */
 
-  bool acquired () __attribute__ ((regparm (1)));
+  bool __reg1 acquired ();
   void upforgrabs () {tls = this;}  // just set to an invalid address
-  void grab () __attribute__ ((regparm (1)));
+  void __reg1 grab ();
   operator int () const {return !!name;}
 };
 
@@ -52,14 +52,19 @@ public:
   {
     locker.acquire ();
     skip_unlock = exiting;
-    if (exiting && exit_state < ES_PROCESS_LOCKED)
-      exit_state = ES_PROCESS_LOCKED;
+  }
+  void release ()
+  {
+    locker.release ();
+    skip_unlock = true;
   }
   ~lock_process ()
   {
     if (!skip_unlock)
-      locker.release ();
+      release ();
   }
+  operator LONG () const {return locker.visits; }
+  static void force_release (_cygtls *tid) {locker.release (tid);}
   friend class dtable;
   friend class fhandler_fifo;
 };

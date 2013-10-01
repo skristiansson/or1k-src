@@ -3,8 +3,7 @@
 
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
-   2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 1998-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -239,8 +238,10 @@ struct gdbarch
   gdbarch_regset_from_core_section_ftype *regset_from_core_section;
   struct core_regset_section * core_regset_sections;
   gdbarch_make_corefile_notes_ftype *make_corefile_notes;
+  gdbarch_elfcore_write_linux_prpsinfo_ftype *elfcore_write_linux_prpsinfo;
   gdbarch_find_memory_regions_ftype *find_memory_regions;
   gdbarch_core_xfer_shared_libraries_ftype *core_xfer_shared_libraries;
+  gdbarch_core_xfer_shared_libraries_aix_ftype *core_xfer_shared_libraries_aix;
   gdbarch_core_pid_to_str_ftype *core_pid_to_str;
   const char * gcore_bfd_target;
   int vtable_function_descriptors;
@@ -260,6 +261,7 @@ struct gdbarch
   gdbarch_process_record_ftype *process_record;
   gdbarch_process_record_signal_ftype *process_record_signal;
   gdbarch_gdb_signal_from_target_ftype *gdb_signal_from_target;
+  gdbarch_gdb_signal_to_target_ftype *gdb_signal_to_target;
   gdbarch_get_siginfo_type_ftype *get_siginfo_type;
   gdbarch_record_special_symbol_ftype *record_special_symbol;
   gdbarch_get_syscall_number_ftype *get_syscall_number;
@@ -283,7 +285,9 @@ struct gdbarch
   int has_dos_based_file_system;
   gdbarch_gen_return_address_ftype *gen_return_address;
   gdbarch_info_proc_ftype *info_proc;
+  gdbarch_core_info_proc_ftype *core_info_proc;
   gdbarch_iterate_over_objfiles_in_search_order_ftype *iterate_over_objfiles_in_search_order;
+  struct ravenscar_arch_ops * ravenscar_ops;
 };
 
 
@@ -407,8 +411,10 @@ struct gdbarch startup_gdbarch =
   0,  /* regset_from_core_section */
   0,  /* core_regset_sections */
   0,  /* make_corefile_notes */
+  0,  /* elfcore_write_linux_prpsinfo */
   0,  /* find_memory_regions */
   0,  /* core_xfer_shared_libraries */
+  0,  /* core_xfer_shared_libraries_aix */
   0,  /* core_pid_to_str */
   0,  /* gcore_bfd_target */
   0,  /* vtable_function_descriptors */
@@ -428,6 +434,7 @@ struct gdbarch startup_gdbarch =
   0,  /* process_record */
   0,  /* process_record_signal */
   0,  /* gdb_signal_from_target */
+  0,  /* gdb_signal_to_target */
   0,  /* get_siginfo_type */
   0,  /* record_special_symbol */
   0,  /* get_syscall_number */
@@ -451,7 +458,9 @@ struct gdbarch startup_gdbarch =
   0,  /* has_dos_based_file_system */
   default_gen_return_address,  /* gen_return_address */
   0,  /* info_proc */
+  0,  /* core_info_proc */
   default_iterate_over_objfiles_in_search_order,  /* iterate_over_objfiles_in_search_order */
+  NULL,  /* ravenscar_ops */
   /* startup_gdbarch() */
 };
 
@@ -542,6 +551,7 @@ gdbarch_alloc (const struct gdbarch_info *info,
   gdbarch->auto_wide_charset = default_auto_wide_charset;
   gdbarch->gen_return_address = default_gen_return_address;
   gdbarch->iterate_over_objfiles_in_search_order = default_iterate_over_objfiles_in_search_order;
+  gdbarch->ravenscar_ops = NULL;
   /* gdbarch_alloc() */
 
   return gdbarch;
@@ -705,8 +715,10 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of fetch_pointer_argument, has predicate.  */
   /* Skip verify of regset_from_core_section, has predicate.  */
   /* Skip verify of make_corefile_notes, has predicate.  */
+  /* Skip verify of elfcore_write_linux_prpsinfo, has predicate.  */
   /* Skip verify of find_memory_regions, has predicate.  */
   /* Skip verify of core_xfer_shared_libraries, has predicate.  */
+  /* Skip verify of core_xfer_shared_libraries_aix, has predicate.  */
   /* Skip verify of core_pid_to_str, has predicate.  */
   /* Skip verify of gcore_bfd_target, has predicate.  */
   /* Skip verify of vtable_function_descriptors, invalid_p == 0 */
@@ -728,6 +740,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of process_record, has predicate.  */
   /* Skip verify of process_record_signal, has predicate.  */
   /* Skip verify of gdb_signal_from_target, has predicate.  */
+  /* Skip verify of gdb_signal_to_target, has predicate.  */
   /* Skip verify of get_siginfo_type, has predicate.  */
   /* Skip verify of record_special_symbol, has predicate.  */
   /* Skip verify of get_syscall_number, has predicate.  */
@@ -750,7 +763,9 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of has_dos_based_file_system, invalid_p == 0 */
   /* Skip verify of gen_return_address, invalid_p == 0 */
   /* Skip verify of info_proc, has predicate.  */
+  /* Skip verify of core_info_proc, has predicate.  */
   /* Skip verify of iterate_over_objfiles_in_search_order, invalid_p == 0 */
+  /* Skip verify of ravenscar_ops, invalid_p == 0 */
   buf = ui_file_xstrdup (log, &length);
   make_cleanup (xfree, buf);
   if (length > 0)
@@ -868,6 +883,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
                       "gdbarch_dump: convert_register_p = <%s>\n",
                       host_address_to_string (gdbarch->convert_register_p));
   fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_core_info_proc_p() = %d\n",
+                      gdbarch_core_info_proc_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: core_info_proc = <%s>\n",
+                      host_address_to_string (gdbarch->core_info_proc));
+  fprintf_unfiltered (file,
                       "gdbarch_dump: gdbarch_core_pid_to_str_p() = %d\n",
                       gdbarch_core_pid_to_str_p (gdbarch));
   fprintf_unfiltered (file,
@@ -888,6 +909,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: core_xfer_shared_libraries = <%s>\n",
                       host_address_to_string (gdbarch->core_xfer_shared_libraries));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_core_xfer_shared_libraries_aix_p() = %d\n",
+                      gdbarch_core_xfer_shared_libraries_aix_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: core_xfer_shared_libraries_aix = <%s>\n",
+                      host_address_to_string (gdbarch->core_xfer_shared_libraries_aix));
   fprintf_unfiltered (file,
                       "gdbarch_dump: decr_pc_after_break = %s\n",
                       core_addr_to_string_nz (gdbarch->decr_pc_after_break));
@@ -942,6 +969,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: elf_make_msymbol_special = <%s>\n",
                       host_address_to_string (gdbarch->elf_make_msymbol_special));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_elfcore_write_linux_prpsinfo_p() = %d\n",
+                      gdbarch_elfcore_write_linux_prpsinfo_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: elfcore_write_linux_prpsinfo = <%s>\n",
+                      host_address_to_string (gdbarch->elfcore_write_linux_prpsinfo));
   fprintf_unfiltered (file,
                       "gdbarch_dump: fast_tracepoint_valid_at = <%s>\n",
                       host_address_to_string (gdbarch->fast_tracepoint_valid_at));
@@ -1002,6 +1035,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: gdb_signal_from_target = <%s>\n",
                       host_address_to_string (gdbarch->gdb_signal_from_target));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_gdb_signal_to_target_p() = %d\n",
+                      gdbarch_gdb_signal_to_target_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdb_signal_to_target = <%s>\n",
+                      host_address_to_string (gdbarch->gdb_signal_to_target));
   fprintf_unfiltered (file,
                       "gdbarch_dump: gen_return_address = <%s>\n",
                       host_address_to_string (gdbarch->gen_return_address));
@@ -1191,6 +1230,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: push_dummy_code = <%s>\n",
                       host_address_to_string (gdbarch->push_dummy_code));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: ravenscar_ops = %s\n",
+                      host_address_to_string (gdbarch->ravenscar_ops));
   fprintf_unfiltered (file,
                       "gdbarch_dump: gdbarch_read_pc_p() = %d\n",
                       gdbarch_read_pc_p (gdbarch));
@@ -3353,6 +3395,30 @@ set_gdbarch_make_corefile_notes (struct gdbarch *gdbarch,
 }
 
 int
+gdbarch_elfcore_write_linux_prpsinfo_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->elfcore_write_linux_prpsinfo != NULL;
+}
+
+char *
+gdbarch_elfcore_write_linux_prpsinfo (struct gdbarch *gdbarch, bfd *obfd, char *note_data, int *note_size, const struct elf_internal_linux_prpsinfo *info)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->elfcore_write_linux_prpsinfo != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_elfcore_write_linux_prpsinfo called\n");
+  return gdbarch->elfcore_write_linux_prpsinfo (obfd, note_data, note_size, info);
+}
+
+void
+set_gdbarch_elfcore_write_linux_prpsinfo (struct gdbarch *gdbarch,
+                                          gdbarch_elfcore_write_linux_prpsinfo_ftype elfcore_write_linux_prpsinfo)
+{
+  gdbarch->elfcore_write_linux_prpsinfo = elfcore_write_linux_prpsinfo;
+}
+
+int
 gdbarch_find_memory_regions_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -3398,6 +3464,30 @@ set_gdbarch_core_xfer_shared_libraries (struct gdbarch *gdbarch,
                                         gdbarch_core_xfer_shared_libraries_ftype core_xfer_shared_libraries)
 {
   gdbarch->core_xfer_shared_libraries = core_xfer_shared_libraries;
+}
+
+int
+gdbarch_core_xfer_shared_libraries_aix_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->core_xfer_shared_libraries_aix != NULL;
+}
+
+LONGEST
+gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch, gdb_byte *readbuf, ULONGEST offset, LONGEST len)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->core_xfer_shared_libraries_aix != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_core_xfer_shared_libraries_aix called\n");
+  return gdbarch->core_xfer_shared_libraries_aix (gdbarch, readbuf, offset, len);
+}
+
+void
+set_gdbarch_core_xfer_shared_libraries_aix (struct gdbarch *gdbarch,
+                                            gdbarch_core_xfer_shared_libraries_aix_ftype core_xfer_shared_libraries_aix)
+{
+  gdbarch->core_xfer_shared_libraries_aix = core_xfer_shared_libraries_aix;
 }
 
 int
@@ -3816,6 +3906,30 @@ set_gdbarch_gdb_signal_from_target (struct gdbarch *gdbarch,
                                     gdbarch_gdb_signal_from_target_ftype gdb_signal_from_target)
 {
   gdbarch->gdb_signal_from_target = gdb_signal_from_target;
+}
+
+int
+gdbarch_gdb_signal_to_target_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->gdb_signal_to_target != NULL;
+}
+
+int
+gdbarch_gdb_signal_to_target (struct gdbarch *gdbarch, enum gdb_signal signal)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->gdb_signal_to_target != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_gdb_signal_to_target called\n");
+  return gdbarch->gdb_signal_to_target (gdbarch, signal);
+}
+
+void
+set_gdbarch_gdb_signal_to_target (struct gdbarch *gdbarch,
+                                  gdbarch_gdb_signal_to_target_ftype gdb_signal_to_target)
+{
+  gdbarch->gdb_signal_to_target = gdb_signal_to_target;
 }
 
 int
@@ -4250,6 +4364,30 @@ set_gdbarch_info_proc (struct gdbarch *gdbarch,
   gdbarch->info_proc = info_proc;
 }
 
+int
+gdbarch_core_info_proc_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->core_info_proc != NULL;
+}
+
+void
+gdbarch_core_info_proc (struct gdbarch *gdbarch, char *args, enum info_proc_what what)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->core_info_proc != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_core_info_proc called\n");
+  gdbarch->core_info_proc (gdbarch, args, what);
+}
+
+void
+set_gdbarch_core_info_proc (struct gdbarch *gdbarch,
+                            gdbarch_core_info_proc_ftype core_info_proc)
+{
+  gdbarch->core_info_proc = core_info_proc;
+}
+
 void
 gdbarch_iterate_over_objfiles_in_search_order (struct gdbarch *gdbarch, iterate_over_objfiles_in_search_order_cb_ftype *cb, void *cb_data, struct objfile *current_objfile)
 {
@@ -4265,6 +4403,23 @@ set_gdbarch_iterate_over_objfiles_in_search_order (struct gdbarch *gdbarch,
                                                    gdbarch_iterate_over_objfiles_in_search_order_ftype iterate_over_objfiles_in_search_order)
 {
   gdbarch->iterate_over_objfiles_in_search_order = iterate_over_objfiles_in_search_order;
+}
+
+struct ravenscar_arch_ops *
+gdbarch_ravenscar_ops (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  /* Skip verify of ravenscar_ops, invalid_p == 0 */
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_ravenscar_ops called\n");
+  return gdbarch->ravenscar_ops;
+}
+
+void
+set_gdbarch_ravenscar_ops (struct gdbarch *gdbarch,
+                           struct ravenscar_arch_ops * ravenscar_ops)
+{
+  gdbarch->ravenscar_ops = ravenscar_ops;
 }
 
 

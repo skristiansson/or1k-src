@@ -1,5 +1,5 @@
 /* Tcl/Tk command definitions for Insight.
-   Copyright (C) 1994-2012 Free Software Foundation, Inc.
+   Copyright (C) 1994-2013 Free Software Foundation, Inc.
 
    Written by Stu Grossman <grossman@cygnus.com> of Cygnus Support.
    Substantially augmented by Martin Hunt, Keith Seitz & Jim Ingham of
@@ -487,9 +487,6 @@ gdb_clear_file (ClientData clientData, Tcl_Interp *interp,
 	target_kill ();
     }
 
-  if (target_has_execution)
-    pop_target ();
-
   delete_command (NULL, 0);
   exec_file_clear (0);
   symbol_file_clear (0);
@@ -969,6 +966,7 @@ gdb_load_info (ClientData clientData, Tcl_Interp *interp,
 
   if (!bfd_check_format (loadfile_bfd, bfd_object))
     {
+      do_cleanups (old_cleanups);
       gdbtk_set_result (interp, "Bad Object File");
       return TCL_ERROR;
     }
@@ -1463,7 +1461,7 @@ gdb_search (ClientData clientData, Tcl_Interp *interp,
 
   search_symbols (regexp, space, nfiles, files, &ss);
   if (ss != NULL)
-    old_chain = make_cleanup_free_search_symbols (ss);
+    old_chain = make_cleanup_free_search_symbols (&ss);
 
   Tcl_SetListObj (result_ptr->obj_ptr, 0, NULL);
 
@@ -1479,16 +1477,16 @@ gdb_search (ClientData clientData, Tcl_Interp *interp,
       if ((p->symbol != NULL
 	   && strncmp (SYMBOL_LINKAGE_NAME (p->symbol), "__tf", 4) != 0
 	   && strncmp (SYMBOL_LINKAGE_NAME (p->symbol), "_GLOBAL_", 8) != 0)
-	  || p->msymbol != NULL)
+	  || p->msymbol.minsym != NULL)
 	{
 	  elem = Tcl_NewListObj (0, NULL);
 
-	  if (p->msymbol == NULL)
+	  if (p->msymbol.minsym == NULL)
 	    Tcl_ListObjAppendElement (interp, elem,
 				      Tcl_NewStringObj (SYMBOL_PRINT_NAME (p->symbol), -1));
 	  else
 	    Tcl_ListObjAppendElement (interp, elem,
-				      Tcl_NewStringObj (SYMBOL_PRINT_NAME (p->msymbol), -1));
+				      Tcl_NewStringObj (SYMBOL_PRINT_NAME (p->msymbol.minsym), -1));
 
 	  if (show_files)
 	    {
@@ -1527,11 +1525,8 @@ gdb_search (ClientData clientData, Tcl_Interp *interp,
 */
 
 static int
-gdb_listfuncs (clientData, interp, objc, objv)
-     ClientData clientData;
-     Tcl_Interp *interp;
-     int objc;
-     Tcl_Obj *CONST objv[];
+gdb_listfuncs (ClientData clientData, Tcl_Interp *interp,
+	       int objc, Tcl_Obj *CONST objv[])
 {
   struct symtab *symtab;
   struct blockvector *bv;
@@ -2476,7 +2471,8 @@ gdb_update_mem (ClientData clientData, Tcl_Interp *interp,
   int max_ascii_len, max_val_len, max_label_len;
   char format, aschar;
   char *data, *tmp;
-  char buff[128], *mbuf, *mptr, *cptr, *bptr;
+  char buff[128], *bptr;
+  gdb_byte *mbuf, *mptr, *cptr;
   struct ui_file *stb;
   struct type *val_type;
   struct cleanup *old_chain;
@@ -2534,7 +2530,7 @@ gdb_update_mem (ClientData clientData, Tcl_Interp *interp,
   addr = string_to_core_addr (tmp);
 
   format = *(Tcl_GetStringFromObj (objv[3], NULL));
-  mbuf = (char *) xmalloc (nbytes + 32);
+  mbuf = (gdb_byte *) xmalloc (nbytes + 32);
   if (!mbuf)
     {
       gdbtk_set_result (interp, "Out of memory.");
@@ -2993,11 +2989,11 @@ pc_function_name (CORE_ADDR pc)
   else
     {
       /* ... if that fails, look it up in the minimal symbols. */
-      struct minimal_symbol *msym = NULL;
+      struct bound_minimal_symbol msym;
 
       msym = lookup_minimal_symbol_by_pc (pc);
-      if (msym != NULL)
-	funcname = GDBTK_SYMBOL_SOURCE_NAME (msym);
+      if (msym.minsym != NULL)
+	funcname = GDBTK_SYMBOL_SOURCE_NAME (msym.minsym);
     }
 
   if (funcname == NULL)

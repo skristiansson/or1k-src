@@ -1,6 +1,6 @@
 /* Definitions for values of C expressions, for GDB.
 
-   Copyright (C) 1986-2012 Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -90,8 +90,6 @@ extern void set_value_offset (struct value *, int offset);
    not_lval and be done with it?  */
 
 extern int deprecated_value_modifiable (struct value *value);
-extern void deprecated_set_value_modifiable (struct value *value,
-					     int modifiable);
 
 /* If a value represents a C++ object, then the `type' field gives the
    object's compile-time type.  If the object actually belongs to some
@@ -321,9 +319,15 @@ extern int value_fetch_lazy (struct value *val);
 extern int value_contents_equal (struct value *val1, struct value *val2);
 
 /* If nonzero, this is the value of a variable which does not actually
-   exist in the program.  */
+   exist in the program, at least partially.  If the value is lazy,
+   this may fetch it now.  */
 extern int value_optimized_out (struct value *value);
 extern void set_value_optimized_out (struct value *value, int val);
+
+/* Like value_optimized_out, but don't fetch the value even if it is
+   lazy.  Mainly useful for constructing other values using VALUE as
+   template.  */
+extern int value_optimized_out_const (const struct value *value);
 
 /* Like value_optimized_out, but return false if any bit in the object
    is valid.  */
@@ -431,6 +435,10 @@ extern int value_bytes_available (const struct value *value,
    whole object is unavailable.  */
 extern int value_entirely_available (struct value *value);
 
+/* Like value_entirely_available, but return false if any byte in the
+   whole object is available.  */
+extern int value_entirely_unavailable (struct value *value);
+
 /* Mark VALUE's content bytes starting at OFFSET and extending for
    LENGTH bytes as unavailable.  */
 
@@ -465,7 +473,12 @@ extern void mark_value_bytes_unavailable (struct value *value,
    value_available_contents_eq(val, 4, val, 12, 2) => 1
    value_available_contents_eq(val, 4, val, 12, 4) => 0
    value_available_contents_eq(val, 3, val, 4, 4) => 0
-*/
+
+   We only know whether a value chunk is available if we've tried to
+   read it.  As this routine is used by printing routines, which may
+   be printing values in the value history, long after the inferior is
+   gone, it works with const values.  Therefore, this routine must not
+   be called with lazy values.  */
 
 extern int value_available_contents_eq (const struct value *val1, int offset1,
 					const struct value *val2, int offset2,
@@ -481,6 +494,12 @@ extern int value_available_contents_eq (const struct value *val1, int offset1,
 extern void read_value_memory (struct value *val, int embedded_offset,
 			       int stack, CORE_ADDR memaddr,
 			       gdb_byte *buffer, size_t length);
+
+/* Cast SCALAR_VALUE to the element type of VECTOR_TYPE, then replicate
+   into each element of a new vector value with VECTOR_TYPE.  */
+
+struct value *value_vector_widen (struct value *scalar_value,
+				  struct type *vector_type);
 
 
 
@@ -557,7 +576,8 @@ extern CORE_ADDR address_from_register (struct type *type, int regnum,
 extern struct value *value_of_variable (struct symbol *var,
 					const struct block *b);
 
-extern struct value *address_of_variable (struct symbol *var, struct block *b);
+extern struct value *address_of_variable (struct symbol *var,
+					  const struct block *b);
 
 extern struct value *value_of_register (int regnum, struct frame_info *frame);
 
@@ -573,7 +593,6 @@ extern struct value *default_read_var_value (struct symbol *var,
 
 extern struct value *allocate_value (struct type *type);
 extern struct value *allocate_value_lazy (struct type *type);
-extern void allocate_value_contents (struct value *value);
 extern void value_contents_copy (struct value *dst, int dst_offset,
 				 struct value *src, int src_offset,
 				 int length);
@@ -644,7 +663,7 @@ enum oload_search_type { NON_METHOD, METHOD, BOTH };
 
 extern int find_overload_match (struct value **args, int nargs,
 				const char *name,
-				enum oload_search_type method, int lax,
+				enum oload_search_type method,
 				struct value **objp, struct symbol *fsym,
 				struct value **valp, struct symbol **symp,
 				int *staticp, const int no_adl);
@@ -691,6 +710,10 @@ extern int value_in (struct value *element, struct value *set);
 extern int value_bit_index (struct type *type, const gdb_byte *addr,
 			    int index);
 
+extern enum return_value_convention
+struct_return_convention (struct gdbarch *gdbarch, struct value *function,
+			  struct type *value_type);
+
 extern int using_struct_return (struct gdbarch *gdbarch,
 				struct value *function,
 				struct type *value_type);
@@ -708,22 +731,23 @@ extern struct value *evaluate_subexpression_type (struct expression *exp,
 
 extern void fetch_subexp_value (struct expression *exp, int *pc,
 				struct value **valp, struct value **resultp,
-				struct value **val_chain);
+				struct value **val_chain,
+				int preserve_errors);
 
 extern char *extract_field_op (struct expression *exp, int *subexp);
 
 extern struct value *evaluate_subexp_with_coercion (struct expression *,
 						    int *, enum noside);
 
-extern struct value *parse_and_eval (char *exp);
+extern struct value *parse_and_eval (const char *exp);
 
-extern struct value *parse_to_comma_and_eval (char **expp);
+extern struct value *parse_to_comma_and_eval (const char **expp);
 
 extern struct type *parse_and_eval_type (char *p, int length);
 
-extern CORE_ADDR parse_and_eval_address (char *exp);
+extern CORE_ADDR parse_and_eval_address (const char *exp);
 
-extern LONGEST parse_and_eval_long (char *exp);
+extern LONGEST parse_and_eval_long (const char *exp);
 
 extern void unop_promote (const struct language_defn *language,
 			  struct gdbarch *gdbarch,
@@ -792,10 +816,9 @@ struct internalvar_funcs
   void (*destroy) (void *data);
 };
 
-extern struct internalvar *
-create_internalvar_type_lazy (const char *name,
-			      const struct internalvar_funcs *funcs,
-			      void *data);
+extern struct internalvar *create_internalvar_type_lazy (const char *name,
+				const struct internalvar_funcs *funcs,
+				void *data);
 
 /* Compile an internal variable to an agent expression.  VAR is the
    variable to compile; EXPR and VALUE are the agent expression we are
@@ -885,7 +908,7 @@ extern void value_print (struct value *val, struct ui_file *stream,
 
 extern void value_print_array_elements (struct value *val,
 					struct ui_file *stream, int format,
-					enum val_prettyprint pretty);
+					enum val_prettyformat pretty);
 
 extern struct value *value_release_to_mark (struct value *mark);
 
@@ -911,8 +934,6 @@ extern void print_variable_and_value (const char *name,
 				      struct frame_info *frame,
 				      struct ui_file *stream,
 				      int indent);
-
-extern int check_field (struct type *, const char *);
 
 extern void typedef_print (struct type *type, struct symbol *news,
 			   struct ui_file *stream);

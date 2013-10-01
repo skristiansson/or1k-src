@@ -1,5 +1,5 @@
 /* Low level interface to Windows debugging, for gdbserver.
-   Copyright (C) 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2006-2013 Free Software Foundation, Inc.
 
    Contributed by Leo Zayas.  Based on "win32-nat.c" from GDB.
 
@@ -25,6 +25,8 @@
 #include "mem-break.h"
 #include "win32-low.h"
 #include "gdbthread.h"
+#include "dll.h"
+#include "hostio.h"
 
 #include <stdint.h>
 #include <windows.h>
@@ -32,7 +34,6 @@
 #include <imagehlp.h>
 #include <tlhelp32.h>
 #include <psapi.h>
-#include <sys/param.h>
 #include <process.h>
 
 #ifndef USE_WIN32API
@@ -87,12 +88,14 @@ static int soft_interrupt_requested = 0;
    by suspending all the threads.  */
 static int faked_breakpoint = 0;
 
+const struct target_desc *win32_tdesc;
+
 #define NUM_REGS (the_low_target.num_regs)
 
-typedef BOOL WINAPI (*winapi_DebugActiveProcessStop) (DWORD dwProcessId);
-typedef BOOL WINAPI (*winapi_DebugSetProcessKillOnExit) (BOOL KillOnExit);
-typedef BOOL WINAPI (*winapi_DebugBreakProcess) (HANDLE);
-typedef BOOL WINAPI (*winapi_GenerateConsoleCtrlEvent) (DWORD, DWORD);
+typedef BOOL (WINAPI *winapi_DebugActiveProcessStop) (DWORD dwProcessId);
+typedef BOOL (WINAPI *winapi_DebugSetProcessKillOnExit) (BOOL KillOnExit);
+typedef BOOL (WINAPI *winapi_DebugBreakProcess) (HANDLE);
+typedef BOOL (WINAPI *winapi_GenerateConsoleCtrlEvent) (DWORD, DWORD);
 
 static void win32_resume (struct thread_resume *resume_info, size_t n);
 
@@ -193,9 +196,6 @@ child_add_thread (DWORD pid, DWORD tid, HANDLE h, void *tlb)
   th->thread_local_base = (CORE_ADDR) (uintptr_t) tlb;
 
   add_thread (ptid, th);
-  set_inferior_regcache_data ((struct thread_info *)
-			      find_inferior_id (&all_threads, ptid),
-			      new_register_cache ());
 
   if (the_low_target.thread_added != NULL)
     (*the_low_target.thread_added) (th);
@@ -280,21 +280,30 @@ static int
 child_xfer_memory (CORE_ADDR memaddr, char *our, int len,
 		   int write, struct target_ops *target)
 {
-  SIZE_T done;
+  BOOL success;
+  SIZE_T done = 0;
+  DWORD lasterror = 0;
   uintptr_t addr = (uintptr_t) memaddr;
 
   if (write)
     {
-      WriteProcessMemory (current_process_handle, (LPVOID) addr,
-			  (LPCVOID) our, len, &done);
+      success = WriteProcessMemory (current_process_handle, (LPVOID) addr,
+				    (LPCVOID) our, len, &done);
+      if (!success)
+	lasterror = GetLastError ();
       FlushInstructionCache (current_process_handle, (LPCVOID) addr, len);
     }
   else
     {
-      ReadProcessMemory (current_process_handle, (LPCVOID) addr, (LPVOID) our,
-			 len, &done);
+      success = ReadProcessMemory (current_process_handle, (LPCVOID) addr,
+				   (LPVOID) our, len, &done);
+      if (!success)
+	lasterror = GetLastError ();
     }
-  return done;
+  if (!success && lasterror == ERROR_PARTIAL_COPY && done > 0)
+    return done;
+  else
+    return success ? done : -1;
 }
 
 /* Clear out any old thread list and reinitialize it to a pristine
@@ -308,6 +317,8 @@ child_init_thread_list (void)
 static void
 do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 {
+  struct process_info *proc;
+
   last_sig = GDB_SIGNAL_0;
 
   current_process_handle = proch;
@@ -319,7 +330,8 @@ do_initial_child_stuff (HANDLE proch, DWORD pid, int attached)
 
   memset (&current_event, 0, sizeof (current_event));
 
-  add_process (pid, attached);
+  proc = add_process (pid, attached);
+  proc->tdesc = win32_tdesc;
   child_init_thread_list ();
 
   if (the_low_target.initial_stuff != NULL)
@@ -448,7 +460,7 @@ strwinerror (DWORD error)
       LocalFree (msgbuf);
     }
   else
-    sprintf (buf, "unknown win32 error (%ld)", error);
+    sprintf (buf, "unknown win32 error (%u)", (unsigned) error);
 
   SetLastError (lasterr);
   return buf;
@@ -513,7 +525,7 @@ static int
 win32_create_inferior (char *program, char **program_args)
 {
 #ifndef USE_WIN32API
-  char real_path[MAXPATHLEN];
+  char real_path[PATH_MAX];
   char *orig_path, *new_path, *path_ptr;
 #endif
   BOOL ret;
@@ -544,8 +556,7 @@ win32_create_inferior (char *program, char **program_args)
       cygwin_conv_path_list (CCP_POSIX_TO_WIN_A, path_ptr, new_path, size);
       setenv ("PATH", new_path, 1);
      }
-  cygwin_conv_path (CCP_POSIX_TO_WIN_A, program, real_path,
-		    MAXPATHLEN);
+  cygwin_conv_path (CCP_POSIX_TO_WIN_A, program, real_path, PATH_MAX);
   program = real_path;
 #endif
 
@@ -1317,10 +1328,10 @@ handle_exception (struct target_waitstatus *ourstatus)
 	  ourstatus->kind = TARGET_WAITKIND_SPURIOUS;
 	  return;
 	}
-      OUTMSG2 (("gdbserver: unknown target exception 0x%08lx at 0x%s",
-		current_event.u.Exception.ExceptionRecord.ExceptionCode,
-		phex_nz ((uintptr_t) current_event.u.Exception.ExceptionRecord.
-		ExceptionAddress, sizeof (uintptr_t))));
+      OUTMSG2 (("gdbserver: unknown target exception 0x%08x at 0x%s",
+	    (unsigned) current_event.u.Exception.ExceptionRecord.ExceptionCode,
+	    phex_nz ((uintptr_t) current_event.u.Exception.ExceptionRecord.
+	    ExceptionAddress, sizeof (uintptr_t))));
       ourstatus->value.sig = GDB_SIGNAL_UNKNOWN;
       break;
     }
@@ -1452,7 +1463,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
     {
     case CREATE_THREAD_DEBUG_EVENT:
       OUTMSG2 (("gdbserver: kernel event CREATE_THREAD_DEBUG_EVENT "
-		"for pid=%d tid=%x)\n",
+		"for pid=%u tid=%x)\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId));
 
@@ -1465,7 +1476,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 
     case EXIT_THREAD_DEBUG_EVENT:
       OUTMSG2 (("gdbserver: kernel event EXIT_THREAD_DEBUG_EVENT "
-		"for pid=%d tid=%x\n",
+		"for pid=%u tid=%x\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId));
       child_delete_thread (current_event.dwProcessId,
@@ -1476,7 +1487,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 
     case CREATE_PROCESS_DEBUG_EVENT:
       OUTMSG2 (("gdbserver: kernel event CREATE_PROCESS_DEBUG_EVENT "
-		"for pid=%d tid=%x\n",
+		"for pid=%u tid=%x\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId));
       CloseHandle (current_event.u.CreateProcessInfo.hFile);
@@ -1510,7 +1521,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 
     case EXIT_PROCESS_DEBUG_EVENT:
       OUTMSG2 (("gdbserver: kernel event EXIT_PROCESS_DEBUG_EVENT "
-		"for pid=%d tid=%x\n",
+		"for pid=%u tid=%x\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId));
       ourstatus->kind = TARGET_WAITKIND_EXITED;
@@ -1522,7 +1533,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 
     case LOAD_DLL_DEBUG_EVENT:
       OUTMSG2 (("gdbserver: kernel event LOAD_DLL_DEBUG_EVENT "
-		"for pid=%d tid=%x\n",
+		"for pid=%u tid=%x\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId));
       CloseHandle (current_event.u.LoadDll.hFile);
@@ -1534,7 +1545,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 
     case UNLOAD_DLL_DEBUG_EVENT:
       OUTMSG2 (("gdbserver: kernel event UNLOAD_DLL_DEBUG_EVENT "
-		"for pid=%d tid=%x\n",
+		"for pid=%u tid=%x\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId));
       handle_unload_dll ();
@@ -1544,7 +1555,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 
     case EXCEPTION_DEBUG_EVENT:
       OUTMSG2 (("gdbserver: kernel event EXCEPTION_DEBUG_EVENT "
-		"for pid=%d tid=%x\n",
+		"for pid=%u tid=%x\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId));
       handle_exception (ourstatus);
@@ -1553,7 +1564,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
     case OUTPUT_DEBUG_STRING_EVENT:
       /* A message from the kernel (or Cygwin).  */
       OUTMSG2 (("gdbserver: kernel event OUTPUT_DEBUG_STRING_EVENT "
-		"for pid=%d tid=%x\n",
+		"for pid=%u tid=%x\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId));
       handle_output_debug_string (ourstatus);
@@ -1561,10 +1572,10 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 
     default:
       OUTMSG2 (("gdbserver: kernel event unknown "
-		"for pid=%d tid=%x code=%ld\n",
+		"for pid=%u tid=%x code=%x\n",
 		(unsigned) current_event.dwProcessId,
 		(unsigned) current_event.dwThreadId,
-		current_event.dwDebugEventCode));
+		(unsigned) current_event.dwDebugEventCode));
       break;
     }
 

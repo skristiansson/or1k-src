@@ -68,7 +68,11 @@ fhandler_fifo::arm (HANDLE h)
 
   bool res = SetEvent (h);
   if (!res)
-    debug_printf ("SetEvent for %s failed, %E", res);
+#ifdef DEBUGGING
+    debug_printf ("SetEvent for %s failed, %E", what);
+#else
+    debug_printf ("SetEvent failed, %E");
+#endif
   return res;
 }
 
@@ -270,7 +274,7 @@ fhandler_fifo::wait (HANDLE h)
    }
 }
 
-void __stdcall
+void __reg3
 fhandler_fifo::raw_read (void *in_ptr, size_t& len)
 {
   size_t orig_len = len;
@@ -286,7 +290,7 @@ fhandler_fifo::raw_read (void *in_ptr, size_t& len)
 	 could hang indefinitely.  Maybe implement a timeout?  */
       if (!DisconnectNamedPipe (get_io_handle ()))
 	{
-	  debug_printf ("DisconnecttNamedPipe failed, %E");
+	  debug_printf ("DisconnectNamedPipe failed, %E");
 	  goto errno_out;
 	}
       else if (!ConnectNamedPipe (get_io_handle (), get_overlapped ())
@@ -309,7 +313,7 @@ errout:
   len = -1;
 }
 
-int __stdcall
+int __reg2
 fhandler_fifo::fstatvfs (struct statvfs *sfs)
 {
   fhandler_disk_file fh (pc);

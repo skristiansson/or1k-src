@@ -1,7 +1,7 @@
 /* fhandler_socket.cc. See fhandler.h for a description of the fhandler classes.
 
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011, 2012, 2013 Red Hat, Inc.
 
    This file is part of Cygwin.
 
@@ -14,16 +14,18 @@
 #define  __INSIDE_CYGWIN_NET__
 #define USE_SYS_TYPES_FD_SET
 
+#define _BSDTYPES_DEFINED
 #include "winsup.h"
+#undef _BSDTYPES_DEFINED
+#include <ws2tcpip.h>
+#include <mswsock.h>
+#include <iphlpapi.h>
 #include "cygerrno.h"
 #include "security.h"
 #include "path.h"
 #include "fhandler.h"
 #include "dtable.h"
 #include "cygheap.h"
-#include <ws2tcpip.h>
-#include <mswsock.h>
-#include <iphlpapi.h>
 #include <asm/byteorder.h>
 #include "cygwin/version.h"
 #include "perprocess.h"
@@ -72,6 +74,21 @@ get_inet_addr (const struct sockaddr *in, int inlen,
   switch (in->sa_family)
     {
     case AF_LOCAL:
+      /* Check for abstract socket. These are generated for AF_LOCAL datagram
+	 sockets in recv_internal, to allow a datagram server to use sendto
+	 after recvfrom. */
+      if (inlen >= (int) sizeof (in->sa_family) + 7
+	  && in->sa_data[0] == '\0' && in->sa_data[1] == 'd'
+	  && in->sa_data[6] == '\0')
+	{
+	  struct sockaddr_in addr;
+	  addr.sin_family = AF_INET;
+	  sscanf (in->sa_data + 2, "%04hx", &addr.sin_port);
+	  addr.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
+	  *outlen = sizeof addr;
+	  memcpy (out, &addr, *outlen);
+	  return 0;
+	}
       break;
     case AF_INET:
     case AF_INET6:
@@ -217,7 +234,7 @@ fhandler_socket::~fhandler_socket ()
 char *
 fhandler_socket::get_proc_fd_name (char *buf)
 {
-  __small_sprintf (buf, "socket:[%d]", get_socket ());
+  __small_sprintf (buf, "socket:[%lu]", get_socket ());
   return buf;
 }
 
@@ -313,7 +330,7 @@ fhandler_socket::af_local_send_secret ()
 bool
 fhandler_socket::af_local_recv_cred ()
 {
-  struct ucred out = { (pid_t) 0, (__uid32_t) -1, (__gid32_t) -1 };
+  struct ucred out = { (pid_t) 0, (uid_t) -1, (gid_t) -1 };
   int rest = sizeof out;
   char *ptr = (char *) &out;
   while (rest > 0)
@@ -406,8 +423,8 @@ fhandler_socket::af_local_set_cred ()
   sec_uid = geteuid32 ();
   sec_gid = getegid32 ();
   sec_peer_pid = (pid_t) 0;
-  sec_peer_uid = (__uid32_t) -1;
-  sec_peer_gid = (__gid32_t) -1;
+  sec_peer_uid = (uid_t) -1;
+  sec_peer_gid = (gid_t) -1;
 }
 
 void
@@ -489,7 +506,7 @@ search_wsa_event_slot (LONG new_serial_number)
 				  everyone_sd (CYG_MUTANT_ACCESS));
       status = NtCreateMutant (&wsa_slot_mtx, CYG_MUTANT_ACCESS, &attr, FALSE);
       if (!NT_SUCCESS (status))
-	api_fatal ("Couldn't create/open shared socket mutex %S, %p",
+	api_fatal ("Couldn't create/open shared socket mutex %S, %y",
 		   &uname, status);
     }
   switch (WaitForSingleObject (wsa_slot_mtx, INFINITE))
@@ -551,7 +568,7 @@ fhandler_socket::init_events ()
       status = NtCreateMutant (&wsock_mtx, CYG_MUTANT_ACCESS, &attr, FALSE);
       if (!NT_SUCCESS (status))
 	{
-	  debug_printf ("NtCreateMutant(%S), %p", &uname, status);
+	  debug_printf ("NtCreateMutant(%S), %y", &uname, status);
 	  set_errno (ENOBUFS);
 	  return false;
 	}
@@ -707,7 +724,7 @@ fhandler_socket::fixup_before_fork_exec (DWORD win_pid)
   if (ret)
     set_winsock_errno ();
   else
-    debug_printf ("WSADuplicateSocket succeeded (%lx)", prot_info_ptr->dwProviderReserved);
+    debug_printf ("WSADuplicateSocket succeeded (%x)", prot_info_ptr->dwProviderReserved);
   return (int) ret;
 }
 
@@ -737,7 +754,7 @@ fhandler_socket::fixup_after_fork (HANDLE parent)
 	 socket is potentially inheritable again. */
       SetHandleInformation ((HANDLE) new_sock, HANDLE_FLAG_INHERIT, 0);
       set_io_handle ((HANDLE) new_sock);
-      debug_printf ("WSASocket succeeded (%lx)", new_sock);
+      debug_printf ("WSASocket succeeded (%p)", new_sock);
     }
 }
 
@@ -802,8 +819,8 @@ fhandler_socket::dup (fhandler_base *child, int flags)
   return -1;
 }
 
-int __stdcall
-fhandler_socket::fstat (struct __stat64 *buf)
+int __reg2
+fhandler_socket::fstat (struct stat *buf)
 {
   int res;
   if (get_device () == FH_UNIX)
@@ -821,7 +838,7 @@ fhandler_socket::fstat (struct __stat64 *buf)
       if (!res)
 	{
 	  buf->st_dev = 0;
-	  buf->st_ino = (__ino64_t) ((DWORD) get_handle ());
+	  buf->st_ino = (ino_t) ((uintptr_t) get_handle ());
 	  buf->st_mode = S_IFSOCK | S_IRWXU | S_IRWXG | S_IRWXO;
 	  buf->st_size = 0;
 	}
@@ -829,7 +846,7 @@ fhandler_socket::fstat (struct __stat64 *buf)
   return res;
 }
 
-int __stdcall
+int __reg2
 fhandler_socket::fstatvfs (struct statvfs *sfs)
 {
   if (get_device () == FH_UNIX)
@@ -857,7 +874,7 @@ fhandler_socket::fchmod (mode_t mode)
 }
 
 int
-fhandler_socket::fchown (__uid32_t uid, __gid32_t gid)
+fhandler_socket::fchown (uid_t uid, gid_t gid)
 {
   if (get_device () == FH_UNIX)
     {
@@ -869,7 +886,7 @@ fhandler_socket::fchown (__uid32_t uid, __gid32_t gid)
 }
 
 int
-fhandler_socket::facl (int cmd, int nentries, __aclent32_t *aclbufp)
+fhandler_socket::facl (int cmd, int nentries, aclent_t *aclbufp)
 {
   if (get_device () == FH_UNIX)
     {
@@ -900,17 +917,43 @@ fhandler_socket::bind (const struct sockaddr *name, int namelen)
     {
 #define un_addr ((struct sockaddr_un *) name)
       struct sockaddr_in sin;
-      int len = sizeof sin;
+      int len = namelen - offsetof (struct sockaddr_un, sun_path);
 
-      if (strlen (un_addr->sun_path) >= UNIX_PATH_LEN)
+      /* Check that name is within bounds.  Don't check if the string is
+         NUL-terminated, because there are projects out there which set
+	 namelen to a value which doesn't cover the trailing NUL. */
+      if (len <= 1 || (len = strnlen (un_addr->sun_path, len)) > UNIX_PATH_MAX)
 	{
-	  set_errno (ENAMETOOLONG);
+	  set_errno (len <= 1 ? (len == 1 ? ENOENT : EINVAL) : ENAMETOOLONG);
 	  goto out;
 	}
+      /* Copy over the sun_path string into a buffer big enough to add a
+	 trailing NUL. */
+      char sun_path[len + 1];
+      strncpy (sun_path, un_addr->sun_path, len);
+      sun_path[len] = '\0';
+
+      /* This isn't entirely foolproof, but we check first if the file exists
+	 so we can return with EADDRINUSE before having bound the socket.
+	 This allows an application to call bind again on the same socket using
+	 another filename.  If we bind first, the application will not be able
+	 to call bind successfully ever again. */
+      path_conv pc (sun_path, PC_SYM_FOLLOW);
+      if (pc.error)
+	{
+	  set_errno (pc.error);
+	  goto out;
+	}
+      if (pc.exists ())
+	{
+	  set_errno (EADDRINUSE);
+	  goto out;
+	}
+
       sin.sin_family = AF_INET;
       sin.sin_port = 0;
       sin.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
-      if (::bind (get_socket (), (sockaddr *) &sin, len))
+      if (::bind (get_socket (), (sockaddr *) &sin, len = sizeof sin))
 	{
 	  syscall_printf ("AF_LOCAL: bind failed");
 	  set_winsock_errno ();
@@ -926,17 +969,6 @@ fhandler_socket::bind (const struct sockaddr *name, int namelen)
       sin.sin_port = ntohs (sin.sin_port);
       debug_printf ("AF_LOCAL: socket bound to port %u", sin.sin_port);
 
-      path_conv pc (un_addr->sun_path, PC_SYM_FOLLOW);
-      if (pc.error)
-	{
-	  set_errno (pc.error);
-	  goto out;
-	}
-      if (pc.exists ())
-	{
-	  set_errno (EADDRINUSE);
-	  goto out;
-	}
       mode_t mode = adjust_socket_file_mode ((S_IRWXU | S_IRWXG | S_IRWXO)
 					     & ~cygheap->umask);
       DWORD fattr = FILE_ATTRIBUTE_SYSTEM;
@@ -992,12 +1024,12 @@ fhandler_socket::bind (const struct sockaddr *name, int namelen)
 	      status = NtSetInformationFile (fh, &io, &fdi, sizeof fdi,
 					     FileDispositionInformation);
 	      if (!NT_SUCCESS (status))
-		debug_printf ("Setting delete dispostion failed, status = %p",
+		debug_printf ("Setting delete dispostion failed, status = %y",
 			      status);
 	    }
 	  else
 	    {
-	      set_sun_path (un_addr->sun_path);
+	      set_sun_path (sun_path);
 	      res = 0;
 	    }
 	  NtClose (fh);
@@ -1011,10 +1043,7 @@ fhandler_socket::bind (const struct sockaddr *name, int namelen)
 	  /* If the application didn't explicitely request SO_REUSEADDR,
 	     enforce POSIX standard socket binding behaviour by setting the
 	     SO_EXCLUSIVEADDRUSE socket option.  See cygwin_setsockopt()
-	     for a more detailed description.
-
-	     KB 870562: Note that a bug in Win2K SP1-3 and XP up to SP1 only
-	     enables this option for users in the local administrators group. */
+	     for a more detailed description. */
 	  int on = 1;
 	  int ret = ::setsockopt (get_socket (), SOL_SOCKET,
 				  ~(SO_REUSEADDR),
@@ -1038,8 +1067,6 @@ fhandler_socket::connect (const struct sockaddr *name, int namelen)
   struct sockaddr_storage sst;
   DWORD err;
   int type;
-
-  pthread_testcancel ();
 
   if (get_inet_addr (name, namelen, &sst, &namelen, &type, connect_secret)
       == SOCKET_ERROR)
@@ -1151,8 +1178,6 @@ fhandler_socket::accept4 (struct sockaddr *peer, int *len, int flags)
   struct sockaddr_storage lpeer;
   int llen = sizeof (struct sockaddr_storage);
 
-  pthread_testcancel ();
-
   int res = 0;
   while (!(res = wait_for_events (FD_ACCEPT | FD_CLOSE, 0))
 	 && (res = ::accept (get_socket (), (struct sockaddr *) &lpeer, &llen))
@@ -1238,7 +1263,7 @@ fhandler_socket::getsockname (struct sockaddr *name, int *namelen)
       sun.sun_family = AF_LOCAL;
       sun.sun_path[0] = '\0';
       if (get_sun_path ())
-	strncat (sun.sun_path, get_sun_path (), UNIX_PATH_LEN - 1);
+	strncat (sun.sun_path, get_sun_path (), UNIX_PATH_MAX - 1);
       memcpy (name, &sun, MIN (*namelen, (int) SUN_LEN (&sun) + 1));
       *namelen = (int) SUN_LEN (&sun) + (get_sun_path () ? 1 : 0);
       res = 0;
@@ -1312,7 +1337,7 @@ fhandler_socket::getpeername (struct sockaddr *name, int *namelen)
       sun.sun_family = AF_LOCAL;
       sun.sun_path[0] = '\0';
       if (get_peer_sun_path ())
-	strncat (sun.sun_path, get_peer_sun_path (), UNIX_PATH_LEN - 1);
+	strncat (sun.sun_path, get_peer_sun_path (), UNIX_PATH_MAX - 1);
       memcpy (name, &sun, MIN (*namelen, (int) SUN_LEN (&sun) + 1));
       *namelen = (int) SUN_LEN (&sun) + (get_peer_sun_path () ? 1 : 0);
     }
@@ -1323,30 +1348,6 @@ fhandler_socket::getpeername (struct sockaddr *name, int *namelen)
     }
 
   return res;
-}
-
-void __stdcall
-fhandler_socket::read (void *in_ptr, size_t& len)
-{
-  WSABUF wsabuf = { len, (char *) in_ptr };
-  WSAMSG wsamsg = { NULL, 0, &wsabuf, 1, { 0,  NULL }, 0 };
-  len = recv_internal (&wsamsg, false);
-}
-
-int
-fhandler_socket::readv (const struct iovec *const iov, const int iovcnt,
-			ssize_t tot)
-{
-  WSABUF wsabuf[iovcnt];
-  WSABUF *wsaptr = wsabuf + iovcnt;
-  const struct iovec *iovptr = iov + iovcnt;
-  while (--wsaptr >= wsabuf)
-    {
-      wsaptr->len = (--iovptr)->iov_len;
-      wsaptr->buf = (char *) iovptr->iov_base;
-    }
-  WSAMSG wsamsg = { NULL, 0, wsabuf, iovcnt, { 0,  NULL}, 0 };
-  return recv_internal (&wsamsg, false);
 }
 
 /* There's no DLL which exports the symbol WSARecvMsg.  One has to call
@@ -1372,6 +1373,7 @@ fhandler_socket::recv_internal (LPWSAMSG wsamsg, bool use_recvmsg)
   LPWSABUF &wsabuf = wsamsg->lpBuffers;
   ULONG &wsacnt = wsamsg->dwBufferCount;
   static NO_COPY LPFN_WSARECVMSG WSARecvMsg;
+  int orig_namelen = wsamsg->namelen;
 
   DWORD wait_flags = wsamsg->dwFlags;
   bool waitall = !!(wait_flags & MSG_WAITALL);
@@ -1468,34 +1470,136 @@ fhandler_socket::recv_internal (LPWSAMSG wsamsg, bool use_recvmsg)
       /* According to SUSv3, errno isn't set in that case and no error
 	 condition is returned. */
       if (WSAGetLastError () == WSAEMSGSIZE)
-	return ret + wret;
-
-      if (!ret)
+	ret += wret;
+      else if (!ret)
 	{
 	  /* ESHUTDOWN isn't defined for recv in SUSv3.  Simply EOF is returned
 	     in this case. */
 	  if (WSAGetLastError () == WSAESHUTDOWN)
-	    return 0;
+	    ret = 0;
+	  else
+	    {
+	      set_winsock_errno ();
+	      return SOCKET_ERROR;
+	    }
+	}
+    }
 
-	  set_winsock_errno ();
-	  return SOCKET_ERROR;
+  if (get_addr_family () == AF_LOCAL && wsamsg->name != NULL
+      && orig_namelen >= (int) sizeof (sa_family_t))
+    {
+      /* WSARecvFrom copied the sockaddr_in block to wsamsg->name.  We have to
+	 overwrite it with a sockaddr_un block.  For datagram sockets we
+	 generate a sockaddr_un with a filename analogue to abstract socket
+	 names under Linux.  See `man 7 unix' under Linux for a description. */
+      sockaddr_un *un = (sockaddr_un *) wsamsg->name;
+      un->sun_family = AF_LOCAL;
+      int len = orig_namelen - offsetof (struct sockaddr_un, sun_path);
+      if (len > 0)
+	{
+	  if (get_socket_type () == SOCK_DGRAM)
+	    {
+	      if (len >= 7)
+		{
+		  __small_sprintf (un->sun_path + 1, "d%04x",
+			       ((struct sockaddr_in *) wsamsg->name)->sin_port);
+		  wsamsg->namelen = offsetof (struct sockaddr_un, sun_path) + 7;
+		}
+	      else
+		wsamsg->namelen = offsetof (struct sockaddr_un, sun_path) + 1;
+	      un->sun_path[0] = '\0';
+	    }
+	  else if (!get_peer_sun_path ())
+	    wsamsg->namelen = sizeof (sa_family_t);
+	  else
+	    {
+	      memset (un->sun_path, 0, len);
+	      strncpy (un->sun_path, get_peer_sun_path (), len);
+	      if (un->sun_path[len - 1] == '\0')
+		len = strlen (un->sun_path) + 1;
+	      if (len > UNIX_PATH_MAX)
+		len = UNIX_PATH_MAX;
+	      wsamsg->namelen = offsetof (struct sockaddr_un, sun_path) + len;
+	    }
 	}
     }
 
   return ret;
 }
 
+void __reg3
+fhandler_socket::read (void *in_ptr, size_t& len)
+{
+  char *ptr = (char *) in_ptr;
+
+#ifdef __x86_64__
+  /* size_t is 64 bit, but the len member in WSABUF is 32 bit.
+     Split buffer if necessary. */
+  DWORD bufcnt = len / UINT32_MAX + ((!len || (len % UINT32_MAX)) ? 1 : 0);
+  WSABUF wsabuf[bufcnt];
+  WSAMSG wsamsg = { NULL, 0, wsabuf, bufcnt, { 0,  NULL }, 0 };
+  /* Don't use len as loop condition, it could be 0. */
+  for (WSABUF *wsaptr = wsabuf; bufcnt--; ++wsaptr)
+    {
+      wsaptr->len = MIN (len, UINT32_MAX);
+      wsaptr->buf = ptr;
+      len -= wsaptr->len;
+      ptr += wsaptr->len;
+    }
+#else
+  WSABUF wsabuf = { len, ptr };
+  WSAMSG wsamsg = { NULL, 0, &wsabuf, 1, { 0,  NULL }, 0 };
+#endif
+  
+  len = recv_internal (&wsamsg, false);
+}
+
 ssize_t
-fhandler_socket::recvfrom (void *ptr, size_t len, int flags,
+fhandler_socket::readv (const struct iovec *const iov, const int iovcnt,
+			ssize_t tot)
+{
+  WSABUF wsabuf[iovcnt];
+  WSABUF *wsaptr = wsabuf + iovcnt;
+  const struct iovec *iovptr = iov + iovcnt;
+  while (--wsaptr >= wsabuf)
+    {
+      wsaptr->len = (--iovptr)->iov_len;
+      wsaptr->buf = (char *) iovptr->iov_base;
+    }
+  WSAMSG wsamsg = { NULL, 0, wsabuf, (DWORD) iovcnt, { 0,  NULL}, 0 };
+  return recv_internal (&wsamsg, false);
+}
+
+ssize_t
+fhandler_socket::recvfrom (void *in_ptr, size_t len, int flags,
 			   struct sockaddr *from, int *fromlen)
 {
-  pthread_testcancel ();
+  char *ptr = (char *) in_ptr;
 
-  WSABUF wsabuf = { len, (char *) ptr };
+#ifdef __x86_64__
+  /* size_t is 64 bit, but the len member in WSABUF is 32 bit.
+     Split buffer if necessary. */
+  DWORD bufcnt = len / UINT32_MAX + ((!len || (len % UINT32_MAX)) ? 1 : 0);
+  WSABUF wsabuf[bufcnt];
+  WSAMSG wsamsg = { from, from && fromlen ? *fromlen : 0,
+		    wsabuf, bufcnt,
+		    { 0,  NULL },
+		    (DWORD) flags };
+  /* Don't use len as loop condition, it could be 0. */
+  for (WSABUF *wsaptr = wsabuf; bufcnt--; ++wsaptr)
+    {
+      wsaptr->len = MIN (len, UINT32_MAX);
+      wsaptr->buf = ptr;
+      len -= wsaptr->len;
+      ptr += wsaptr->len;
+    }
+#else
+  WSABUF wsabuf = { len, ptr };
   WSAMSG wsamsg = { from, from && fromlen ? *fromlen : 0,
 		    &wsabuf, 1,
 		    { 0, NULL},
-		    flags };
+		    (DWORD) flags };
+#endif
   ssize_t ret = recv_internal (&wsamsg, false);
   if (fromlen)
     *fromlen = wsamsg.namelen;
@@ -1505,15 +1609,12 @@ fhandler_socket::recvfrom (void *ptr, size_t len, int flags,
 ssize_t
 fhandler_socket::recvmsg (struct msghdr *msg, int flags)
 {
-  pthread_testcancel ();
-
   /* TODO: Descriptor passing on AF_LOCAL sockets. */
 
   /* Disappointing but true:  Even if WSARecvMsg is supported, it's only
      supported for datagram and raw sockets. */
   bool use_recvmsg = true;
-  if (get_socket_type () == SOCK_STREAM || get_addr_family () == AF_LOCAL
-      || !wincap.has_recvmsg ())
+  if (get_socket_type () == SOCK_STREAM || get_addr_family () == AF_LOCAL)
     {
       use_recvmsg = false;
       msg->msg_controllen = 0;
@@ -1528,9 +1629,9 @@ fhandler_socket::recvmsg (struct msghdr *msg, int flags)
       wsaptr->buf = (char *) iovptr->iov_base;
     }
   WSAMSG wsamsg = { (struct sockaddr *) msg->msg_name, msg->msg_namelen,
-		    wsabuf, msg->msg_iovlen,
-		    { msg->msg_controllen, (char *) msg->msg_control },
-		    flags };
+		    wsabuf, (DWORD) msg->msg_iovlen,
+		    { (DWORD) msg->msg_controllen, (char *) msg->msg_control },
+		    (DWORD) flags };
   ssize_t ret = recv_internal (&wsamsg, use_recvmsg);
   if (ret >= 0)
     {
@@ -1542,34 +1643,10 @@ fhandler_socket::recvmsg (struct msghdr *msg, int flags)
   return ret;
 }
 
-int
-fhandler_socket::write (const void *ptr, size_t len)
-{
-  WSABUF wsabuf = { len, (char *) ptr };
-  WSAMSG wsamsg = { NULL, 0, &wsabuf, 1, { 0, NULL }, 0 };
-  return send_internal (&wsamsg, 0);
-}
-
-int
-fhandler_socket::writev (const struct iovec *const iov, const int iovcnt,
-			 ssize_t tot)
-{
-  WSABUF wsabuf[iovcnt];
-  WSABUF *wsaptr = wsabuf;
-  const struct iovec *iovptr = iov;
-  for (int i = 0; i < iovcnt; ++i)
-    {
-      wsaptr->len = iovptr->iov_len;
-      (wsaptr++)->buf = (char *) (iovptr++)->iov_base;
-    }
-  WSAMSG wsamsg = { NULL, 0, wsabuf, iovcnt, { 0, NULL}, 0 };
-  return send_internal (&wsamsg, 0);
-}
-
 inline ssize_t
 fhandler_socket::send_internal (struct _WSAMSG *wsamsg, int flags)
 {
-  int res = 0;
+  ssize_t res = 0;
   DWORD ret = 0, err = 0, sum = 0, off = 0;
   WSABUF buf;
   bool use_sendmsg = false;
@@ -1650,33 +1727,91 @@ fhandler_socket::send_internal (struct _WSAMSG *wsamsg, int flags)
 }
 
 ssize_t
-fhandler_socket::sendto (const void *ptr, size_t len, int flags,
+fhandler_socket::write (const void *in_ptr, size_t len)
+{
+  char *ptr = (char *) in_ptr;
+
+#ifdef __x86_64__
+  /* size_t is 64 bit, but the len member in WSABUF is 32 bit.
+     Split buffer if necessary. */
+  DWORD bufcnt = len / UINT32_MAX + ((!len || (len % UINT32_MAX)) ? 1 : 0);
+  WSABUF wsabuf[bufcnt];
+  WSAMSG wsamsg = { NULL, 0, wsabuf, bufcnt, { 0,  NULL }, 0 };
+  /* Don't use len as loop condition, it could be 0. */
+  for (WSABUF *wsaptr = wsabuf; bufcnt--; ++wsaptr)
+    {
+      wsaptr->len = MIN (len, UINT32_MAX);
+      wsaptr->buf = ptr;
+      len -= wsaptr->len;
+      ptr += wsaptr->len;
+    }
+#else
+  WSABUF wsabuf = { len, ptr };
+  WSAMSG wsamsg = { NULL, 0, &wsabuf, 1, { 0, NULL }, 0 };
+#endif
+  return send_internal (&wsamsg, 0);
+}
+
+ssize_t
+fhandler_socket::writev (const struct iovec *const iov, const int iovcnt,
+			 ssize_t tot)
+{
+  WSABUF wsabuf[iovcnt];
+  WSABUF *wsaptr = wsabuf;
+  const struct iovec *iovptr = iov;
+  for (int i = 0; i < iovcnt; ++i)
+    {
+      wsaptr->len = iovptr->iov_len;
+      (wsaptr++)->buf = (char *) (iovptr++)->iov_base;
+    }
+  WSAMSG wsamsg = { NULL, 0, wsabuf, (DWORD) iovcnt, { 0, NULL}, 0 };
+  return send_internal (&wsamsg, 0);
+}
+
+ssize_t
+fhandler_socket::sendto (const void *in_ptr, size_t len, int flags,
 			 const struct sockaddr *to, int tolen)
 {
+  char *ptr = (char *) in_ptr;
   struct sockaddr_storage sst;
-
-  pthread_testcancel ();
 
   if (to && get_inet_addr (to, tolen, &sst, &tolen) == SOCKET_ERROR)
     return SOCKET_ERROR;
 
-  WSABUF wsabuf = { len, (char *) ptr };
+#ifdef __x86_64__
+  /* size_t is 64 bit, but the len member in WSABUF is 32 bit.
+     Split buffer if necessary. */
+  DWORD bufcnt = len / UINT32_MAX + ((!len || (len % UINT32_MAX)) ? 1 : 0);
+  WSABUF wsabuf[bufcnt];
+  WSAMSG wsamsg = { to ? (struct sockaddr *) &sst : NULL, tolen,
+		    wsabuf, bufcnt,
+		    { 0,  NULL },
+		    0 };
+  /* Don't use len as loop condition, it could be 0. */
+  for (WSABUF *wsaptr = wsabuf; bufcnt--; ++wsaptr)
+    {
+      wsaptr->len = MIN (len, UINT32_MAX);
+      wsaptr->buf = ptr;
+      len -= wsaptr->len;
+      ptr += wsaptr->len;
+    }
+#else
+  WSABUF wsabuf = { len, ptr };
   WSAMSG wsamsg = { to ? (struct sockaddr *) &sst : NULL, tolen,
 		    &wsabuf, 1,
 		    { 0, NULL},
 		    0 };
+#endif
   return send_internal (&wsamsg, flags);
 }
 
-int
+ssize_t
 fhandler_socket::sendmsg (const struct msghdr *msg, int flags)
 {
   /* TODO: Descriptor passing on AF_LOCAL sockets. */
 
   struct sockaddr_storage sst;
   int len = 0;
-
-  pthread_testcancel ();
 
   if (msg->msg_name
       && get_inet_addr ((struct sockaddr *) msg->msg_name, msg->msg_namelen,
@@ -1691,15 +1826,15 @@ fhandler_socket::sendmsg (const struct msghdr *msg, int flags)
       wsaptr->len = iovptr->iov_len;
       (wsaptr++)->buf = (char *) (iovptr++)->iov_base;
     }
+  /* Disappointing but true:  Even if WSASendMsg is supported, it's only
+     supported for datagram and raw sockets. */
+  DWORD controllen = (DWORD) (!wincap.has_sendmsg ()
+			      || get_socket_type () == SOCK_STREAM
+			      || get_addr_family () == AF_LOCAL
+			      ? 0 : msg->msg_controllen);
   WSAMSG wsamsg = { msg->msg_name ? (struct sockaddr *) &sst : NULL, len,
-		    wsabuf, msg->msg_iovlen,
-		    /* Disappointing but true:  Even if WSASendMsg is
-		       supported, it's only supported for datagram and
-		       raw sockets. */
-		    { !wincap.has_sendmsg ()
-		      || get_socket_type () == SOCK_STREAM
-		      || get_addr_family () == AF_LOCAL
-		      ? 0 : msg->msg_controllen, (char *) msg->msg_control },
+		    wsabuf, (DWORD) msg->msg_iovlen,
+		    { controllen, (char *) msg->msg_control },
 		    0 };
   return send_internal (&wsamsg, flags);
 }
@@ -1747,20 +1882,7 @@ int
 fhandler_socket::close ()
 {
   int res = 0;
-  /* TODO: CV - 2008-04-16.  Lingering disabled.  The original problem
-     could be no longer reproduced on NT4, XP, 2K8.  Any return of a
-     spurious "Connection reset by peer" *could* be caused by disabling
-     the linger code here... */
-#if 0
-  /* HACK to allow a graceful shutdown even if shutdown() hasn't been
-     called by the application. Note that this isn't the ultimate
-     solution but it helps in many cases. */
-  struct linger linger;
-  linger.l_onoff = 1;
-  linger.l_linger = 240; /* secs. default 2MSL value according to MSDN. */
-  setsockopt (get_socket (), SOL_SOCKET, SO_LINGER,
-	      (const char *)&linger, sizeof linger);
-#endif
+
   release_events ();
   while ((res = closesocket (get_socket ())) != 0)
     {
@@ -1969,7 +2091,17 @@ fhandler_socket::ioctl (unsigned int cmd, void *p)
 	WSAEventSelect (get_socket (), wsock_evt, EVENT_MASK);
       break;
     case FIONREAD:
-      res = ioctlsocket (get_socket (), FIONREAD, (unsigned long *) p);
+#ifdef __x86_64__
+/* FIXME: This looks broken in the Mingw64 headers.  If I make sure
+to use the Windows u_long definition, I'd expect that it's defined
+as a 4 byte type on LP64 as well.  But that's not the case right now.
+The *additional* type __ms_u_long is available on LP64, and that's
+used in subsequent function declarations, but that's not available
+on 32 bit or LLP64.  The LP64-ness shouldn't require to use another
+type name in the application code. */
+#define u_long __ms_u_long
+#endif
+      res = ioctlsocket (get_socket (), FIONREAD, (u_long *) p);
       if (res == SOCKET_ERROR)
 	set_winsock_errno ();
       break;
@@ -1984,15 +2116,15 @@ fhandler_socket::ioctl (unsigned int cmd, void *p)
 	  res = 0;
 	}
       else
-	res = ioctlsocket (get_socket (), cmd, (unsigned long *) p);
+	res = ioctlsocket (get_socket (), cmd, (u_long *) p);
       break;
     }
-  syscall_printf ("%d = ioctl_socket(%x, %x)", res, cmd, p);
+  syscall_printf ("%d = ioctl_socket(%x, %p)", res, cmd, p);
   return res;
 }
 
 int
-fhandler_socket::fcntl (int cmd, void *arg)
+fhandler_socket::fcntl (int cmd, intptr_t arg)
 {
   int res = 0;
   int request, current;
@@ -2016,7 +2148,7 @@ fhandler_socket::fcntl (int cmd, void *arg)
 	/* Carefully test for the O_NONBLOCK or deprecated OLD_O_NDELAY flag.
 	   Set only the flag that has been passed in.  If both are set, just
 	   record O_NONBLOCK.   */
-	int new_flags = (int) arg & O_NONBLOCK_MASK;
+	int new_flags = arg & O_NONBLOCK_MASK;
 	if ((new_flags & OLD_O_NDELAY) && (new_flags & O_NONBLOCK))
 	  new_flags = O_NONBLOCK;
 	current = get_flags () & O_NONBLOCK_MASK;
@@ -2060,7 +2192,7 @@ fhandler_socket::set_peer_sun_path (const char *path)
 }
 
 int
-fhandler_socket::getpeereid (pid_t *pid, __uid32_t *euid, __gid32_t *egid)
+fhandler_socket::getpeereid (pid_t *pid, uid_t *euid, gid_t *egid)
 {
   if (get_addr_family () != AF_LOCAL || get_socket_type () != SOCK_STREAM)
     {

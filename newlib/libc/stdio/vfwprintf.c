@@ -150,14 +150,23 @@ SEEALSO
 
 int _EXFUN(_VFWPRINTF_R, (struct _reent *, FILE *, _CONST wchar_t *, va_list));
 /* Defined in vfprintf.c. */
-#ifdef STRING_ONLY
-#define __SPRINT __ssprint_r
-#else
-#define __SPRINT __sprint_r
-#endif
+#ifdef _FVWRITE_IN_STREAMIO
+# ifdef STRING_ONLY
+#  define __SPRINT __ssprint_r
+# else
+#  define __SPRINT __sprint_r
+# endif
 int _EXFUN(__SPRINT, (struct _reent *, FILE *, register struct __suio *));
-
+#else
+# ifdef STRING_ONLY
+#  define __SPRINT __ssputs_r
+# else
+#  define __SPRINT __sfputs_r
+# endif
+int _EXFUN(__SPRINT, (struct _reent *, FILE *, _CONST char *, size_t));
+#endif
 #ifndef STRING_ONLY
+#ifdef _UNBUF_STREAM_OPT
 /*
  * Helper function for `fprintf to unbuffered unix file': creates a
  * temporary buffer.  We only work on write-only files; this avoids
@@ -201,6 +210,7 @@ _DEFUN(__sbwprintf, (rptr, fp, fmt, ap),
 #endif
 	return (ret);
 }
+#endif /* _UNBUF_STREAM_OPT */
 #endif /* !STRING_ONLY */
 
 
@@ -377,7 +387,6 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 	register wint_t ch;	/* character from fmt */
 	register int n, m;	/* handy integers (short term usage) */
 	register wchar_t *cp;	/* handy char pointer (short term usage) */
-	register struct __siov *iovp;/* for PRINT macro */
 	register int flags;	/* flags as above */
 	wchar_t *fmt_anchor;    /* current format spec being processed */
 #ifndef _NO_POS_ARGS
@@ -426,9 +435,12 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 	int realsz;		/* field size expanded by dprec */
 	int size = 0;		/* size of converted field or string */
 	wchar_t *xdigs = NULL;	/* digits for [xX] conversion */
+#ifdef _FVWRITE_IN_STREAMIO
 #define NIOV 8
 	struct __suio uio;	/* output information: summary */
 	struct __siov iov[NIOV];/* ... and individual io vectors */
+	register struct __siov *iovp;/* for PRINT macro */
+#endif
 	wchar_t buf[BUF];	/* space for %c, %ls/%S, %[diouxX], %[aA] */
 	wchar_t ox[2];		/* space for 0x hex-prefix */
 	wchar_t *malloc_buf = NULL;/* handy pointer for malloced buffers */
@@ -469,6 +481,7 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 	/*
 	 * BEWARE, these `goto error' on error, and PAD uses `n'.
 	 */
+#ifdef _FVWRITE_IN_STREAMIO
 #define	PRINT(ptr, len) { \
 	iovp->iov_base = (char *) (ptr); \
 	iovp->iov_len = (len) * sizeof (wchar_t); \
@@ -503,6 +516,30 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 	uio.uio_iovcnt = 0; \
 	iovp = iov; \
 }
+#else
+#define PRINT(ptr, len) {		\
+	if (__SPRINT (data, fp, (_CONST char *)(ptr), (len) * sizeof (wchar_t)) == EOF) \
+		goto error;		\
+}
+#define	PAD(howmany, with) {		\
+	if ((n = (howmany)) > 0) {	\
+		while (n > PADSIZE) {	\
+			PRINT (with, PADSIZE);	\
+			n -= PADSIZE;	\
+		}			\
+		PRINT (with, n);	\
+	}				\
+}
+#define PRINTANDPAD(p, ep, len, with) {	\
+	int n = (ep) - (p);		\
+	if (n > (len))			\
+		n = (len);		\
+	if (n > 0)			\
+		PRINT((p), n);		\
+	PAD((len) - (n > 0 ? n : 0), (with)); \
+}
+#define	FLUSH()
+#endif
 
 	/* Macros to support positional arguments */
 #ifndef _NO_POS_ARGS
@@ -564,12 +601,14 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 		return (EOF);
 	}
 
+#ifdef _UNBUF_STREAM_OPT
 	/* optimise fwprintf(stderr) (and other unbuffered Unix files) */
 	if ((fp->_flags & (__SNBF|__SWR|__SRW)) == (__SNBF|__SWR) &&
 	    fp->_file >= 0) {
 		_newlib_flockfile_exit (fp);
 		return (__sbwprintf (data, fp, fmt0, ap));
 	}
+#endif
 #else /* STRING_ONLY */
         /* Create initial buffer if we are called by asprintf family.  */
         if (fp->_flags & __SMBF && !fp->_bf._base)
@@ -585,9 +624,11 @@ _DEFUN(_VFWPRINTF_R, (data, fp, fmt0, ap),
 #endif /* STRING_ONLY */
 
 	fmt = (wchar_t *)fmt0;
+#ifdef _FVWRITE_IN_STREAMIO
 	uio.uio_iov = iovp = iov;
 	uio.uio_resid = 0;
 	uio.uio_iovcnt = 0;
+#endif
 	ret = 0;
 #ifndef _NO_POS_ARGS
 	arg_index = 0;
@@ -1171,11 +1212,11 @@ string:
 					insize = strlen(arg);
 				if (insize >= BUF) {
 				    if ((malloc_buf = (wchar_t *) _malloc_r (data, (insize + 1) * sizeof (wchar_t)))
-								== NULL) {
-							fp->_flags |= __SERR;
-							goto error;
-						}
-						cp = malloc_buf;
+					== NULL) {
+						fp->_flags |= __SERR;
+						goto error;
+					}
+					cp = malloc_buf;
 				} else
 					cp = buf;
 				memset ((_PTR)&ps, '\0', sizeof (mbstate_t));
@@ -1195,9 +1236,31 @@ string:
 				*p = L'\0';
 				size = p - cp;
 			}
-			else
+#else
+			if (ch != L'S' && !(flags & LONGINT)) {
+				char *arg = (char *) cp;
+				size_t insize = 0;
+
+				if (prec >= 0) {
+					char *p = memchr (arg, '\0', prec);
+					insize = p ? p - arg : prec;
+				} else
+					insize = strlen (arg);
+				if (insize >= BUF) {
+				    if ((malloc_buf = (wchar_t *) _malloc_r (data, (insize + 1) * sizeof (wchar_t)))
+					== NULL) {
+						fp->_flags |= __SERR;
+						goto error;
+					}
+					cp = malloc_buf;
+				} else
+					cp = buf;
+				for (size = 0; size < insize; ++size)
+					cp[size] = arg[size];
+				cp[size] = L'\0';
+			}
 #endif /* _MB_CAPABLE */
-			if (prec >= 0) {
+			else if (prec >= 0) {
 				/*
 				 * can't use wcslen; can only look for the
 				 * NUL in the first `prec' characters, and
@@ -1222,7 +1285,7 @@ string:
 		case L'X':
 			xdigs = L"0123456789ABCDEF";
 			goto hex;
-		case 'x':
+		case L'x':
 			xdigs = L"0123456789abcdef";
 hex:			_uquad = UARG ();
 			base = HEX;

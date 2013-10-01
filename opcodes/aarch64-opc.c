@@ -1,5 +1,5 @@
 /* aarch64-opc.c -- AArch64 opcode support.
-   Copyright 2009, 2010, 2011, 2012  Free Software Foundation, Inc.
+   Copyright 2009, 2010, 2011, 2012, 2013  Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of the GNU opcodes library.
@@ -334,10 +334,10 @@ const struct aarch64_name_value_pair aarch64_barrier_options[16] =
     { "sy",    0xf },
 };
 
-/* op -> op:       load = 0 store = 1
+/* op -> op:       load = 0 instruction = 1 store = 2
    l  -> level:    1-3
    t  -> temporal: temporal (retained) = 0 non-temporal (streaming) = 1   */
-#define B(op,l,t) ((((op) * 2) << 3) | (((l) - 1) << 1) | (t))
+#define B(op,l,t) (((op) << 3) | (((l) - 1) << 1) | (t))
 const struct aarch64_name_value_pair aarch64_prfops[32] =
 {
   { "pldl1keep", B(0, 1, 0) },
@@ -346,32 +346,32 @@ const struct aarch64_name_value_pair aarch64_prfops[32] =
   { "pldl2strm", B(0, 2, 1) },
   { "pldl3keep", B(0, 3, 0) },
   { "pldl3strm", B(0, 3, 1) },
-  { "#0x06", 0x06 },
-  { "#0x07", 0x07 },
-  { "#0x08", 0x08 },
-  { "#0x09", 0x09 },
-  { "#0x0a", 0x0a },
-  { "#0x0b", 0x0b },
-  { "#0x0c", 0x0c },
-  { "#0x0d", 0x0d },
-  { "#0x0e", 0x0e },
-  { "#0x0f", 0x0f },
-  { "pstl1keep", B(1, 1, 0) },
-  { "pstl1strm", B(1, 1, 1) },
-  { "pstl2keep", B(1, 2, 0) },
-  { "pstl2strm", B(1, 2, 1) },
-  { "pstl3keep", B(1, 3, 0) },
-  { "pstl3strm", B(1, 3, 1) },
-  { "#0x16", 0x16 },
-  { "#0x17", 0x17 },
-  { "#0x18", 0x18 },
-  { "#0x19", 0x19 },
-  { "#0x1a", 0x1a },
-  { "#0x1b", 0x1b },
-  { "#0x1c", 0x1c },
-  { "#0x1d", 0x1d },
-  { "#0x1e", 0x1e },
-  { "#0x1f", 0x1f },
+  { NULL, 0x06 },
+  { NULL, 0x07 },
+  { "plil1keep", B(1, 1, 0) },
+  { "plil1strm", B(1, 1, 1) },
+  { "plil2keep", B(1, 2, 0) },
+  { "plil2strm", B(1, 2, 1) },
+  { "plil3keep", B(1, 3, 0) },
+  { "plil3strm", B(1, 3, 1) },
+  { NULL, 0x0e },
+  { NULL, 0x0f },
+  { "pstl1keep", B(2, 1, 0) },
+  { "pstl1strm", B(2, 1, 1) },
+  { "pstl2keep", B(2, 2, 0) },
+  { "pstl2strm", B(2, 2, 1) },
+  { "pstl3keep", B(2, 3, 0) },
+  { "pstl3strm", B(2, 3, 1) },
+  { NULL, 0x16 },
+  { NULL, 0x17 },
+  { NULL, 0x18 },
+  { NULL, 0x19 },
+  { NULL, 0x1a },
+  { NULL, 0x1b },
+  { NULL, 0x1c },
+  { NULL, 0x1d },
+  { NULL, 0x1e },
+  { NULL, 0x1f },
 };
 #undef B
 
@@ -1063,7 +1063,8 @@ aarch64_logical_immediate_p (uint64_t value, int is32, aarch64_insn *encoding)
       /* Allow all zeros or all ones in top 32-bits, so that
 	 constant expressions like ~1 are permitted.  */
       if (value >> 32 != 0 && value >> 32 != 0xffffffff)
-	return 0xffffffff;
+	return FALSE;
+
       /* Replicate the 32 lower bits to the 32 upper bits.  */
       value &= 0xffffffff;
       value |= value << 32;
@@ -1724,10 +1725,10 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	  assert (idx == 1);
 	  if (aarch64_get_qualifier_esize (opnds[0].qualifier) != 8)
 	    {
-	      /* uimm8 */
-	      if (!value_in_range_p (opnd->imm.value, 0, 255))
+	      /* uimm8 or simm8 */
+	      if (!value_in_range_p (opnd->imm.value, -128, 255))
 		{
-		  set_imm_out_of_range_error (mismatch_detail, idx, 0, 255);
+		  set_imm_out_of_range_error (mismatch_detail, idx, -128, 255);
 		  return 0;
 		}
 	    }
@@ -1745,15 +1746,15 @@ operand_general_constraint_met_p (const aarch64_opnd_info *opnds, int idx,
 	    {
 	    case AARCH64_MOD_LSL:
 	      size = aarch64_get_qualifier_esize (opnds[0].qualifier);
+	      if (!value_in_range_p (opnd->shifter.amount, 0, (size - 1) * 8))
+		{
+		  set_sft_amount_out_of_range_error (mismatch_detail, idx, 0,
+						     (size - 1) * 8);
+		  return 0;
+		}
 	      if (!value_aligned_p (opnd->shifter.amount, 8))
 		{
 		  set_unaligned_error (mismatch_detail, idx, 8);
-		  return 0;
-		}
-	      if (!value_in_range_p (opnd->shifter.amount, 0, (size - 1) * 8))
-		{
-		  set_imm_out_of_range_error (mismatch_detail, idx, 0,
-					      (size - 1) * 8);
 		  return 0;
 		}
 	      break;
@@ -2433,8 +2434,24 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
     case AARCH64_OPND_IMMR:
     case AARCH64_OPND_IMMS:
     case AARCH64_OPND_FBITS:
-    case AARCH64_OPND_IMM_MOV:
       snprintf (buf, size, "#%" PRIi64, opnd->imm.value);
+      break;
+
+    case AARCH64_OPND_IMM_MOV:
+      switch (aarch64_get_qualifier_esize (opnds[0].qualifier))
+	{
+	case 4:	/* e.g. MOV Wd, #<imm32>.  */
+	    {
+	      int imm32 = opnd->imm.value;
+	      snprintf (buf, size, "#0x%-20x\t// #%d", imm32, imm32);
+	    }
+	  break;
+	case 8:	/* e.g. MOV Xd, #<imm64>.  */
+	  snprintf (buf, size, "#0x%-20" PRIx64 "\t// #%" PRIi64,
+		    opnd->imm.value, opnd->imm.value);
+	  break;
+	default: assert (0);
+	}
       break;
 
     case AARCH64_OPND_FPIMM0:
@@ -2622,7 +2639,10 @@ aarch64_print_operand (char *buf, size_t size, bfd_vma pc,
       break;
 
     case AARCH64_OPND_PRFOP:
-      snprintf (buf, size, "%s", opnd->prfop->name);
+      if (opnd->prfop->name != NULL)
+	snprintf (buf, size, "%s", opnd->prfop->name);
+      else
+	snprintf (buf, size, "#0x%02x", opnd->prfop->value);
       break;
 
     default:

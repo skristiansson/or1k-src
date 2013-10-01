@@ -1187,7 +1187,13 @@ bfin_check_relocs (bfd * abfd,
       if (r_symndx < symtab_hdr->sh_info)
 	h = NULL;
       else
-	h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+	{
+	  h = sym_hashes[r_symndx - symtab_hdr->sh_info];
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
+	}
 
       switch (ELF32_R_TYPE (rel->r_info))
 	{
@@ -1301,7 +1307,9 @@ bfin_check_relocs (bfd * abfd,
 }
 
 static enum elf_reloc_type_class
-elf32_bfin_reloc_type_class (const Elf_Internal_Rela * rela)
+elf32_bfin_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			     const asection *rel_sec ATTRIBUTE_UNUSED,
+			     const Elf_Internal_Rela * rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {
@@ -1821,7 +1829,7 @@ bfinfdpic_elf_link_hash_table_create (bfd *abfd)
   struct bfinfdpic_elf_link_hash_table *ret;
   bfd_size_type amt = sizeof (struct bfinfdpic_elf_link_hash_table);
 
-  ret = bfd_zalloc (abfd, amt);
+  ret = bfd_zmalloc (amt);
   if (ret == NULL)
     return NULL;
 
@@ -5088,7 +5096,7 @@ bfin_link_hash_table_create (bfd * abfd)
   struct bfin_link_hash_table *ret;
   bfd_size_type amt = sizeof (struct bfin_link_hash_table);
 
-  ret = bfd_zalloc (abfd, amt);
+  ret = bfd_zmalloc (amt);
   if (ret == NULL)
     return NULL;
 

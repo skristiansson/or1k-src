@@ -1,6 +1,6 @@
 /* sys/resource.h
 
-   Copyright 1997, 1998, 2000, 2001 Red Hat, Inc.
+   Copyright 1997, 1998, 2000, 2001, 2005 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -34,7 +34,7 @@ extern "C" {
 #define RLIMIT_NLIMITS  7		/* upper bound of RLIMIT_* defines */
 #define RLIM_NLIMITS    RLIMIT_NLIMITS
 
-#define RLIM_INFINITY	(0xffffffffUL)
+#define RLIM_INFINITY	(~0UL)
 #define RLIM_SAVED_MAX	RLIM_INFINITY
 #define RLIM_SAVED_CUR	RLIM_INFINITY
 

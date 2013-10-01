@@ -653,6 +653,7 @@ microblaze
 mips
 mn10300
 moxie
+msp430
 or1ksim
 or1k
 rl78
@@ -3787,6 +3788,13 @@ subdirs="$subdirs arm"
 
 
        sim_testsuite=yes
+       ;;
+   msp430*-*-*)
+
+  sim_arch=msp430
+  subdirs="$subdirs msp430"
+
+
        ;;
    or1k-*-* | or1knd-*-*)
 if test "${enable_or1ksim}" != no; then

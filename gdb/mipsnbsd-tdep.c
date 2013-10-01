@@ -1,6 +1,6 @@
 /* Target-dependent code for NetBSD/mips.
 
-   Copyright (C) 2002-2004, 2006-2012 Free Software Foundation, Inc.
+   Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
    Contributed by Wasabi Systems, Inc.
 
@@ -262,7 +262,7 @@ mipsnbsd_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
   struct gdbarch *gdbarch = get_frame_arch (frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR jb_addr;
-  char *buf;
+  gdb_byte *buf;
 
   buf = alloca (NBSD_MIPS_JB_ELEMENT_SIZE (gdbarch));
 

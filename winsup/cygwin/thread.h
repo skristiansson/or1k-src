@@ -1,7 +1,7 @@
 /* thread.h: Locking and threading module definitions
 
-   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007,
-   2008, 2009, 2010, 2011, 2012 Red Hat, Inc.
+   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009,
+   2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -92,7 +92,7 @@ class pinfo;
 
 #define MUTEX_OWNER_ANONYMOUS ((pthread_t) -1)
 
-typedef unsigned long thread_magic_t;
+typedef uint32_t thread_magic_t;
 
 /* verifyable_object should not be defined here - it's a general purpose class */
 
@@ -443,7 +443,7 @@ private:
   void precreate (pthread_attr *);
   void postcreate ();
   bool create_cancel_event ();
-  static void set_tls_self_pointer (pthread *);
+  void set_tls_self_pointer ();
   void cancel_self () __attribute__ ((noreturn));
   DWORD get_thread_id ();
 };
@@ -496,8 +496,8 @@ public:
   int shared;
   clockid_t clock_id;
 
-  unsigned long waiting;
-  unsigned long pending;
+  LONG waiting;
+  LONG pending;
   HANDLE sem_wait;
 
   pthread_mutex mtx_in;
@@ -547,14 +547,15 @@ public:
 
   int shared;
 
-  unsigned long waiting_readers;
-  unsigned long waiting_writers;
+  uint32_t waiting_readers;
+  uint32_t waiting_writers;
   pthread_t writer;
   struct RWLOCK_READER
   {
     struct RWLOCK_READER *next;
     pthread_t thread;
-    unsigned long n;
+    uint32_t n;
+    RWLOCK_READER (): next (NULL), thread (pthread::self ()), n (0) {}
   } *readers;
   fast_mutex readers_mx;
 
@@ -583,9 +584,9 @@ public:
 private:
   static List<pthread_rwlock> rwlocks;
 
-  void add_reader (struct RWLOCK_READER *rd);
+  RWLOCK_READER *add_reader ();
   void remove_reader (struct RWLOCK_READER *rd);
-  struct RWLOCK_READER *lookup_reader (pthread_t thread);
+  struct RWLOCK_READER *lookup_reader ();
 
   void release ()
   {
@@ -636,7 +637,8 @@ public:
 
   HANDLE win32_obj_id;
   int shared;
-  long currentvalue;
+  LONG currentvalue;
+  LONG startvalue;
   int fd;
   unsigned long long hash;
   LUID luid;
@@ -647,6 +649,10 @@ public:
   ~semaphore ();
 
   class semaphore * next;
+  static void fixup_before_fork ()
+  {
+    semaphores.for_each (&semaphore::_fixup_before_fork);
+  }
   static void fixup_after_fork ()
   {
     semaphores.fixup_after_fork ();
@@ -665,6 +671,7 @@ private:
   int _trywait ();
   int _timedwait (const struct timespec *abstime);
 
+  void _fixup_before_fork ();
   void _fixup_after_fork ();
   void _terminate ();
 

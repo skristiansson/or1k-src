@@ -1,7 +1,7 @@
 /* heap.cc: Cygwin heap manager.
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009, 2010, 2011 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -22,13 +22,25 @@ details. */
 
 #define assert(x)
 
-static unsigned page_const;
+static ptrdiff_t page_const;
 
+/* Minimum size of the base heap. */
 #define MINHEAP_SIZE (4 * 1024 * 1024)
+/* Chunksize of subsequent heap reservations. */
+#define RAISEHEAP_SIZE (1 * 1024 * 1024)
 
 static uintptr_t
 eval_start_address ()
 {
+#ifdef __x86_64__
+  /* On 64 bit, we choose a fixed address outside the 32 bit area.  The
+     executable starts at 0x1:00400000L, the Cygwin DLL starts at
+     0x1:80040000L, other rebased DLLs are located in the region from
+     0x2:00000000L up to 0x4:00000000L, -auto-image-based DLLs are located
+     in the region from 0x4:00000000L up to 0x6:00000000L.
+     So we let the heap start at 0x6:00000000L. */
+  uintptr_t start_address = 0x600000000L;
+#else
   /* Starting with Vista, Windows performs heap ASLR.  This spoils the entire
      region below 0x20000000 for us, because that region is used by Windows
      to randomize heap and stack addresses.  Therefore we put our heap into a
@@ -53,57 +65,67 @@ eval_start_address ()
 	 memory for heap, thread stacks, and shared memory regions. */
       start_address = 0x80000000L;
     }
+#endif
   return start_address;
 }
 
-static unsigned
+static SIZE_T
 eval_initial_heap_size ()
 {
   PIMAGE_DOS_HEADER dosheader;
-  PIMAGE_NT_HEADERS32 ntheader;
-  unsigned size;
+  PIMAGE_NT_HEADERS ntheader;
+  SIZE_T size;
 
   dosheader = (PIMAGE_DOS_HEADER) GetModuleHandle (NULL);
-  ntheader = (PIMAGE_NT_HEADERS32) ((PBYTE) dosheader + dosheader->e_lfanew);
+  ntheader = (PIMAGE_NT_HEADERS) ((PBYTE) dosheader + dosheader->e_lfanew);
   /* LoaderFlags is an obsolete DWORD member of the PE/COFF file header.
      It's value is ignored by the loader, so we're free to use it for
-     Cygwin.  If it's 0, we default to the usual 384 Megs.  Otherwise,
-     we use it as the default initial heap size in megabyte.  Valid values
-     are between 4 and 2048 Megs. */
+     Cygwin.  If it's 0, we default to the usual 384 Megs on 32 bit and
+     512 on 64 bit.  Otherwise, we use it as the default initial heap size
+     in megabyte.  Valid values are between 4 and 2048/8388608 Megs. */
+
   size = ntheader->OptionalHeader.LoaderFlags;
+#ifdef __x86_64__
+  if (size == 0)
+    size = 512;
+  else if (size < 4)
+    size = 4;
+  else if (size > 8388608)
+    size = 8388608;
+#else
   if (size == 0)
     size = 384;
   else if (size < 4)
     size = 4;
   else if (size > 2048)
     size = 2048;
+#endif
   return size << 20;
 }
 
 /* Initialize the heap at process start up.  */
 void
-heap_init ()
+user_heap_info::init ()
 {
   const DWORD alloctype = MEM_RESERVE;
   /* If we're the forkee, we must allocate the heap at exactly the same place
      as our parent.  If not, we (almost) don't care where it ends up.  */
 
   page_const = wincap.page_size ();
-  if (!cygheap->user_heap.base)
+  if (!base)
     {
       uintptr_t start_address = eval_start_address ();
       PVOID largest_found = NULL;
-      size_t largest_found_size = 0;
+      SIZE_T largest_found_size = 0;
       SIZE_T ret;
       MEMORY_BASIC_INFORMATION mbi;
 
-      cygheap->user_heap.chunk = eval_initial_heap_size ();
+      chunk = eval_initial_heap_size ();
       do
 	{
-	  cygheap->user_heap.base = VirtualAlloc ((LPVOID) start_address,
-						  cygheap->user_heap.chunk,
-						  alloctype, PAGE_NOACCESS);
-	  if (cygheap->user_heap.base)
+	  base = VirtualAlloc ((LPVOID) start_address, chunk, alloctype,
+			       PAGE_NOACCESS);
+	  if (base)
 	    break;
 
 	  /* Ok, so we are at the 1% which didn't work with 0x20000000 out
@@ -116,7 +138,7 @@ heap_init ()
 	    {
 	      if (mbi.State == MEM_FREE)
 		{
-		  if (mbi.RegionSize >= cygheap->user_heap.chunk)
+		  if (mbi.RegionSize >= chunk)
 		    break;
 		  if (mbi.RegionSize > largest_found_size)
 		    {
@@ -138,44 +160,46 @@ heap_init ()
 		 region, unless it's smaller than the minimum size. */
 	      if (largest_found_size >= MINHEAP_SIZE)
 		{
-		  cygheap->user_heap.chunk = largest_found_size;
-		  cygheap->user_heap.base =
-			VirtualAlloc (largest_found, cygheap->user_heap.chunk,
-				      alloctype, PAGE_NOACCESS);
+		  chunk = largest_found_size;
+		  base = VirtualAlloc (largest_found, chunk, alloctype,
+				       PAGE_NOACCESS);
 		}
 	      /* Last resort (but actually we are probably broken anyway):
 		 Use the minimal heap size and let the system decide. */
-	      if (!cygheap->user_heap.base)
+	      if (!base)
 		{
-		  cygheap->user_heap.chunk = MINHEAP_SIZE;
-		  cygheap->user_heap.base =
-			VirtualAlloc (NULL, cygheap->user_heap.chunk,
-				      alloctype, PAGE_NOACCESS);
+		  chunk = MINHEAP_SIZE;
+		  base = VirtualAlloc (NULL, chunk, alloctype, PAGE_NOACCESS);
 		}
 	    }
 	}
-      while (!cygheap->user_heap.base && ret);
-      if (cygheap->user_heap.base == NULL)
-	api_fatal ("unable to allocate heap, heap_chunk_size %p, %E",
-		   cygheap->user_heap.chunk);
-      cygheap->user_heap.ptr = cygheap->user_heap.top = cygheap->user_heap.base;
-      cygheap->user_heap.max = (char *) cygheap->user_heap.base
-			       + cygheap->user_heap.chunk;
+      while (!base && ret);
+      if (base == NULL)
+	api_fatal ("unable to allocate heap, heap_chunk_size %ly, %E",
+		   chunk);
+      ptr = top = base;
+      max = (char *) base + chunk;
     }
   else
     {
-      DWORD chunk = cygheap->user_heap.chunk;	/* allocation chunk */
       /* total size commited in parent */
-      DWORD allocsize = (char *) cygheap->user_heap.top -
-			(char *) cygheap->user_heap.base;
+      SIZE_T allocsize = (char *) top - (char *) base;
 
       /* Loop until we've managed to reserve an adequate amount of memory. */
+      SIZE_T reserve_size = chunk * ((allocsize + (chunk - 1)) / chunk);
+
+      /* With ptmalloc3 there's a good chance that there has been no memory
+	 allocated on the heap.  If we don't check that, reserve_size will
+	 be 0 and from there, the below loop will end up overallocating due
+	 to integer overflow. */
+      if (!reserve_size)
+	reserve_size = chunk;
+
       char *p;
-      DWORD reserve_size = chunk * ((allocsize + (chunk - 1)) / chunk);
       while (1)
 	{
-	  p = (char *) VirtualAlloc (cygheap->user_heap.base, reserve_size,
-				     alloctype, PAGE_READWRITE);
+	  p = (char *) VirtualAlloc (base, reserve_size, alloctype,
+				     PAGE_READWRITE);
 	  if (p)
 	    break;
 	  if ((reserve_size -= page_const) < allocsize)
@@ -183,12 +207,14 @@ heap_init ()
 	}
       if (!p && in_forkee && !fork_info->abort (NULL))
 	api_fatal ("couldn't allocate heap, %E, base %p, top %p, "
-		   "reserve_size %d, allocsize %d, page_const %d",
-		   cygheap->user_heap.base, cygheap->user_heap.top,
+		   "reserve_size %ld, allocsize %ld, page_const %d",
+		   base, top,
 		   reserve_size, allocsize, page_const);
-      if (p != cygheap->user_heap.base)
-	api_fatal ("heap allocated at wrong address %p (mapped) != %p (expected)", p, cygheap->user_heap.base);
-      if (allocsize && !VirtualAlloc (cygheap->user_heap.base, allocsize, MEM_COMMIT, PAGE_READWRITE))
+      if (p != base)
+	api_fatal ("heap allocated at wrong address %p (mapped) "
+		   "!= %p (expected)", p, base);
+      if (allocsize && !VirtualAlloc (base, allocsize,
+				      MEM_COMMIT, PAGE_READWRITE))
 	api_fatal ("MEM_COMMIT failed, %E");
     }
 
@@ -198,79 +224,111 @@ heap_init ()
      size has not been evaluated yet, except in a forked child.  Since
      heap_init is called early, the heap size is printed pretty much at the
      start of the strace output, so there isn't anything lost. */
-  debug_printf ("heap base %p, heap top %p, heap size %p (%u)",
-		cygheap->user_heap.base, cygheap->user_heap.top,
-		cygheap->user_heap.chunk, cygheap->user_heap.chunk);
+  debug_printf ("heap base %p, heap top %p, heap size %ly (%lu)",
+		base, top, chunk, chunk);
   page_const--;
   // malloc_init ();
 }
 
 #define pround(n) (((size_t)(n) + page_const) & ~page_const)
+/* Linux defines n to be intptr_t, newlib defines it to be ptrdiff_t.
+   It shouldn't matter much, though, since the function is not standarized
+   and sizeof(ptrdiff_t) == sizeof(intptr_t) anyway. */
+extern "C" void *
+sbrk (ptrdiff_t n)
+{
+  return cygheap->user_heap.sbrk (n);
+}
 
+void __reg2 *
+user_heap_info::sbrk (ptrdiff_t n)
+{
 /* FIXME: This function no longer handles "split heaps". */
 
-extern "C" void *
-sbrk (int n)
-{
   char *newtop, *newbrk;
-  unsigned commitbytes, newbrksize;
+  SIZE_T commitbytes, newbrksize, reservebytes;
 
   if (n == 0)
-    return cygheap->user_heap.ptr;		/* Just wanted to find current cygheap->user_heap.ptr address */
+    return ptr;					/* Just wanted to find current ptr
+						   address */
 
-  newbrk = (char *) cygheap->user_heap.ptr + n;	/* Where new cygheap->user_heap.ptr will be */
+  newbrk = (char *) ptr + n;			/* Where new cptr will be */
   newtop = (char *) pround (newbrk);		/* Actual top of allocated memory -
 						   on page boundary */
 
-  if (newtop == cygheap->user_heap.top)
+  if (newtop == top)
     goto good;
 
   if (n < 0)
     {						/* Freeing memory */
-      assert (newtop < cygheap->user_heap.top);
-      n = (char *) cygheap->user_heap.top - newtop;
+      assert (newtop < top);
+      n = (char *) top - newtop;
+      /* FIXME: This doesn't work if we cross a virtual memory reservation
+	 border.  If that happens, we have to free the space in multiple
+	 VirtualFree calls, aligned to the former reservation borders. */
       if (VirtualFree (newtop, n, MEM_DECOMMIT)) /* Give it back to OS */
-	goto good;				/*  Didn't take */
-      else
-	goto err;
+	goto good;
+      goto err;					/*  Didn't take */
     }
 
-  assert (newtop > cygheap->user_heap.top);
+  assert (newtop > top);
 
   /* Find the number of bytes to commit, rounded up to the nearest page. */
-  commitbytes = pround (newtop - (char *) cygheap->user_heap.top);
+  commitbytes = pround (newtop - (char *) top);
 
   /* Need to grab more pages from the OS.  If this fails it may be because
      we have used up previously reserved memory.  Or, we're just plumb out
      of memory.  Only attempt to commit memory that we know we've previously
      reserved.  */
-  if (newtop <= cygheap->user_heap.max)
+  if (newtop <= max)
     {
-      if (VirtualAlloc (cygheap->user_heap.top, commitbytes, MEM_COMMIT, PAGE_READWRITE) != NULL)
+      if (VirtualAlloc (top, commitbytes, MEM_COMMIT, PAGE_READWRITE))
 	goto good;
+      goto err;
     }
 
-  /* Couldn't allocate memory.  Maybe we can reserve some more.
-     Reserve either the maximum of the standard cygwin_shared->heap_chunk_size ()
-     or the requested amount.  Then attempt to actually allocate it.  */
-  if ((newbrksize = cygheap->user_heap.chunk) < commitbytes)
-    newbrksize = commitbytes;
+  /* The remainder of the existing heap is too small to fulfill the memory
+     request.  We have to extend the heap, so we reserve some more memory
+     and then commit the remainder of the old heap, if any, and the rest of
+     the required space from the extended heap. */
 
-   if ((VirtualAlloc (cygheap->user_heap.top, newbrksize, MEM_RESERVE, PAGE_NOACCESS)
-	|| VirtualAlloc (cygheap->user_heap.top, newbrksize = commitbytes, MEM_RESERVE, PAGE_NOACCESS))
-       && VirtualAlloc (cygheap->user_heap.top, commitbytes, MEM_COMMIT, PAGE_READWRITE) != NULL)
-     {
-	cygheap->user_heap.max = (char *) cygheap->user_heap.max + pround (newbrksize);
-	goto good;
-     }
+  /* For subsequent chunks following the base heap, reserve either 1 Megs
+     per chunk, or the requested amount if it's bigger than 1 Megs. */
+  reservebytes = commitbytes - ((char *) max - (char *) top);
+  commitbytes -= reservebytes;
+  if ((newbrksize = RAISEHEAP_SIZE) < reservebytes)
+    newbrksize = reservebytes;
+
+  if (VirtualAlloc (max, newbrksize, MEM_RESERVE, PAGE_NOACCESS)
+      || VirtualAlloc (max, newbrksize = reservebytes, MEM_RESERVE,
+		       PAGE_NOACCESS))
+    {
+      /* Now commit the requested memory.  Windows keeps all virtual
+	 reservations separate, so we can't commit the two regions in a single,
+	 combined call or we suffer an ERROR_INVALID_ADDRESS.  The same error
+	 is returned when trying to VirtualAlloc 0 bytes, which would occur if
+	 the existing heap was already full. */
+      if ((!commitbytes || VirtualAlloc (top, commitbytes, MEM_COMMIT,
+					 PAGE_READWRITE))
+	  && VirtualAlloc (max, reservebytes, MEM_COMMIT, PAGE_READWRITE))
+	{
+	  max = (char *) max + pround (newbrksize);
+	  goto good;
+	}
+      /* If committing the memory failed, we must free the extendend reserved
+         region, otherwise any other try to fetch memory (for instance by using
+	 mmap) may fail just because we still reserve memory we don't even know
+	 about. */
+      VirtualFree (max, newbrksize, MEM_RELEASE);
+    }
 
 err:
   set_errno (ENOMEM);
   return (void *) -1;
 
 good:
-  void *oldbrk = cygheap->user_heap.ptr;
-  cygheap->user_heap.ptr = newbrk;
-  cygheap->user_heap.top = newtop;
+  void *oldbrk = ptr;
+  ptr = newbrk;
+  top = newtop;
   return oldbrk;
 }

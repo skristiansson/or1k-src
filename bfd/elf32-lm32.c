@@ -159,7 +159,7 @@ lm32_elf_link_hash_table_create (bfd *abfd)
   struct elf_lm32_link_hash_table *ret;
   bfd_size_type amt = sizeof (struct elf_lm32_link_hash_table);
 
-  ret = bfd_malloc (amt);
+  ret = bfd_zmalloc (amt);
   if (ret == NULL)
     return NULL;
 
@@ -171,16 +171,6 @@ lm32_elf_link_hash_table_create (bfd *abfd)
       free (ret);
       return NULL;
     }
-
-  ret->sgot = NULL;
-  ret->sgotplt = NULL;
-  ret->srelgot = NULL;
-  ret->sfixup32 = NULL;
-  ret->splt = NULL;
-  ret->srelplt = NULL;
-  ret->sdynbss = NULL;
-  ret->srelbss = NULL;
-  ret->relocs32 = 0;
 
   return &ret->root.root;
 }
@@ -785,8 +775,7 @@ _lm32fdpic_osec_to_segment (bfd *output_bfd, asection *osec)
   Elf_Internal_Phdr *p;
 
   /* Find the segment that contains the output_section.  */
-  for (m = elf_tdata (output_bfd)->segment_map,
-	 p = elf_tdata (output_bfd)->phdr;
+  for (m = elf_seg_map (output_bfd), p = elf_tdata (output_bfd)->phdr;
        m != NULL;
        m = m->next, p++)
     {
@@ -1316,6 +1305,10 @@ lm32_elf_check_relocs (bfd *abfd,
 	  while (h->root.type == bfd_link_hash_indirect
 		 || h->root.type == bfd_link_hash_warning)
 	    h = (struct elf_link_hash_entry *) h->root.u.i.link;
+
+	  /* PR15323, ref flags aren't set for references in the same
+	     object.  */
+	  h->root.non_ir_ref = 1;
 	}
 
       /* Some relocs require a global offset table.  */
@@ -1752,7 +1745,9 @@ lm32_elf_finish_dynamic_symbol (bfd *output_bfd,
 }
 
 static enum elf_reloc_type_class
-lm32_elf_reloc_type_class (const Elf_Internal_Rela *rela)
+lm32_elf_reloc_type_class (const struct bfd_link_info *info ATTRIBUTE_UNUSED,
+			   const asection *rel_sec ATTRIBUTE_UNUSED,
+			   const Elf_Internal_Rela *rela)
 {
   switch ((int) ELF32_R_TYPE (rela->r_info))
     {

@@ -1,6 +1,6 @@
 /* attach_dll.cc: crt0 for attaching cygwin DLL from a non-cygwin app.
 
-   Copyright 2000, 2001 Red Hat, Inc.
+   Copyright 2000, 2001, 2007, 2010 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -16,7 +16,7 @@ details. */
 #include "crt0.h"
 
 /* for a loaded dll */
-int
+PVOID
 cygwin_attach_dll (HMODULE h, MainFunc f)
 {
   static struct per_process u;

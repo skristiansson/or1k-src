@@ -1,7 +1,6 @@
 /* Fortran language support routines for GDB, the GNU debugger.
 
-   Copyright (C) 1993-1996, 1998-2005, 2007-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1993-2013 Free Software Foundation, Inc.
 
    Contributed by Motorola.  Adapted from the C parser by Farooq Butt
    (fmbutt@engage.sps.mot.com).
@@ -230,9 +229,10 @@ f_word_break_characters (void)
    class.  */
 
 static VEC (char_ptr) *
-f_make_symbol_completion_list (char *text, char *word)
+f_make_symbol_completion_list (const char *text, const char *word,
+			       enum type_code code)
 {
-  return default_make_symbol_completion_list_break_on (text, word, ":");
+  return default_make_symbol_completion_list_break_on (text, word, ":", code);
 }
 
 const struct language_defn f_language_defn =

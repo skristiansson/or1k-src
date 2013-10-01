@@ -1,6 +1,6 @@
 /* Frame unwinder for frames with DWARF Call Frame Information.
 
-   Copyright (C) 2003-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2003-2013 Free Software Foundation, Inc.
 
    Contributed by Mark Kettenis.
 
@@ -141,7 +141,7 @@ struct comp_unit
   struct objfile *objfile;
 
   /* Pointer to the .debug_frame section loaded into memory.  */
-  gdb_byte *dwarf_frame_buffer;
+  const gdb_byte *dwarf_frame_buffer;
 
   /* Length of the loaded .debug_frame section.  */
   bfd_size_type dwarf_frame_size;
@@ -410,7 +410,7 @@ execute_cfa_program (struct dwarf2_fde *fde, const gdb_byte *insn_ptr,
 		     CORE_ADDR pc, struct dwarf2_frame_state *fs)
 {
   int eh_frame_p = fde->eh_frame_p;
-  int bytes_read;
+  unsigned int bytes_read;
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   while (insn_ptr < insn_end && fs->pc <= pc)
@@ -672,8 +672,8 @@ bad CFI data; mismatched DW_CFA_restore_state at %s"),
 	    case DW_CFA_GNU_negative_offset_extended:
 	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &reg);
 	      reg = dwarf2_frame_adjust_regnum (gdbarch, reg, eh_frame_p);
-	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &offset);
-	      offset *= fs->data_align;
+	      insn_ptr = safe_read_uleb128 (insn_ptr, insn_end, &utmp);
+	      offset = utmp * fs->data_align;
 	      dwarf2_frame_state_alloc_regs (&fs->regs, reg + 1);
 	      fs->regs.reg[reg].how = DWARF2_FRAME_REG_SAVED_OFFSET;
 	      fs->regs.reg[reg].loc.offset = -offset;
@@ -888,8 +888,6 @@ dwarf2_compile_cfa_to_ax (struct agent_expr *expr, struct axs_value *loc,
 			  CORE_ADDR pc,
 			  struct dwarf2_per_cu_data *data)
 {
-  const int num_regs = gdbarch_num_regs (gdbarch)
-		       + gdbarch_num_pseudo_regs (gdbarch);
   struct dwarf2_fde *fde;
   CORE_ADDR text_offset;
   struct dwarf2_frame_state fs;
@@ -1805,11 +1803,7 @@ add_fde (struct dwarf2_fde_table *fde_table, struct dwarf2_fde *fde)
   fde_table->entries[fde_table->num_entries - 1] = fde;
 }
 
-#ifdef CC_HAS_LONG_LONG
 #define DW64_CIE_ID 0xffffffffffffffffULL
-#else
-#define DW64_CIE_ID ~0
-#endif
 
 /* Defines the type of eh_frames that are expected to be decoded: CIE, FDE
    or any of them.  */
@@ -2312,7 +2306,7 @@ dwarf2_build_frame_info (struct objfile *objfile)
 	  if (e.reason < 0)
 	    {
 	      warning (_("skipping .eh_frame info of %s: %s"),
-		       objfile->name, e.message);
+		       objfile_name (objfile), e.message);
 
 	      if (fde_table.num_entries != 0)
 		{
@@ -2352,7 +2346,7 @@ dwarf2_build_frame_info (struct objfile *objfile)
       if (e.reason < 0)
 	{
 	  warning (_("skipping .debug_frame info of %s: %s"),
-		   objfile->name, e.message);
+		   objfile_name (objfile), e.message);
 
 	  if (fde_table.num_entries != 0)
 	    {

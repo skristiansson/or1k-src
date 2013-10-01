@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Copyright (C) 2011-2012 Free Software Foundation, Inc.
+# Copyright (C) 2011-2013 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -29,10 +29,10 @@
 #     regenerate the various scripts and Makefiles are on the PATH.
 
 # The list of gnulib modules we are importing in GDB.
-IMPORTED_GNULIB_MODULES="fnmatch-gnu inttypes memmem update-copyright"
+IMPORTED_GNULIB_MODULES="fnmatch-gnu frexpl inttypes memmem update-copyright unistd pathmax"
 
 # The gnulib commit ID to use for the update.
-GNULIB_COMMIT_SHA1="a39f53ccb70a613e647e1019fb4c63645220267e"
+GNULIB_COMMIT_SHA1="8d5bd1402003bd0153984b138735adf537d960b0"
 
 # The expected version number for the various auto tools we will
 # use after the import.
@@ -110,6 +110,7 @@ fi
 # Regenerate all necessary files...
 aclocal -Iimport/m4 &&
 autoconf &&
+autoheader &&
 automake
 if [ $? -ne 0 ]; then
    echo "Error: Failed to regenerate Makefiles and configure scripts."

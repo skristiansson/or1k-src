@@ -1,6 +1,6 @@
 /* Handle SOM shared libraries.
 
-   Copyright (C) 2004-2005, 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2004-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -189,7 +189,7 @@ som_solib_create_inferior_hook (int from_tty)
   struct minimal_symbol *msymbol;
   unsigned int dld_flags, status, have_endo;
   asection *shlib_info;
-  char buf[4];
+  gdb_byte buf[4];
   CORE_ADDR anaddr;
 
   if (symfile_objfile == NULL)
@@ -220,7 +220,7 @@ som_solib_create_inferior_hook (int from_tty)
     goto keep_going;
 
   anaddr = SYMBOL_VALUE_ADDRESS (msymbol);
-  store_unsigned_integer (buf, 4, byte_order, PIDGET (inferior_ptid));
+  store_unsigned_integer (buf, 4, byte_order, ptid_get_pid (inferior_ptid));
   status = target_write_memory (anaddr, buf, 4);
   if (status != 0)
     {
@@ -528,7 +528,7 @@ link_map_start (void)
   enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch ());
   struct minimal_symbol *sym;
   CORE_ADDR addr;
-  char buf[4];
+  gdb_byte buf[4];
   unsigned int dld_flags;
 
   sym = lookup_minimal_symbol ("__dld_flags", NULL, NULL);
@@ -569,7 +569,7 @@ link_map_start (void)
 static int
 match_main (const char *name)
 {
-  return strcmp (name, symfile_objfile->name) == 0;
+  return strcmp (name, objfile_name (symfile_objfile)) == 0;
 }
 
 static struct so_list *
@@ -588,7 +588,7 @@ som_current_sos (void)
       struct cleanup *old_chain;
       int errcode;
       struct dld_list dbuf;
-      char tsdbuf[4];
+      gdb_byte tsdbuf[4];
 
       new = (struct so_list *) xmalloc (sizeof (struct so_list));
       old_chain = make_cleanup (xfree, new);
@@ -697,7 +697,8 @@ som_open_symbol_file_object (void *from_ttyp)
   char *filename;
   int errcode;
   int from_tty = *(int *)from_ttyp;
-  char buf[4];
+  gdb_byte buf[4];
+  struct cleanup *cleanup;
 
   if (symfile_objfile)
     if (!query (_("Attempt to reload symbols from process? ")))
@@ -727,10 +728,11 @@ som_open_symbol_file_object (void *from_ttyp)
       return 0;
     }
 
-  make_cleanup (xfree, filename);
+  cleanup = make_cleanup (xfree, filename);
   /* Have a pathname: read the symbol file.  */
   symbol_file_add_main (filename, from_tty);
 
+  do_cleanups (cleanup);
   return 1;
 }
 
@@ -837,16 +839,15 @@ som_solib_section_offsets (struct objfile *objfile,
     {
       /* Oh what a pain!  We need the offsets before so_list->objfile
          is valid.  The BFDs will never match.  Make a best guess.  */
-      if (strstr (objfile->name, so_list->so_name))
+      if (strstr (objfile_name (objfile), so_list->so_name))
 	{
 	  asection *private_section;
+	  struct obj_section *sect;
 
 	  /* The text offset is easy.  */
 	  offsets->offsets[SECT_OFF_TEXT (objfile)]
 	    = (so_list->lm_info->text_addr
 	       - so_list->lm_info->text_link_addr);
-	  offsets->offsets[SECT_OFF_RODATA (objfile)]
-	    = ANOFFSET (offsets, SECT_OFF_TEXT (objfile));
 
 	  /* We should look at presumed_dp in the SOM header, but
 	     that's not easily available.  This should be OK though.  */
@@ -859,10 +860,28 @@ som_solib_section_offsets (struct objfile *objfile,
 	      offsets->offsets[SECT_OFF_BSS (objfile)] = 0;
 	      return 1;
 	    }
-	  offsets->offsets[SECT_OFF_DATA (objfile)]
-	    = (so_list->lm_info->data_start - private_section->vma);
-	  offsets->offsets[SECT_OFF_BSS (objfile)]
-	    = ANOFFSET (offsets, SECT_OFF_DATA (objfile));
+	  if (objfile->sect_index_data != -1)
+	    {
+	      offsets->offsets[SECT_OFF_DATA (objfile)]
+		= (so_list->lm_info->data_start - private_section->vma);
+	      if (objfile->sect_index_bss != -1)
+		offsets->offsets[SECT_OFF_BSS (objfile)]
+		  = ANOFFSET (offsets, SECT_OFF_DATA (objfile));
+	    }
+
+	  ALL_OBJFILE_OSECTIONS (objfile, sect)
+	    {
+	      flagword flags = bfd_get_section_flags (objfile->obfd,
+						      sect->the_bfd_section);
+
+	      if ((flags & SEC_CODE) != 0)
+		offsets->offsets[sect->the_bfd_section->index]
+		  = offsets->offsets[SECT_OFF_TEXT (objfile)];
+	      else
+		offsets->offsets[sect->the_bfd_section->index]
+		  = offsets->offsets[SECT_OFF_DATA (objfile)];
+	    }
+
 	  return 1;
 	}
       so_list = so_list->next;

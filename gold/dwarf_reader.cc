@@ -374,6 +374,7 @@ Dwarf_ranges_table::read_ranges_table(
   this->ranges_reloc_mapper_ = make_elf_reloc_mapper(object, symtab,
 						     symtab_size);
   this->ranges_reloc_mapper_->initialize(reloc_shndx, reloc_type);
+  this->reloc_type_ = reloc_type;
 
   return true;
 }
@@ -430,11 +431,8 @@ Dwarf_ranges_table::read_range_list(
       unsigned int shndx2 = 0;
       if (this->ranges_reloc_mapper_ != NULL)
         {
-	  shndx1 =
-	      this->ranges_reloc_mapper_->get_reloc_target(offset, &start);
-	  shndx2 =
-	      this->ranges_reloc_mapper_->get_reloc_target(offset + addr_size,
-							   &end);
+	  shndx1 = this->lookup_reloc(offset, &start);
+	  shndx2 = this->lookup_reloc(offset + addr_size, &end);
         }
 
       // End of list is marked by a pair of zeroes.
@@ -460,34 +458,51 @@ Dwarf_ranges_table::read_range_list(
   return ranges;
 }
 
+// Look for a relocation at offset OFF in the range table,
+// and return the section index and offset of the target.
+
+unsigned int
+Dwarf_ranges_table::lookup_reloc(off_t off, off_t* target_off)
+{
+  off_t value;
+  unsigned int shndx =
+      this->ranges_reloc_mapper_->get_reloc_target(off, &value);
+  if (shndx == 0)
+    return 0;
+  if (this->reloc_type_ == elfcpp::SHT_REL)
+    *target_off += value;
+  else
+    *target_off = value;
+  return shndx;
+}
+
 // class Dwarf_pubnames_table
 
-// Read the pubnames section SHNDX from the object file.
+// Read the pubnames section from the object file.
 
 bool
-Dwarf_pubnames_table::read_section(Relobj* object, unsigned int shndx)
+Dwarf_pubnames_table::read_section(Relobj* object, const unsigned char* symtab,
+                                   off_t symtab_size)
 {
   section_size_type buffer_size;
+  unsigned int shndx = 0;
 
-  // If we don't have relocations, shndx will be 0, and
-  // we'll have to hunt for the .debug_pubnames/pubtypes section.
-  if (shndx == 0)
+  // Find the .debug_pubnames/pubtypes section.
+  const char* name = (this->is_pubtypes_
+                      ? ".debug_pubtypes"
+                      : ".debug_pubnames");
+  for (unsigned int i = 1; i < object->shnum(); ++i)
     {
-      const char* name = (this->is_pubtypes_
-			  ? ".debug_pubtypes"
-			  : ".debug_pubnames");
-      for (unsigned int i = 1; i < object->shnum(); ++i)
-	{
-	  if (object->section_name(i) == name)
-	    {
-	      shndx = i;
-	      this->output_section_offset_ = object->output_section_offset(i);
-	      break;
-	    }
-	}
-      if (shndx == 0)
-	return false;
+      if (object->section_name(i) == name)
+        {
+          shndx = i;
+          this->output_section_offset_ = object->output_section_offset(i);
+          break;
+        }
     }
+  if (shndx == 0)
+    return false;
+
 
   this->buffer_ = object->decompressed_section_contents(shndx,
 							&buffer_size,
@@ -495,6 +510,30 @@ Dwarf_pubnames_table::read_section(Relobj* object, unsigned int shndx)
   if (this->buffer_ == NULL)
     return false;
   this->buffer_end_ = this->buffer_ + buffer_size;
+
+  // For incremental objects, we have no relocations.
+  if (object->is_incremental())
+    return true;
+
+  // Find the relocation section
+  unsigned int reloc_shndx = 0;
+  unsigned int reloc_type = 0;
+  for (unsigned int i = 0; i < object->shnum(); ++i)
+    {
+      reloc_type = object->section_type(i);
+      if ((reloc_type == elfcpp::SHT_REL
+	   || reloc_type == elfcpp::SHT_RELA)
+	  && object->section_info(i) == shndx)
+	{
+	  reloc_shndx = i;
+	  break;
+	}
+    }
+
+  this->reloc_mapper_ = make_elf_reloc_mapper(object, symtab, symtab_size);
+  this->reloc_mapper_->initialize(reloc_shndx, reloc_type);
+  this->reloc_type_ = reloc_type;
+
   return true;
 }
 
@@ -503,6 +542,9 @@ Dwarf_pubnames_table::read_section(Relobj* object, unsigned int shndx)
 bool
 Dwarf_pubnames_table::read_header(off_t offset)
 {
+  // Make sure we have actually read the section.
+  gold_assert(this->buffer_ != NULL);
+
   // Correct the offset.  For incremental update links, we have a
   // relocated offset that is relative to the output section, but
   // here we need an offset relative to the input section.
@@ -514,22 +556,29 @@ Dwarf_pubnames_table::read_header(off_t offset)
   const unsigned char* pinfo = this->buffer_ + offset;
 
   // Read the unit_length field.
-  uint32_t unit_length = this->dwinfo_->read_from_pointer<32>(pinfo);
+  uint64_t unit_length = this->dwinfo_->read_from_pointer<32>(pinfo);
   pinfo += 4;
   if (unit_length == 0xffffffff)
     {
       unit_length = this->dwinfo_->read_from_pointer<64>(pinfo);
+      this->unit_length_ = unit_length + 12;
       pinfo += 8;
       this->offset_size_ = 8;
     }
   else
-    this->offset_size_ = 4;
+    {
+      this->unit_length_ = unit_length + 4;
+      this->offset_size_ = 4;
+    }
 
   // Check the version.
   unsigned int version = this->dwinfo_->read_from_pointer<16>(pinfo);
   pinfo += 2;
   if (version != 2)
     return false;
+
+  this->reloc_mapper_->get_reloc_target(pinfo - this->buffer_,
+                                        &this->cu_offset_);
 
   // Skip the debug_info_offset and debug_info_size fields.
   pinfo += 2 * this->offset_size_;
@@ -1141,21 +1190,6 @@ Dwarf_die::sibling_offset()
 
 // class Dwarf_info_reader
 
-// Check that the pointer P is within the current compilation unit.
-
-inline bool
-Dwarf_info_reader::check_buffer(const unsigned char* p) const
-{
-  if (p > this->buffer_ + this->cu_offset_ + this->cu_length_)
-    {
-      gold_warning(_("%s: corrupt debug info in %s"),
-		   this->object_->name().c_str(),
-		   this->object_->section_name(this->shndx_).c_str());
-      return false;
-    }
-  return true;
-}
-
 // Begin parsing the debug info.  This calls visit_compilation_unit()
 // or visit_type_unit() for each compilation or type unit found in the
 // section, and visit_die() for each top-level DIE.
@@ -1445,6 +1479,16 @@ Dwarf_info_reader::visit_compilation_unit(off_t, off_t, Dwarf_die*)
 void
 Dwarf_info_reader::visit_type_unit(off_t, off_t, uint64_t, Dwarf_die*)
 {
+}
+
+// Print a warning about a corrupt debug section.
+
+void
+Dwarf_info_reader::warn_corrupt_debug_section() const
+{
+  gold_warning(_("%s: corrupt debug info in %s"),
+	       this->object_->name().c_str(),
+	       this->object_->section_name(this->shndx_).c_str());
 }
 
 // class Sized_dwarf_line_info

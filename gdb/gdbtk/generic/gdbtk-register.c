@@ -1,5 +1,5 @@
 /* Tcl/Tk command definitions for Insight - Registers
-   Copyright (C) 2001-2012 Free Software Foundation, Inc.
+   Copyright (C) 2001-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -43,11 +43,6 @@ typedef union
 /* Type of our mapping functions */
 typedef void (*map_func)(int, map_arg);
 
-/* This contains the previous values of the registers, since the last call to
-   gdb_changed_register_list.
-
-   It is an array of (NUM_REGS+NUM_PSEUDO_REGS)*MAX_REGISTER_RAW_SIZE bytes. */
-
 static int gdb_register_info (ClientData, Tcl_Interp *, int, Tcl_Obj **);
 static void get_register (int, map_arg);
 static void get_register_name (int, map_arg);
@@ -62,7 +57,13 @@ static int gdb_reggrouplist (ClientData, Tcl_Interp *, int, Tcl_Obj **);
 
 static void get_register_types (int regnum, map_arg);
 
+/* This contains the previous values of the registers, since the last call to
+   gdb_changed_register_list.
+
+   It is an array of (NUM_REGS+NUM_PSEUDO_REGS)*MAX_REGISTER_RAW_SIZE bytes. */
+
 static char *old_regs = NULL;
+static int old_regs_count = 0;
 static int *regformat = (int *)NULL;
 static struct type **regtype = (struct type **)NULL;
 
@@ -340,7 +341,7 @@ get_register (int regnum, map_arg arg)
 
       get_formatted_print_options (&opts, format);
       opts.deref_ref = 1;
-      opts.pretty = Val_pretty_default;
+      opts.prettyformat = Val_prettyformat_default;
       val_print (reg_vtype, value_contents_for_printing (val),
 		 value_embedded_offset (val), 0,
 		 stb, 0, val, &opts, current_language);
@@ -442,27 +443,32 @@ map_arg_registers (Tcl_Interp *interp, int objc, Tcl_Obj **objv,
 static void
 register_changed_p (int regnum, map_arg arg)
 {
-  char raw_buffer[MAX_REGISTER_SIZE];
+  struct value *val;
+  gdb_assert (regnum < old_regs_count);
 
-  if (!target_has_registers
-      || !deprecated_frame_register_read (get_selected_frame (NULL), regnum,
-					  raw_buffer))
+  if (!target_has_registers)
     return;
 
-  if (memcmp (&old_regs[regnum * MAX_REGISTER_SIZE], raw_buffer,
+  val = get_frame_register_value (get_selected_frame (NULL), regnum);
+  if (value_optimized_out (val) || !value_entirely_available (val))
+    return;
+
+  if (memcmp (&old_regs[regnum * MAX_REGISTER_SIZE],
+	      value_contents_all (val),
 	      register_size (get_current_arch (), regnum)) == 0)
     return;
 
   /* Found a changed register.  Save new value and return its number. */
 
-  memcpy (&old_regs[regnum * MAX_REGISTER_SIZE], raw_buffer,
+  memcpy (&old_regs[regnum * MAX_REGISTER_SIZE],
+	  value_contents_all (val),
 	  register_size (get_current_arch (), regnum));
 
   Tcl_ListObjAppendElement (NULL, result_ptr->obj_ptr, Tcl_NewIntObj (regnum));
 }
 
 static void
-setup_architecture_data ()
+setup_architecture_data (void)
 {
   int numregs;
 
@@ -472,6 +478,7 @@ setup_architecture_data ()
 
   numregs = (gdbarch_num_regs (get_current_arch ())
 	     + gdbarch_num_pseudo_regs (get_current_arch ()));
+  old_regs_count = numregs;
   old_regs = xcalloc (1, numregs * MAX_REGISTER_SIZE + 1);
   regformat = (int *)xcalloc (numregs, sizeof(int));
   regtype = (struct type **)xcalloc (numregs, sizeof(struct type **));

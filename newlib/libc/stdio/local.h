@@ -32,6 +32,16 @@
 # include <io.h>
 #endif
 
+/* The following define determines if the per-reent stdin, stdout and stderr
+   streams are closed during _reclaim_reent().  The stdin, stdout and stderr
+   streams are initialized to use file descriptors 0, 1 and 2 respectively.  In
+   case _STDIO_CLOSE_PER_REENT_STD_STREAMS is defined these file descriptors
+   will be closed via close() provided the owner of the reent structure
+   triggerd the on demand reent initilization, see CHECK_INIT(). */
+#ifndef __rtems__
+#define _STDIO_CLOSE_PER_REENT_STD_STREAMS
+#endif
+
 /* The following macros are supposed to replace calls to _flockfile/_funlockfile
    and __sfp_lock_acquire/__sfp_lock_release.  In case of multi-threaded
    environments using pthreads, it's not sufficient to lock the stdio functions
@@ -45,7 +55,12 @@
    section before reaching the end of the critical section's code end, use
    the appropriate _newlib_XXX_exit macro. */
 
-#if !defined (__SINGLE_THREAD__) && defined (_POSIX_THREADS)
+#if !defined (__SINGLE_THREAD__) && defined (_POSIX_THREADS) \
+    && !defined (__rtems__)
+#define _STDIO_WITH_THREAD_CANCELLATION_SUPPORT
+#endif
+
+#ifdef _STDIO_WITH_THREAD_CANCELLATION_SUPPORT
 #include <pthread.h>
 
 /* Start a stream oriented critical section: */
@@ -84,7 +99,7 @@
 	  pthread_setcancelstate (__oldsfpcancel, &__oldsfpcancel); \
 	}
 
-#else /* __SINGLE_THREAD__ || !_POSIX_THREADS */
+#else /* !_STDIO_WITH_THREAD_CANCELLATION_SUPPORT */
 
 # define _newlib_flockfile_start(_fp) \
 	{ \
@@ -108,7 +123,7 @@
 		__sfp_lock_release (); \
 	}
 
-#endif /* !__SINGLE_THREAD__ && _POSIX_THREADS */
+#endif /* _STDIO_WITH_THREAD_CANCELLATION_SUPPORT */
 
 extern u_char *_EXFUN(__sccl, (char *, u_char *fmt));
 extern int    _EXFUN(__svfscanf_r,(struct _reent *,FILE *, _CONST char *,va_list));
@@ -160,34 +175,37 @@ extern _READ_WRITE_RETURN_TYPE _EXFUN(__swrite64,(struct _reent *, void *,
 
 #ifdef _REENT_SMALL
 #define CHECK_INIT(ptr, fp) \
-  do						\
-    {						\
-      if ((ptr) && !(ptr)->__sdidinit)		\
-	__sinit (ptr);				\
-      if ((fp) == (FILE *)&__sf_fake_stdin)	\
-	(fp) = _stdin_r(ptr);			\
-      else if ((fp) == (FILE *)&__sf_fake_stdout) \
-	(fp) = _stdout_r(ptr);			\
-      else if ((fp) == (FILE *)&__sf_fake_stderr) \
-	(fp) = _stderr_r(ptr);			\
-    }						\
+  do								\
+    {								\
+      struct _reent *_check_init_ptr = (ptr);			\
+      if ((_check_init_ptr) && !(_check_init_ptr)->__sdidinit)	\
+	__sinit (_check_init_ptr);				\
+      if ((fp) == (FILE *)&__sf_fake_stdin)			\
+	(fp) = _stdin_r(_check_init_ptr);			\
+      else if ((fp) == (FILE *)&__sf_fake_stdout)		\
+	(fp) = _stdout_r(_check_init_ptr);			\
+      else if ((fp) == (FILE *)&__sf_fake_stderr)		\
+	(fp) = _stderr_r(_check_init_ptr);			\
+    }								\
   while (0)
 #else /* !_REENT_SMALL   */
 #define CHECK_INIT(ptr, fp) \
-  do						\
-    {						\
-      if ((ptr) && !(ptr)->__sdidinit)		\
-	__sinit (ptr);				\
-    }						\
+  do								\
+    {								\
+      struct _reent *_check_init_ptr = (ptr);			\
+      if ((_check_init_ptr) && !(_check_init_ptr)->__sdidinit)	\
+	__sinit (_check_init_ptr);				\
+    }								\
   while (0)
 #endif /* !_REENT_SMALL  */
 
 #define CHECK_STD_INIT(ptr) \
-  do						\
-    {						\
-      if ((ptr) && !(ptr)->__sdidinit)		\
-	__sinit (ptr);				\
-    }						\
+  do								\
+    {								\
+      struct _reent *_check_init_ptr = (ptr);			\
+      if ((_check_init_ptr) && !(_check_init_ptr)->__sdidinit)	\
+	__sinit (_check_init_ptr);				\
+    }								\
   while (0)
 
 /* Return true and set errno and stream error flag iff the given FILE
@@ -213,6 +231,7 @@ extern _READ_WRITE_RETURN_TYPE _EXFUN(__swrite64,(struct _reent *, void *,
 #define	FREELB(ptr, fp) { _free_r(ptr,(char *)(fp)->_lb._base); \
       (fp)->_lb._base = NULL; }
 
+#ifdef _WIDE_ORIENT
 /*
  * Set the orientation for a stream. If o > 0, the stream has wide-
  * orientation. If o < 0, the stream has byte-orientation.
@@ -230,6 +249,9 @@ extern _READ_WRITE_RETURN_TYPE _EXFUN(__swrite64,(struct _reent *, void *,
 	}							\
     }								\
   while (0)
+#else
+#define ORIENT(fp,ori)
+#endif
 
 /* WARNING: _dcvt is defined in the stdlib directory, not here!  */
 

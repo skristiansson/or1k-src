@@ -1,7 +1,5 @@
 /* readelf.c -- display contents of an ELF format file
-   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009, 2010, 2011, 2012
-   Free Software Foundation, Inc.
+   Copyright 1998-2013 Free Software Foundation, Inc.
 
    Originally developed by Eric Youngdale <eric@andante.jic.com>
    Modifications by Nick Clifton <nickc@redhat.com>
@@ -124,6 +122,7 @@
 #include "elf/m68hc11.h"
 #include "elf/mcore.h"
 #include "elf/mep.h"
+#include "elf/metag.h"
 #include "elf/microblaze.h"
 #include "elf/mips.h"
 #include "elf/mmix.h"
@@ -132,6 +131,7 @@
 #include "elf/moxie.h"
 #include "elf/mt.h"
 #include "elf/msp430.h"
+#include "elf/nios2.h"
 #include "elf/or1k.h"
 #include "elf/pj.h"
 #include "elf/ppc.h"
@@ -158,6 +158,10 @@
 #include "libiberty.h"
 #include "safe-ctype.h"
 #include "filenames.h"
+
+#ifndef offsetof
+#define offsetof(TYPE, MEMBER) ((size_t) &(((TYPE *) 0)->MEMBER))
+#endif
 
 char * program_name = "readelf";
 static long archive_file_offset;
@@ -538,10 +542,12 @@ find_section_in_set (const char * name, unsigned int * set)
 /* Read an unsigned LEB128 encoded value from p.  Set *PLEN to the number of
    bytes read.  */
 
-static unsigned long
-read_uleb128 (unsigned char *data, unsigned int *length_return)
+static inline unsigned long
+read_uleb128 (unsigned char *data,
+	      unsigned int *length_return,
+	      const unsigned char * const end)
 {
-  return read_leb128 (data, length_return, 0);
+  return read_leb128 (data, length_return, FALSE, end);
 }
 
 /* Return true if the current file is for IA-64 machine and OpenVMS ABI.
@@ -608,6 +614,7 @@ guess_is_rela (unsigned int e_machine)
     case EM_M32R:
     case EM_MCORE:
     case EM_CYGNUS_MEP:
+    case EM_METAG:
     case EM_MMIX:
     case EM_MN10200:
     case EM_CYGNUS_MN10200:
@@ -894,6 +901,17 @@ get_reloc_symindex (bfd_vma reloc_info)
   return is_32bit_elf ? ELF32_R_SYM (reloc_info) : ELF64_R_SYM (reloc_info);
 }
 
+static inline bfd_boolean
+uses_msp430x_relocs (void)
+{
+  return
+    elf_header.e_machine == EM_MSP430 /* Paranoia.  */
+    /* GCC uses osabi == ELFOSBI_STANDALONE.  */
+    && (((elf_header.e_flags & EF_MSP430_MACH) == E_MSP430_MACH_MSP430X)
+	/* TI compiler uses ELFOSABI_NONE.  */
+	|| (elf_header.e_ident[EI_OSABI] == ELFOSABI_NONE));
+}
+
 /* Display the contents of the relocation data found at the specified
    offset.  */
 
@@ -1116,6 +1134,11 @@ dump_relocations (FILE * file,
 	  break;
 
 	case EM_MSP430:
+	  if (uses_msp430x_relocs ())
+	    {
+	      rtype = elf_msp430x_reloc_type (type);
+	      break;
+	    }
 	case EM_MSP430_OLD:
 	  rtype = elf_msp430_reloc_type (type);
 	  break;
@@ -1262,6 +1285,10 @@ dump_relocations (FILE * file,
 	  rtype = elf_rx_reloc_type (type);
 	  break;
 
+	case EM_METAG:
+	  rtype = elf_metag_reloc_type (type);
+	  break;
+
 	case EM_XC16X:
 	case EM_C166:
 	  rtype = elf_xc16x_reloc_type (type);
@@ -1281,6 +1308,10 @@ dump_relocations (FILE * file,
 
 	case EM_XGATE:
 	  rtype = elf_xgate_reloc_type (type);
+	  break;
+
+	case EM_ALTERA_NIOS2:
+	  rtype = elf_nios2_reloc_type (type);
 	  break;
 	}
 
@@ -1681,6 +1712,17 @@ get_tic6x_dynamic_type (unsigned long type)
 }
 
 static const char *
+get_nios2_dynamic_type (unsigned long type)
+{
+  switch (type)
+    {
+    case DT_NIOS2_GP: return "NIOS2_GP";
+    default:
+      return NULL;
+    }
+}
+
+static const char *
 get_dynamic_type (unsigned long type)
 {
   static char buff[64];
@@ -1793,6 +1835,9 @@ get_dynamic_type (unsigned long type)
 	      break;
 	    case EM_TI_C6000:
 	      result = get_tic6x_dynamic_type (type);
+	      break;
+	    case EM_ALTERA_NIOS2:
+	      result = get_nios2_dynamic_type (type);
 	      break;
 	    default:
 	      result = NULL;
@@ -2026,7 +2071,7 @@ get_machine_name (unsigned e_machine)
     case EM_MICROBLAZE_OLD:	return "Xilinx MicroBlaze";
     case EM_RL78:		return "Renesas RL78";
     case EM_RX:			return "Renesas RX";
-    case EM_METAG:		return "Imagination Technologies META processor architecture";
+    case EM_METAG:		return "Imagination Technologies Meta processor architecture";
     case EM_MCST_ELBRUS:	return "MCST Elbrus general purpose hardware architecture";
     case EM_ECOG16:		return "Cyan Technology eCOG16 family";
     case EM_ETPU:		return "Freescale Extended Time Processing Unit";
@@ -2467,6 +2512,9 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
 	case EM_CYGNUS_V850:
 	  switch (e_flags & EF_V850_ARCH)
 	    {
+	    case E_V850E3V5_ARCH:
+	      strcat (buf, ", v850e3v5");
+	      break;
 	    case E_V850E2V3_ARCH:
 	      strcat (buf, ", v850e2v3");
 	      break;
@@ -2516,6 +2564,12 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
 
 	  if (e_flags & EF_MIPS_32BITMODE)
 	    strcat (buf, ", 32bitmode");
+
+	  if (e_flags & EF_MIPS_NAN2008)
+	    strcat (buf, ", nan2008");
+
+	  if (e_flags & EF_MIPS_FP64)
+	    strcat (buf, ", fp64");
 
 	  switch ((e_flags & EF_MIPS_MACH))
 	    {
@@ -2730,6 +2784,11 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
 	    strcat (buf, ", G-Float");
 	  break;
 
+	case EM_RL78:
+	  if (e_flags & E_FLAG_RL78_G10)
+	    strcat (buf, ", G10");
+	  break;
+	  
 	case EM_RX:
 	  if (e_flags & E_FLAG_RX_64BIT_DOUBLES)
 	    strcat (buf, ", 64-bit doubles");
@@ -2750,6 +2809,32 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
 	  if ((e_flags & EF_C6000_REL))
 	    strcat (buf, ", relocatable module");
 	  break;
+
+	case EM_MSP430:
+	  strcat (buf, _(": architecture variant: "));
+	  switch (e_flags & EF_MSP430_MACH)
+	    {
+	    case E_MSP430_MACH_MSP430x11: strcat (buf, "MSP430x11"); break;
+	    case E_MSP430_MACH_MSP430x11x1 : strcat (buf, "MSP430x11x1 "); break;
+	    case E_MSP430_MACH_MSP430x12: strcat (buf, "MSP430x12"); break;
+	    case E_MSP430_MACH_MSP430x13: strcat (buf, "MSP430x13"); break;
+	    case E_MSP430_MACH_MSP430x14: strcat (buf, "MSP430x14"); break;
+	    case E_MSP430_MACH_MSP430x15: strcat (buf, "MSP430x15"); break;
+	    case E_MSP430_MACH_MSP430x16: strcat (buf, "MSP430x16"); break;
+	    case E_MSP430_MACH_MSP430x31: strcat (buf, "MSP430x31"); break;
+	    case E_MSP430_MACH_MSP430x32: strcat (buf, "MSP430x32"); break;
+	    case E_MSP430_MACH_MSP430x33: strcat (buf, "MSP430x33"); break;
+	    case E_MSP430_MACH_MSP430x41: strcat (buf, "MSP430x41"); break;
+	    case E_MSP430_MACH_MSP430x42: strcat (buf, "MSP430x42"); break;
+	    case E_MSP430_MACH_MSP430x43: strcat (buf, "MSP430x43"); break;
+	    case E_MSP430_MACH_MSP430x44: strcat (buf, "MSP430x44"); break;
+	    case E_MSP430_MACH_MSP430X  : strcat (buf, "MSP430X"); break;
+	    default:
+	      strcat (buf, _(": unknown")); break;
+	    }
+
+	  if (e_flags & ~ EF_MSP430_MACH)
+	    strcat (buf, _(": unknown extra flag bits also present"));
 	}
     }
 
@@ -3175,6 +3260,18 @@ get_tic6x_section_type_name (unsigned int sh_type)
 }
 
 static const char *
+get_msp430x_section_type_name (unsigned int sh_type)
+{
+  switch (sh_type)
+    {
+    case SHT_MSP430_SEC_FLAGS:   return "MSP430_SEC_FLAGS";
+    case SHT_MSP430_SYM_ALIASES: return "MSP430_SYM_ALIASES";
+    case SHT_MSP430_ATTRIBUTES:  return "MSP430_ATTRIBUTES";
+    default: return NULL;
+    }
+}
+
+static const char *
 get_section_type_name (unsigned int sh_type)
 {
   static char buff[32];
@@ -3238,6 +3335,9 @@ get_section_type_name (unsigned int sh_type)
 	      break;
 	    case EM_TI_C6000:
 	      result = get_tic6x_section_type_name (sh_type);
+	      break;
+	    case EM_MSP430:
+	      result = get_msp430x_section_type_name (sh_type);
 	      break;
 	    default:
 	      result = NULL;
@@ -4726,16 +4826,19 @@ process_section_headers (FILE * file)
 #define CHECK_ENTSIZE_VALUES(section, i, size32, size64) \
   do									    \
     {									    \
-      size_t expected_entsize						    \
-	= is_32bit_elf ? size32 : size64;				    \
+      bfd_size_type expected_entsize = is_32bit_elf ? size32 : size64;	    \
       if (section->sh_entsize != expected_entsize)			    \
-	error (_("Section %d has invalid sh_entsize %lx (expected %lx)\n"), \
-	       i, (unsigned long int) section->sh_entsize,		    \
-	       (unsigned long int) expected_entsize);			    \
-      section->sh_entsize = expected_entsize;				    \
+	{								\
+	  error (_("Section %d has invalid sh_entsize of %" BFD_VMA_FMT "x\n"), \
+		 i, section->sh_entsize);	\
+	  error (_("(Using the expected size of %d for the rest of this dump)\n"), \
+		   (int) expected_entsize); \
+	  section->sh_entsize = expected_entsize;			\
+	} \
     }									    \
   while (0)
-#define CHECK_ENTSIZE(section, i, type) \
+
+#define CHECK_ENTSIZE(section, i, type)					\
   CHECK_ENTSIZE_VALUES (section, i, sizeof (Elf32_External_##type),	    \
 			sizeof (Elf64_External_##type))
 
@@ -4804,7 +4907,8 @@ process_section_headers (FILE * file)
 	      || (do_debug_info     && const_strneq (name, "info"))
 	      || (do_debug_info     && const_strneq (name, "types"))
 	      || (do_debug_abbrevs  && const_strneq (name, "abbrev"))
-	      || (do_debug_lines    && const_strneq (name, "line"))
+	      || (do_debug_lines    && strcmp (name, "line") == 0)
+	      || (do_debug_lines    && const_strneq (name, "line."))
 	      || (do_debug_pubnames && const_strneq (name, "pubnames"))
 	      || (do_debug_pubtypes && const_strneq (name, "pubtypes"))
 	      || (do_debug_aranges  && const_strneq (name, "aranges"))
@@ -6529,7 +6633,10 @@ get_unwind_section_word (struct arm_unw_aux_info *  aux,
 	   ++relsec)
 	{
 	  if (relsec->sh_info >= elf_header.e_shnum
-	      || section_headers + relsec->sh_info != sec)
+	      || section_headers + relsec->sh_info != sec
+	      /* PR 15745: Check the section type as well.  */
+	      || (relsec->sh_type != SHT_REL
+		  && relsec->sh_type != SHT_RELA))
 	    continue;
 
 	  arm_sec->rel_type = relsec->sh_type;
@@ -6539,19 +6646,15 @@ get_unwind_section_word (struct arm_unw_aux_info *  aux,
 				     relsec->sh_size,
 				     & arm_sec->rela, & arm_sec->nrelas))
 		return FALSE;
-	      break;
 	    }
-	  else if (relsec->sh_type == SHT_RELA)
+	  else /* relsec->sh_type == SHT_RELA */
 	    {
 	      if (!slurp_rela_relocs (aux->file, relsec->sh_offset,
 				      relsec->sh_size,
 				      & arm_sec->rela, & arm_sec->nrelas))
 		return FALSE;
-	      break;
 	    }
-	  else
-	    warn (_("unexpected relocation type (%d) for section %d"),
-		  relsec->sh_type, relsec->sh_info);
+	  break;
 	}
 
       arm_sec->next_rela = arm_sec->rela;
@@ -6828,7 +6931,7 @@ decode_arm_unwind_bytecode (struct arm_unw_aux_info *aux,
 		break;
 	    }
 	  assert (i < sizeof (buf));
-	  offset = read_uleb128 (buf, &len);
+	  offset = read_uleb128 (buf, &len, buf + i + 1);
 	  assert (len == i + 1);
 	  offset = offset * 4 + 0x204;
 	  printf ("vsp = vsp + %ld", offset);
@@ -7024,7 +7127,7 @@ decode_tic6x_unwind_bytecode (struct arm_unw_aux_info *aux,
 		break;
 	    }
 	  assert (i < sizeof (buf));
-	  offset = read_uleb128 (buf, &len);
+	  offset = read_uleb128 (buf, &len, buf + i + 1);
 	  assert (len == i + 1);
 	  offset = offset * 8 + 0x408;
 	  printf (_("sp = sp + %ld"), offset);
@@ -7397,7 +7500,10 @@ process_unwind (FILE * file)
 
   for (i = 0; handlers[i].handler != NULL; i++)
     if (elf_header.e_machine == handlers[i].machtype)
-      return handlers[i].handler (file);
+      {
+	handlers[i].handler (file);
+	return;
+      }
 
   printf (_("\nThe decoding of unwind sections for machine type %s is not currently supported.\n"),
 	  get_machine_name (elf_header.e_machine));
@@ -8462,8 +8568,8 @@ process_version_sections (FILE * file)
 		int j;
 		int isum;
 
-		/* Check for negative or very large indicies.  */
-		if ((unsigned char *) edefs + idx < (unsigned char *) edefs)
+		/* Check for very large indicies.  */
+		if (idx > (size_t) (endbuf - (char *) edefs))
 		  break;
 
 		vstart = ((char *) edefs) + idx;
@@ -8487,8 +8593,7 @@ process_version_sections (FILE * file)
 			ent.vd_ndx, ent.vd_cnt);
 
 		/* Check for overflow.  */
-		if ((unsigned char *)(vstart + ent.vd_aux) < (unsigned char *) vstart
-		    || (unsigned char *)(vstart + ent.vd_aux) > (unsigned char *) endbuf)
+		if (ent.vd_aux > (size_t) (endbuf - vstart))
 		  break;
 
 		vstart += ent.vd_aux;
@@ -8508,8 +8613,7 @@ process_version_sections (FILE * file)
 		for (j = 1; j < ent.vd_cnt; j++)
 		  {
 		    /* Check for overflow.  */
-		    if ((unsigned char *)(vstart + aux.vda_next) < (unsigned char *) vstart
-			|| (unsigned char *)(vstart + aux.vda_next) > (unsigned char *) endbuf)
+		    if (aux.vda_next > (size_t) (endbuf - vstart))
 		      break;
 
 		    isum   += aux.vda_next;
@@ -8579,7 +8683,7 @@ process_version_sections (FILE * file)
 		int isum;
 		char * vstart;
 
-		if ((unsigned char *) eneed + idx < (unsigned char *) eneed)
+		if (idx > (size_t) (endbuf - (char *) eneed))
 		  break;
 
 		vstart = ((char *) eneed) + idx;
@@ -8604,8 +8708,7 @@ process_version_sections (FILE * file)
 		printf (_("  Cnt: %d\n"), ent.vn_cnt);
 
 		/* Check for overflow.  */
-		if ((unsigned char *)(vstart + ent.vn_aux) < (unsigned char *) vstart
-		    || (unsigned char *)(vstart + ent.vn_aux) > (unsigned char *) endbuf)
+		if (ent.vn_aux > (size_t) (endbuf - vstart))
 		  break;
 
 		vstart += ent.vn_aux;
@@ -8636,8 +8739,7 @@ process_version_sections (FILE * file)
 			    get_ver_flags (aux.vna_flags), aux.vna_other);
 
 		    /* Check for overflow.  */
-		    if ((unsigned char *)(vstart + aux.vna_next) < (unsigned char *) vstart
-			|| (unsigned char *)(vstart + aux.vna_next) > (unsigned char *) endbuf)
+		    if (aux.vna_next > (size_t) (endbuf - vstart))
 		      break;
 
 		    isum   += aux.vna_next;
@@ -8963,8 +9065,13 @@ get_symbol_type (unsigned int type)
     default:
       if (type >= STT_LOPROC && type <= STT_HIPROC)
 	{
-	  if (elf_header.e_machine == EM_ARM && type == STT_ARM_TFUNC)
-	    return "THUMB_FUNC";
+	  if (elf_header.e_machine == EM_ARM)
+	    {
+	      if (type == STT_ARM_TFUNC)
+		return "THUMB_FUNC";
+	      if (type == STT_ARM_16BIT)
+		return "THUMB_LABEL";
+	    }
 
 	  if (elf_header.e_machine == EM_SPARCV9 && type == STT_REGISTER)
 	    return "REGISTER";
@@ -9930,6 +10037,60 @@ target_specific_reloc_handling (Elf_Internal_Rela * reloc,
 
   switch (elf_header.e_machine)
     {
+    case EM_MSP430:
+    case EM_MSP430_OLD:
+      {
+	static Elf_Internal_Sym * saved_sym = NULL;
+
+	switch (reloc_type)
+	  {
+	  case 10: /* R_MSP430_SYM_DIFF */
+	    if (uses_msp430x_relocs ())
+	      break;
+	  case 21: /* R_MSP430X_SYM_DIFF */
+	    saved_sym = symtab + get_reloc_symindex (reloc->r_info);
+	    return TRUE;
+
+	  case 1: /* R_MSP430_32 or R_MSP430_ABS32 */
+	  case 3: /* R_MSP430_16 or R_MSP430_ABS8 */
+	    goto handle_sym_diff;
+	    
+	  case 5: /* R_MSP430_16_BYTE */
+	  case 9: /* R_MSP430_8 */
+	    if (uses_msp430x_relocs ())
+	      break;
+	    goto handle_sym_diff;
+
+	  case 2: /* R_MSP430_ABS16 */
+	  case 15: /* R_MSP430X_ABS16 */
+	    if (! uses_msp430x_relocs ())
+	      break;
+	    goto handle_sym_diff;
+	    
+	  handle_sym_diff:
+	    if (saved_sym != NULL)
+	      {
+		bfd_vma value;
+
+		value = reloc->r_addend
+		  + (symtab[get_reloc_symindex (reloc->r_info)].st_value
+		     - saved_sym->st_value);
+
+		byte_put (start + reloc->r_offset, value, reloc_type == 1 ? 4 : 2);
+
+		saved_sym = NULL;
+		return TRUE;
+	      }
+	    break;
+
+	  default:
+	    if (saved_sym != NULL)
+	      error (_("Unhandled MSP430 reloc type found after SYM_DIFF reloc"));
+	    break;
+	  }
+	break;
+      }
+
     case EM_MN10300:
     case EM_CYGNUS_MN10300:
       {
@@ -10051,6 +10212,8 @@ is_32bit_abs_reloc (unsigned int reloc_type)
       return reloc_type == 1; /* R_MCORE_ADDR32.  */
     case EM_CYGNUS_MEP:
       return reloc_type == 4; /* R_MEP_32.  */
+    case EM_METAG:
+      return reloc_type == 2; /* R_METAG_ADDR32.  */
     case EM_MICROBLAZE:
       return reloc_type == 1; /* R_MICROBLAZE_32.  */
     case EM_MIPS:
@@ -10067,10 +10230,11 @@ is_32bit_abs_reloc (unsigned int reloc_type)
       return reloc_type == 1; /* R_MOXIE_32.  */
     case EM_MSP430_OLD:
     case EM_MSP430:
-      return reloc_type == 1; /* R_MSP43_32.  */
+      return reloc_type == 1; /* R_MSP430_32 or R_MSP320_ABS32.  */
     case EM_MT:
       return reloc_type == 2; /* R_MT_32.  */
     case EM_ALTERA_NIOS2:
+      return reloc_type == 12; /* R_NIOS2_BFD_RELOC_32.  */
     case EM_NIOS32:
       return reloc_type == 1; /* R_NIOS_32.  */
     case EM_OR1K:
@@ -10318,12 +10482,15 @@ is_16bit_abs_reloc (unsigned int reloc_type)
     case EM_M32C_OLD:
     case EM_M32C:
       return reloc_type == 1; /* R_M32C_16 */
-    case EM_MSP430_OLD:
     case EM_MSP430:
+      if (uses_msp430x_relocs ())
+	return reloc_type == 2; /* R_MSP430_ABS16.  */
+    case EM_MSP430_OLD:
       return reloc_type == 5; /* R_MSP430_16_BYTE.  */
     case EM_OR1K:
       return reloc_type == 2; /* R_OR1K_16.  */
     case EM_ALTERA_NIOS2:
+      return reloc_type == 13; /* R_NIOS2_BFD_RELOC_16.  */
     case EM_NIOS32:
       return reloc_type == 9; /* R_NIOS_16.  */
     case EM_TI_C6000:
@@ -10380,6 +10547,8 @@ is_none_reloc (unsigned int reloc_type)
     case EM_TILEPRO: /* R_TILEPRO_NONE.  */
     case EM_XC16X:
     case EM_C166:    /* R_XC16X_NONE.  */
+    case EM_ALTERA_NIOS2: /* R_NIOS2_NONE.  */
+    case EM_NIOS32:  /* R_NIOS_NONE.  */
     case EM_OR1K:    /* R_OR1K_NONE. */
       return reloc_type == 0;
     case EM_AARCH64:
@@ -10390,6 +10559,8 @@ is_none_reloc (unsigned int reloc_type)
 	      || reloc_type == 17  /* R_XTENSA_DIFF8.  */
 	      || reloc_type == 18  /* R_XTENSA_DIFF16.  */
 	      || reloc_type == 19  /* R_XTENSA_DIFF32.  */);
+    case EM_METAG:
+      return reloc_type == 3; /* R_METAG_NONE.  */
     }
   return FALSE;
 }
@@ -10485,7 +10656,7 @@ apply_relocations (void * file,
 	    }
 
 	  rloc = start + rp->r_offset;
-	  if ((rloc + reloc_size) > end)
+	  if ((rloc + reloc_size) > end || (rloc < start))
 	    {
 	      warn (_("skipping invalid relocation offset 0x%lx in section %s\n"),
 		    (unsigned long) rp->r_offset,
@@ -10938,6 +11109,7 @@ display_debug_section (int shndx, Elf_Internal_Shdr * section, FILE * file)
   /* See if we know how to display the contents of this section.  */
   for (i = 0; i < max; i++)
     if (streq (debug_displays[i].section.uncompressed_name, name)
+	|| (i == line && const_strneq (name, ".debug_line."))
         || streq (debug_displays[i].section.compressed_name, name))
       {
 	struct dwarf_section * sec = &debug_displays [i].section;
@@ -10946,7 +11118,9 @@ display_debug_section (int shndx, Elf_Internal_Shdr * section, FILE * file)
 	if (secondary)
 	  free_debug_section ((enum dwarf_section_display_enum) i);
 
-	if (streq (sec->uncompressed_name, name))
+	if (i == line && const_strneq (name, ".debug_line."))
+	  sec->name = name;
+	else if (streq (sec->uncompressed_name, name))
 	  sec->name = sec->uncompressed_name;
 	else
 	  sec->name = sec->compressed_name;
@@ -11061,6 +11235,52 @@ process_mips_fpe_exception (int mask)
     }
   else
     fputs ("0", stdout);
+}
+
+/* Display's the value of TAG at location P.  If TAG is
+   greater than 0 it is assumed to be an unknown tag, and
+   a message is printed to this effect.  Otherwise it is
+   assumed that a message has already been printed.
+
+   If the bottom bit of TAG is set it assumed to have a
+   string value, otherwise it is assumed to have an integer
+   value.
+
+   Returns an updated P pointing to the first unread byte
+   beyond the end of TAG's value.
+
+   Reads at or beyond END will not be made.  */
+
+static unsigned char *
+display_tag_value (int tag,
+		   unsigned char * p,
+		   const unsigned char * const end)
+{
+  unsigned long val;
+
+  if (tag > 0)
+    printf ("  Tag_unknown_%d: ", tag);
+
+  if (p >= end)
+    {
+      warn (_("corrupt tag\n"));
+    }
+  else if (tag & 1)
+    {
+      /* FIXME: we could read beyond END here.  */
+      printf ("\"%s\"\n", p);
+      p += strlen ((char *) p) + 1;
+    }
+  else
+    {
+      unsigned int len;
+
+      val = read_uleb128 (p, &len, end);
+      p += len;
+      printf ("%ld (0x%lx)\n", val, val);
+    }
+
+  return p;
 }
 
 /* ARM EABI attributes section.  */
@@ -11184,7 +11404,8 @@ static arm_attr_public_tag arm_attr_public_tags[] =
 #undef LOOKUP
 
 static unsigned char *
-display_arm_attribute (unsigned char * p)
+display_arm_attribute (unsigned char * p,
+		       const unsigned char * const end)
 {
   int tag;
   unsigned int len;
@@ -11193,7 +11414,7 @@ display_arm_attribute (unsigned char * p)
   unsigned i;
   int type;
 
-  tag = read_uleb128 (p, &len);
+  tag = read_uleb128 (p, &len, end);
   p += len;
   attr = NULL;
   for (i = 0; i < ARRAY_SIZE (arm_attr_public_tags); i++)
@@ -11214,7 +11435,7 @@ display_arm_attribute (unsigned char * p)
 	  switch (tag)
 	    {
 	    case 7: /* Tag_CPU_arch_profile.  */
-	      val = read_uleb128 (p, &len);
+	      val = read_uleb128 (p, &len, end);
 	      p += len;
 	      switch (val)
 		{
@@ -11228,7 +11449,7 @@ display_arm_attribute (unsigned char * p)
 	      break;
 
 	    case 24: /* Tag_align_needed.  */
-	      val = read_uleb128 (p, &len);
+	      val = read_uleb128 (p, &len, end);
 	      p += len;
 	      switch (val)
 		{
@@ -11247,7 +11468,7 @@ display_arm_attribute (unsigned char * p)
 	      break;
 
 	    case 25: /* Tag_align_preserved.  */
-	      val = read_uleb128 (p, &len);
+	      val = read_uleb128 (p, &len, end);
 	      p += len;
 	      switch (val)
 		{
@@ -11266,7 +11487,7 @@ display_arm_attribute (unsigned char * p)
 	      break;
 
 	    case 32: /* Tag_compatibility.  */
-	      val = read_uleb128 (p, &len);
+	      val = read_uleb128 (p, &len, end);
 	      p += len;
 	      printf (_("flag = %d, vendor = %s\n"), val, p);
 	      p += strlen ((char *) p) + 1;
@@ -11278,11 +11499,11 @@ display_arm_attribute (unsigned char * p)
 	      break;
 
 	    case 65: /* Tag_also_compatible_with.  */
-	      val = read_uleb128 (p, &len);
+	      val = read_uleb128 (p, &len, end);
 	      p += len;
 	      if (val == 6 /* Tag_CPU_arch.  */)
 		{
-		  val = read_uleb128 (p, &len);
+		  val = read_uleb128 (p, &len, end);
 		  p += len;
 		  if ((unsigned int)val >= ARRAY_SIZE (arm_attr_tag_CPU_arch))
 		    printf ("??? (%d)\n", val);
@@ -11300,13 +11521,13 @@ display_arm_attribute (unsigned char * p)
 	  return p;
 
 	case 1:
+	  return display_tag_value (-1, p, end);
 	case 2:
-	  type = attr->type;
-	  break;
+	  return display_tag_value (0, p, end);
 
 	default:
 	  assert (attr->type & 0x80);
-	  val = read_uleb128 (p, &len);
+	  val = read_uleb128 (p, &len, end);
 	  p += len;
 	  type = attr->type & 0x7f;
 	  if (val >= type)
@@ -11316,87 +11537,58 @@ display_arm_attribute (unsigned char * p)
 	  return p;
 	}
     }
-  else
-    {
-      if (tag & 1)
-	type = 1; /* String.  */
-      else
-	type = 2; /* uleb128.  */
-      printf ("  Tag_unknown_%d: ", tag);
-    }
 
-  if (type == 1)
-    {
-      printf ("\"%s\"\n", p);
-      p += strlen ((char *) p) + 1;
-    }
-  else
-    {
-      val = read_uleb128 (p, &len);
-      p += len;
-      printf ("%d (0x%x)\n", val, val);
-    }
-
-  return p;
+  return display_tag_value (tag, p, end);
 }
 
 static unsigned char *
 display_gnu_attribute (unsigned char * p,
-		       unsigned char * (* display_proc_gnu_attribute) (unsigned char *, int))
+		       unsigned char * (* display_proc_gnu_attribute) (unsigned char *, int, const unsigned char * const),
+		       const unsigned char * const end)
 {
   int tag;
   unsigned int len;
   int val;
-  int type;
 
-  tag = read_uleb128 (p, &len);
+  tag = read_uleb128 (p, &len, end);
   p += len;
 
   /* Tag_compatibility is the only generic GNU attribute defined at
      present.  */
   if (tag == 32)
     {
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
-      printf (_("flag = %d, vendor = %s\n"), val, p);
-      p += strlen ((char *) p) + 1;
+      if (p == end)
+	{
+	  printf (_("flag = %d, vendor = <corrupt>\n"), val);
+	  warn (_("corrupt vendor attribute\n"));
+	}
+      else
+	{
+	  printf (_("flag = %d, vendor = %s\n"), val, p);
+	  p += strlen ((char *) p) + 1;
+	}
       return p;
     }
 
   if ((tag & 2) == 0 && display_proc_gnu_attribute)
-    return display_proc_gnu_attribute (p, tag);
+    return display_proc_gnu_attribute (p, tag, end);
 
-  if (tag & 1)
-    type = 1; /* String.  */
-  else
-    type = 2; /* uleb128.  */
-  printf ("  Tag_unknown_%d: ", tag);
-
-  if (type == 1)
-    {
-      printf ("\"%s\"\n", p);
-      p += strlen ((char *) p) + 1;
-    }
-  else
-    {
-      val = read_uleb128 (p, &len);
-      p += len;
-      printf ("%d (0x%x)\n", val, val);
-    }
-
-  return p;
+  return display_tag_value (tag, p, end);
 }
 
 static unsigned char *
-display_power_gnu_attribute (unsigned char * p, int tag)
+display_power_gnu_attribute (unsigned char * p,
+			     int tag,
+			     const unsigned char * const end)
 {
-  int type;
   unsigned int len;
   int val;
 
   if (tag == Tag_GNU_Power_ABI_FP)
     {
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_GNU_Power_ABI_FP: ");
 
@@ -11423,7 +11615,7 @@ display_power_gnu_attribute (unsigned char * p, int tag)
 
   if (tag == Tag_GNU_Power_ABI_Vector)
     {
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_GNU_Power_ABI_Vector: ");
       switch (val)
@@ -11449,7 +11641,13 @@ display_power_gnu_attribute (unsigned char * p, int tag)
 
   if (tag == Tag_GNU_Power_ABI_Struct_Return)
     {
-      val = read_uleb128 (p, &len);
+      if (p == end)
+	{
+	  warn (_("corrupt Tag_GNU_Power_ABI_Struct_Return"));
+	  return p;
+	}
+		   
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_GNU_Power_ABI_Struct_Return: ");
       switch (val)
@@ -11470,25 +11668,7 @@ display_power_gnu_attribute (unsigned char * p, int tag)
       return p;
     }
 
-  if (tag & 1)
-    type = 1; /* String.  */
-  else
-    type = 2; /* uleb128.  */
-  printf ("  Tag_unknown_%d: ", tag);
-
-  if (type == 1)
-    {
-      printf ("\"%s\"\n", p);
-      p += strlen ((char *) p) + 1;
-    }
-  else
-    {
-      val = read_uleb128 (p, &len);
-      p += len;
-      printf ("%d (0x%x)\n", val, val);
-    }
-
-  return p;
+  return display_tag_value (tag & 1, p, end);
 }
 
 static void
@@ -11536,71 +11716,54 @@ display_sparc_hwcaps (int mask)
 }
 
 static unsigned char *
-display_sparc_gnu_attribute (unsigned char * p, int tag)
+display_sparc_gnu_attribute (unsigned char * p,
+			     int tag,
+			     const unsigned char * const end)
 {
-  int type;
-  unsigned int len;
-  int val;
-
   if (tag == Tag_GNU_Sparc_HWCAPS)
     {
-      val = read_uleb128 (p, &len);
+      unsigned int len;
+      int val;
+
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_GNU_Sparc_HWCAPS: ");
-
       display_sparc_hwcaps (val);
       return p;
    }
 
-  if (tag & 1)
-    type = 1; /* String.  */
-  else
-    type = 2; /* uleb128.  */
-  printf ("  Tag_unknown_%d: ", tag);
-
-  if (type == 1)
-    {
-      printf ("\"%s\"\n", p);
-      p += strlen ((char *) p) + 1;
-    }
-  else
-    {
-      val = read_uleb128 (p, &len);
-      p += len;
-      printf ("%d (0x%x)\n", val, val);
-    }
-
-  return p;
+  return display_tag_value (tag, p, end);
 }
 
 static unsigned char *
-display_mips_gnu_attribute (unsigned char * p, int tag)
+display_mips_gnu_attribute (unsigned char * p,
+			    int tag,
+			    const unsigned char * const end)
 {
-  int type;
-  unsigned int len;
-  int val;
-
   if (tag == Tag_GNU_MIPS_ABI_FP)
     {
-      val = read_uleb128 (p, &len);
+      unsigned int len;
+      int val;
+
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_GNU_MIPS_ABI_FP: ");
 
       switch (val)
 	{
-	case 0:
+	case Val_GNU_MIPS_ABI_FP_ANY:
 	  printf (_("Hard or soft float\n"));
 	  break;
-	case 1:
+	case Val_GNU_MIPS_ABI_FP_DOUBLE:
 	  printf (_("Hard float (double precision)\n"));
 	  break;
-	case 2:
+	case Val_GNU_MIPS_ABI_FP_SINGLE:
 	  printf (_("Hard float (single precision)\n"));
 	  break;
-	case 3:
+	case Val_GNU_MIPS_ABI_FP_SOFT:
 	  printf (_("Soft float\n"));
 	  break;
-	case 4:
+	case Val_GNU_MIPS_ABI_FP_64:
 	  printf (_("Hard float (MIPS32r2 64-bit FPU)\n"));
 	  break;
 	default:
@@ -11610,41 +11773,24 @@ display_mips_gnu_attribute (unsigned char * p, int tag)
       return p;
    }
 
-  if (tag & 1)
-    type = 1; /* String.  */
-  else
-    type = 2; /* uleb128.  */
-  printf ("  Tag_unknown_%d: ", tag);
-
-  if (type == 1)
-    {
-      printf ("\"%s\"\n", p);
-      p += strlen ((char *) p) + 1;
-    }
-  else
-    {
-      val = read_uleb128 (p, &len);
-      p += len;
-      printf ("%d (0x%x)\n", val, val);
-    }
-
-  return p;
+  return display_tag_value (tag & 1, p, end);
 }
 
 static unsigned char *
-display_tic6x_attribute (unsigned char * p)
+display_tic6x_attribute (unsigned char * p,
+			 const unsigned char * const end)
 {
   int tag;
   unsigned int len;
   int val;
 
-  tag = read_uleb128 (p, &len);
+  tag = read_uleb128 (p, &len, end);
   p += len;
 
   switch (tag)
     {
     case Tag_ISA:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ISA: ");
 
@@ -11678,7 +11824,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_wchar_t:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_wchar_t: ");
       switch (val)
@@ -11699,7 +11845,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_stack_align_needed:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_stack_align_needed: ");
       switch (val)
@@ -11717,7 +11863,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_stack_align_preserved:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_stack_align_preserved: ");
       switch (val)
@@ -11735,7 +11881,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_DSBT:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_DSBT: ");
       switch (val)
@@ -11753,7 +11899,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_PID:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_PID: ");
       switch (val)
@@ -11774,7 +11920,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_PIC:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_PIC: ");
       switch (val)
@@ -11792,7 +11938,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_array_object_alignment:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_array_object_alignment: ");
       switch (val)
@@ -11813,7 +11959,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_array_object_align_expected:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_array_object_align_expected: ");
       switch (val)
@@ -11834,7 +11980,7 @@ display_tic6x_attribute (unsigned char * p)
       return p;
 
     case Tag_ABI_compatibility:
-      val = read_uleb128 (p, &len);
+      val = read_uleb128 (p, &len, end);
       p += len;
       printf ("  Tag_ABI_compatibility: ");
       printf (_("flag = %d, vendor = %s\n"), val, p);
@@ -11848,19 +11994,122 @@ display_tic6x_attribute (unsigned char * p)
       return p;
     }
 
-  printf ("  Tag_unknown_%d: ", tag);
+  return display_tag_value (tag, p, end);
+}
 
-  if (tag & 1)
+static void
+display_raw_attribute (unsigned char * p, unsigned char * end)
+{
+  unsigned long addr = 0;
+  size_t bytes = end - p;
+
+  while (bytes)
     {
-      printf ("\"%s\"\n", p);
-      p += strlen ((char *) p) + 1;
+      int j;
+      int k;
+      int lbytes = (bytes > 16 ? 16 : bytes);
+
+      printf ("  0x%8.8lx ", addr);
+
+      for (j = 0; j < 16; j++)
+	{
+	  if (j < lbytes)
+	    printf ("%2.2x", p[j]);
+	  else
+	    printf ("  ");
+
+	  if ((j & 3) == 3)
+	    printf (" ");
+	}
+
+      for (j = 0; j < lbytes; j++)
+	{
+	  k = p[j];
+	  if (k >= ' ' && k < 0x7f)
+	    printf ("%c", k);
+	  else
+	    printf (".");
+	}
+
+      putchar ('\n');
+
+      p  += lbytes;
+      bytes -= lbytes;
+      addr += lbytes;
     }
-  else
+
+  putchar ('\n');
+}
+
+static unsigned char *
+display_msp430x_attribute (unsigned char * p,
+			   const unsigned char * const end)
+{
+  unsigned int len;
+  int val;
+  int tag;
+
+  tag = read_uleb128 (p, & len, end);
+  p += len;
+  
+  switch (tag)
     {
-      val = read_uleb128 (p, &len);
+    case OFBA_MSPABI_Tag_ISA:
+      val = read_uleb128 (p, &len, end);
       p += len;
-      printf ("%d (0x%x)\n", val, val);
-    }
+      printf ("  Tag_ISA: ");
+      switch (val)
+	{
+	case 0: printf (_("None\n")); break;
+	case 1: printf (_("MSP430\n")); break;
+	case 2: printf (_("MSP430X\n")); break;
+	default: printf ("??? (%d)\n", val); break;
+	}
+      break;
+
+    case OFBA_MSPABI_Tag_Code_Model:
+      val = read_uleb128 (p, &len, end);
+      p += len;
+      printf ("  Tag_Code_Model: ");
+      switch (val)
+	{
+	case 0: printf (_("None\n")); break;
+	case 1: printf (_("Small\n")); break;
+	case 2: printf (_("Large\n")); break;
+	default: printf ("??? (%d)\n", val); break;
+	}
+      break;
+
+    case OFBA_MSPABI_Tag_Data_Model:
+      val = read_uleb128 (p, &len, end);
+      p += len;
+      printf ("  Tag_Data_Model: ");
+      switch (val)
+	{
+	case 0: printf (_("None\n")); break;
+	case 1: printf (_("Small\n")); break;
+	case 2: printf (_("Large\n")); break;
+	case 3: printf (_("Restricted Large\n")); break;
+	default: printf ("??? (%d)\n", val); break;
+	}
+      break;
+
+    default:
+      printf (_("  <unknown tag %d>: "), tag);
+
+      if (tag & 1)
+	{
+	  printf ("\"%s\"\n", p);
+	  p += strlen ((char *) p) + 1;
+	}
+      else
+	{
+	  val = read_uleb128 (p, &len, end);
+	  p += len;
+	  printf ("%d (0x%x)\n", val, val);
+	}
+      break;
+   }
 
   return p;
 }
@@ -11869,8 +12118,8 @@ static int
 process_attributes (FILE * file,
 		    const char * public_name,
 		    unsigned int proc_type,
-		    unsigned char * (* display_pub_attribute) (unsigned char *),
-		    unsigned char * (* display_proc_gnu_attribute) (unsigned char *, int))
+		    unsigned char * (* display_pub_attribute) (unsigned char *, const unsigned char * const),
+		    unsigned char * (* display_proc_gnu_attribute) (unsigned char *, int, const unsigned char * const))
 {
   Elf_Internal_Shdr * sect;
   unsigned char * contents;
@@ -11965,7 +12214,7 @@ process_attributes (FILE * file,
 			{
 			  unsigned int j;
 
-			  val = read_uleb128 (p, &j);
+			  val = read_uleb128 (p, &j, end);
 			  p += j;
 			  if (val == 0)
 			    break;
@@ -11982,18 +12231,19 @@ process_attributes (FILE * file,
 		  if (public_section)
 		    {
 		      while (p < end)
-			p = display_pub_attribute (p);
+			p = display_pub_attribute (p, end);
 		    }
 		  else if (gnu_section)
 		    {
 		      while (p < end)
 			p = display_gnu_attribute (p,
-						   display_proc_gnu_attribute);
+						   display_proc_gnu_attribute,
+						   end);
 		    }
 		  else
 		    {
-		      /* ??? Do something sensible, like dump hex.  */
 		      printf (_("  Unknown section contexts\n"));
+		      display_raw_attribute (p, end);
 		      p = end;
 		    }
 		}
@@ -12033,6 +12283,13 @@ process_tic6x_specific (FILE * file)
 {
   return process_attributes (file, "c6xabi", SHT_C6000_ATTRIBUTES,
 			     display_tic6x_attribute, NULL);
+}
+
+static int
+process_msp430x_specific (FILE * file)
+{
+  return process_attributes (file, "mspabi", SHT_MSP430_ATTRIBUTES,
+			     display_msp430x_attribute, NULL);
 }
 
 /* DATA points to the contents of a MIPS GOT that starts at VMA PLTGOT.
@@ -12807,8 +13064,20 @@ get_note_type (unsigned e_type)
 	return _("NT_S390_CTRS (s390 control registers)");
       case NT_S390_PREFIX:
 	return _("NT_S390_PREFIX (s390 prefix register)");
+      case NT_S390_LAST_BREAK:
+	return _("NT_S390_LAST_BREAK (s390 last breaking event address)");
+      case NT_S390_SYSTEM_CALL:
+	return _("NT_S390_SYSTEM_CALL (s390 system call restart data)");
+      case NT_S390_TDB:
+	return _("NT_S390_TDB (s390 transaction diagnostic block)");
       case NT_ARM_VFP:
 	return _("NT_ARM_VFP (arm VFP registers)");
+      case NT_ARM_TLS:
+	return _("NT_ARM_TLS (AArch TLS registers)");
+      case NT_ARM_HW_BREAK:
+	return _("NT_ARM_HW_BREAK (AArch hardware breakpoint registers)");
+      case NT_ARM_HW_WATCH:
+	return _("NT_ARM_HW_WATCH (AArch hardware watchpoint registers)");
       case NT_PSTATUS:
 	return _("NT_PSTATUS (pstatus structure)");
       case NT_FPREGS:
@@ -13307,71 +13576,79 @@ process_corefile_note_segment (FILE * file, bfd_vma offset, bfd_vma length)
     return 0;
 
   pnotes = (Elf_External_Note *) get_data (NULL, file, offset, 1, length,
-                                           _("notes"));
+					   _("notes"));
   if (pnotes == NULL)
     return 0;
 
   external = pnotes;
 
-  printf (_("\nNotes at offset 0x%08lx with length 0x%08lx:\n"),
+  printf (_("\nDisplaying notes found at file offset 0x%08lx with length 0x%08lx:\n"),
 	  (unsigned long) offset, (unsigned long) length);
   printf (_("  %-20s %10s\tDescription\n"), _("Owner"), _("Data size"));
 
-  while (external < (Elf_External_Note *) ((char *) pnotes + length))
+  while ((char *) external < (char *) pnotes + length)
     {
-      Elf_External_Note * next;
       Elf_Internal_Note inote;
+      size_t min_notesz;
+      char *next;
       char * temp = NULL;
+      size_t data_remaining = ((char *) pnotes + length) - (char *) external;
 
       if (!is_ia64_vms ())
-        {
-          inote.type     = BYTE_GET (external->type);
-          inote.namesz   = BYTE_GET (external->namesz);
-          inote.namedata = external->name;
-          inote.descsz   = BYTE_GET (external->descsz);
-          inote.descdata = inote.namedata + align_power (inote.namesz, 2);
-          inote.descpos  = offset + (inote.descdata - (char *) pnotes);
-
-          next = (Elf_External_Note *) (inote.descdata + align_power (inote.descsz, 2));
-        }
-      else
-        {
-          Elf64_External_VMS_Note *vms_external;
-
-          vms_external = (Elf64_External_VMS_Note *)external;
-          inote.type     = BYTE_GET (vms_external->type);
-          inote.namesz   = BYTE_GET (vms_external->namesz);
-          inote.namedata = vms_external->name;
-          inote.descsz   = BYTE_GET (vms_external->descsz);
-          inote.descdata = inote.namedata + align_power (inote.namesz, 3);
-          inote.descpos  = offset + (inote.descdata - (char *) pnotes);
-
-          next = (Elf_External_Note *)
-            (inote.descdata + align_power (inote.descsz, 3));
-        }
-
-      if (   ((char *) next > ((char *) pnotes) + length)
-	  || ((char *) next <  (char *) pnotes))
 	{
-	  warn (_("corrupt note found at offset %lx into core notes\n"),
+	  /* PR binutils/15191
+	     Make sure that there is enough data to read.  */
+	  min_notesz = offsetof (Elf_External_Note, name);
+	  if (data_remaining < min_notesz)
+	    {
+	      warn (_("Corrupt note: only %d bytes remain, not enough for a full note\n"),
+		    (int) data_remaining);
+	      break;
+	    }
+	  inote.type     = BYTE_GET (external->type);
+	  inote.namesz   = BYTE_GET (external->namesz);
+	  inote.namedata = external->name;
+	  inote.descsz   = BYTE_GET (external->descsz);
+	  inote.descdata = inote.namedata + align_power (inote.namesz, 2);
+	  inote.descpos  = offset + (inote.descdata - (char *) pnotes);
+	  next = inote.descdata + align_power (inote.descsz, 2);
+	}
+      else
+	{
+	  Elf64_External_VMS_Note *vms_external;
+
+	  /* PR binutils/15191
+	     Make sure that there is enough data to read.  */
+	  min_notesz = offsetof (Elf64_External_VMS_Note, name);
+	  if (data_remaining < min_notesz)
+	    {
+	      warn (_("Corrupt note: only %d bytes remain, not enough for a full note\n"),
+		    (int) data_remaining);
+	      break;
+	    }
+
+	  vms_external = (Elf64_External_VMS_Note *) external;
+	  inote.type     = BYTE_GET (vms_external->type);
+	  inote.namesz   = BYTE_GET (vms_external->namesz);
+	  inote.namedata = vms_external->name;
+	  inote.descsz   = BYTE_GET (vms_external->descsz);
+	  inote.descdata = inote.namedata + align_power (inote.namesz, 3);
+	  inote.descpos  = offset + (inote.descdata - (char *) pnotes);
+	  next = inote.descdata + align_power (inote.descsz, 3);
+	}
+
+      if (inote.descdata < (char *) external + min_notesz
+	  || next < (char *) external + min_notesz
+	  || data_remaining < (size_t)(next - (char *) external))
+	{
+	  warn (_("note with invalid namesz and/or descsz found at offset 0x%lx\n"),
 		(unsigned long) ((char *) external - (char *) pnotes));
-	  warn (_(" type: %lx, namesize: %08lx, descsize: %08lx\n"),
+	  warn (_(" type: 0x%lx, namesize: 0x%08lx, descsize: 0x%08lx\n"),
 		inote.type, inote.namesz, inote.descsz);
 	  break;
 	}
 
-      external = next;
-
-      /* Prevent out-of-bounds indexing.  */
-      if (inote.namedata + inote.namesz > (char *) pnotes + length
-	  || inote.namedata + inote.namesz < inote.namedata)
-        {
-          warn (_("corrupt note found at offset %lx into core notes\n"),
-                (unsigned long) ((char *) external - (char *) pnotes));
-          warn (_(" type: %lx, namesize: %08lx, descsize: %08lx\n"),
-                inote.type, inote.namesz, inote.descsz);
-          break;
-        }
+      external = (Elf_External_Note *) next;
 
       /* Verify that name is null terminated.  It appears that at least
 	 one version of Linux (RedHat 6.0) generates corefiles that don't
@@ -13493,6 +13770,8 @@ process_arch_specific (FILE * file)
     case EM_TI_C6000:
       return process_tic6x_specific (file);
       break;
+    case EM_MSP430:
+      return process_msp430x_specific (file);
     default:
       break;
     }
@@ -13940,6 +14219,15 @@ process_archive (char * file_name, FILE * file, bfd_boolean is_thin_archive)
         }
       else if (is_thin_archive)
         {
+	  /* PR 15140: Allow for corrupt thin archives.  */
+	  if (nested_arch.file == NULL)
+	    {
+	      error (_("%s: contains corrupt thin archive: %s\n"),
+		     file_name, name);
+	      ret = 1;
+	      break;
+	    }
+
           /* This is a proxy for a member of a nested archive.  */
           archive_file_offset = arch.nested_member_origin + sizeof arch.arhdr;
 

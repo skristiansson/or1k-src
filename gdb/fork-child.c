@@ -1,7 +1,6 @@
 /* Fork a Unix child process, and set up to debug it, for GDB.
 
-   Copyright (C) 1990-1996, 1998-2001, 2004-2012 Free Software
-   Foundation, Inc.
+   Copyright (C) 1990-2013 Free Software Foundation, Inc.
 
    Contributed by Cygnus Support.
 
@@ -33,6 +32,7 @@
 #include "command.h" /* for dont_repeat () */
 #include "gdbcmd.h"
 #include "solib.h"
+#include "filestuff.h"
 
 #include <signal.h>
 
@@ -314,6 +314,8 @@ fork_inferior (char *exec_file_arg, char *allargs, char **env,
 
   if (pid == 0)
     {
+      close_most_fds ();
+
       if (debug_fork)
 	sleep (debug_fork);
 

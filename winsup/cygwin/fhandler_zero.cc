@@ -1,6 +1,6 @@
 /* fhandler_dev_zero.cc: code to access /dev/zero
 
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005 Red Hat, Inc.
+   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009 Red Hat, Inc.
 
    Written by DJ Delorie (dj@cygnus.com)
 
@@ -41,14 +41,14 @@ fhandler_dev_zero::write (const void *, size_t len)
   return len;
 }
 
-void __stdcall
+void __reg3
 fhandler_dev_zero::read (void *ptr, size_t& len)
 {
   memset (ptr, 0, len);
 }
 
-_off64_t
-fhandler_dev_zero::lseek (_off64_t, int)
+off_t
+fhandler_dev_zero::lseek (off_t, int)
 {
   return 0;
 }

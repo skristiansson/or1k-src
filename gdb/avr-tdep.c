@@ -1,6 +1,6 @@
 /* Target-dependent code for Atmel AVR, for GDB.
 
-   Copyright (C) 1996-2012 Free Software Foundation, Inc.
+   Copyright (C) 1996-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -67,9 +67,6 @@
    addresses before they are send to the target or received from the target
    via the remote serial protocol.  The extra bits are the MSBs and are used to
    decode which memory space the address is referring to.  */
-
-#undef XMALLOC
-#define XMALLOC(TYPE) ((TYPE*) xmalloc (sizeof (TYPE)))
 
 /* Constants: prefixed with AVR_ to avoid name space clashes */
 
@@ -1103,7 +1100,7 @@ avr_frame_prev_register (struct frame_info *this_frame,
 	     everything else about the avr is little endian.  Ick!  */
 	  ULONGEST pc;
 	  int i;
-	  unsigned char buf[3];
+	  gdb_byte buf[3];
 	  struct gdbarch *gdbarch = get_frame_arch (this_frame);
 	  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
@@ -1245,7 +1242,7 @@ avr_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 {
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int i;
-  unsigned char buf[3];
+  gdb_byte buf[3];
   int call_length = gdbarch_tdep (gdbarch)->call_length;
   CORE_ADDR return_pc = avr_convert_iaddr_to_raw (bp_addr);
   int regnum = AVR_ARGN_REGNUM;
@@ -1468,8 +1465,9 @@ avr_io_reg_read_command (char *args, int from_tty)
 {
   LONGEST bufsiz = 0;
   gdb_byte *buf;
+  const char *bufstr;
   char query[400];
-  char *p;
+  const char *p;
   unsigned int nreg = 0;
   unsigned int val;
   int i, j, k, step;
@@ -1477,6 +1475,7 @@ avr_io_reg_read_command (char *args, int from_tty)
   /* Find out how many io registers the target has.  */
   bufsiz = target_read_alloc (&current_target, TARGET_OBJECT_AVR,
 			      "avr.io_reg", &buf);
+  bufstr = (const char *) buf;
 
   if (bufsiz <= 0)
     {
@@ -1486,7 +1485,7 @@ avr_io_reg_read_command (char *args, int from_tty)
       return;
     }
 
-  if (sscanf (buf, "%x", &nreg) != 1)
+  if (sscanf (bufstr, "%x", &nreg) != 1)
     {
       fprintf_unfiltered (gdb_stderr,
 			  _("Error fetching number of io registers\n"));
@@ -1514,7 +1513,7 @@ avr_io_reg_read_command (char *args, int from_tty)
       bufsiz = target_read_alloc (&current_target, TARGET_OBJECT_AVR,
 				  query, &buf);
 
-      p = buf;
+      p = (const char *) buf;
       for (k = i; k < (i + j); k++)
 	{
 	  if (sscanf (p, "%[^,],%x;", query, &val) == 2)

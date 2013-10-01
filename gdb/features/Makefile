@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2012 Free Software Foundation, Inc.
+# Copyright (C) 2007-2013 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
@@ -30,7 +30,8 @@
 # in the GDB repository.  To generate C files:
 #   make GDB=/path/to/gdb XMLTOC="xml files" cfiles
 
-WHICH = arm-with-iwmmxt arm-with-vfpv2 arm-with-vfpv3 arm-with-neon \
+WHICH = aarch64 \
+	arm-with-iwmmxt arm-with-vfpv2 arm-with-vfpv3 arm-with-neon \
 	arm-with-m arm-with-m-fpa-layout arm-with-m-vfp-d16 \
 	i386/i386 i386/i386-linux \
 	i386/i386-mmx i386/i386-mmx-linux \
@@ -41,6 +42,7 @@ WHICH = arm-with-iwmmxt arm-with-vfpv2 arm-with-vfpv3 arm-with-neon \
 	i386/x32-avx i386/x32-avx-linux \
 	mips-linux mips-dsp-linux \
 	mips64-linux mips64-dsp-linux \
+	nios2-linux \
 	rs6000/powerpc-32 \
 	rs6000/powerpc-32l rs6000/powerpc-altivec32l rs6000/powerpc-e500l \
 	rs6000/powerpc-64l rs6000/powerpc-altivec64l rs6000/powerpc-vsx32l \
@@ -48,10 +50,12 @@ WHICH = arm-with-iwmmxt arm-with-vfpv2 arm-with-vfpv3 arm-with-neon \
 	s390-linux32 s390-linux64 s390x-linux64 \
 	s390-linux32v1 s390-linux64v1 s390x-linux64v1 \
 	s390-linux32v2 s390-linux64v2 s390x-linux64v2 \
+	s390-te-linux64 s390x-te-linux64 \
 	tic6x-c64xp tic6x-c64x tic6x-c62x \
 	tic6x-c64xp-linux tic6x-c64x-linux tic6x-c62x-linux
 
 # Record which registers should be sent to GDB by default after stop.
+aarch64-expedite = x29,sp,pc
 arm-expedite = r11,sp,pc
 i386/i386-expedite = ebp,esp,eip
 i386/i386-linux-expedite = ebp,esp,eip
@@ -71,6 +75,7 @@ mips-expedite = r29,pc
 mips-dsp-expedite = r29,pc
 mips64-expedite = r29,pc
 mips64-dsp-expedite = r29,pc
+nios2-linux-expedite = sp,pc
 powerpc-expedite = r1,pc
 rs6000/powerpc-cell32l-expedite = r1,pc,r0,orig_r3,r4
 rs6000/powerpc-cell64l-expedite = r1,pc,r0,orig_r3,r4
@@ -80,9 +85,11 @@ s390-linux32v2-expedite = r14,r15,pswa
 s390-linux64-expedite = r14l,r15l,pswa
 s390-linux64v1-expedite = r14l,r15l,pswa
 s390-linux64v2-expedite = r14l,r15l,pswa
+s390-te-linux64-expedite = r14,r15,pswa
 s390x-linux64-expedite = r14,r15,pswa
 s390x-linux64v1-expedite = r14,r15,pswa
 s390x-linux64v2-expedite = r14,r15,pswa
+s390x-te-linux64-expedite = r14,r15,pswa
 tic6x-c64xp-expedite = A15,PC
 tic6x-c64x-expedite = A15,PC
 tic6x-c62x-expedite = A15,PC

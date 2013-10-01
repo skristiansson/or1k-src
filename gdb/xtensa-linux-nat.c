@@ -1,6 +1,6 @@
 /* Xtensa GNU/Linux native support.
 
-   Copyright (C) 2007-2012 Free Software Foundation, Inc.
+   Copyright (C) 2007-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -29,7 +29,6 @@
 
 #include <stdint.h>
 #include <sys/types.h>
-#include <sys/param.h>
 #include <signal.h>
 #include <sys/user.h>
 #include <sys/ioctl.h>
@@ -49,9 +48,9 @@
 static int
 get_thread_id (ptid_t ptid)
 {
-  int tid = TIDGET (ptid);
+  int tid = ptid_get_lwp (ptid);
   if (0 == tid)
-    tid = PIDGET (ptid);
+    tid = ptid_get_pid (ptid);
   return tid;
 }
 #define GET_THREAD_ID(PTID)	get_thread_id (PTID)

@@ -1,7 +1,6 @@
 /* Ada language support definitions for GDB, the GNU debugger.
 
-   Copyright (C) 1992, 1997-2005, 2007-2012 Free Software Foundation,
-   Inc.
+   Copyright (C) 1992-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -90,7 +89,7 @@ struct ada_symbol_info
   struct symbol *sym;
 
   /* The block where the symbol was found.  */
-  struct block *block;
+  const struct block *block;
 };
 
 /* Denotes a type of renaming symbol (see ada_parse_renaming).  */
@@ -220,7 +219,7 @@ extern struct value *ada_get_decoded_value (struct value *value);
 
 extern struct type *ada_get_decoded_type (struct type *type);
 
-extern char *ada_decode_symbol (const struct general_symbol_info*);
+extern const char *ada_decode_symbol (const struct general_symbol_info *);
 
 extern const char *ada_decode (const char*);
 
@@ -229,8 +228,7 @@ extern enum language ada_update_initial_language (enum language);
 extern void clear_ada_sym_cache (void);
 
 extern int ada_lookup_symbol_list (const char *, const struct block *,
-                                   domain_enum, struct ada_symbol_info**,
-				   int);
+                                   domain_enum, struct ada_symbol_info**);
 
 extern char *ada_fold_name (const char *);
 
@@ -241,7 +239,7 @@ extern void ada_lookup_encoded_symbol
   (const char *name, const struct block *block, domain_enum namespace,
    struct ada_symbol_info *symbol_info);
 
-extern struct minimal_symbol *ada_lookup_simple_minsym (const char *);
+extern struct bound_minimal_symbol ada_lookup_simple_minsym (const char *);
 
 extern void ada_fill_in_ada_prototype (struct symbol *);
 
@@ -277,6 +275,8 @@ extern struct type *ada_tag_type (struct value *);
 extern struct value *ada_value_tag (struct value *);
 
 extern const char *ada_tag_name (struct value *);
+
+extern struct value *ada_tag_value_at_base_address (struct value *obj);
 
 extern int ada_is_parent_field (struct type *, int);
 
@@ -340,7 +340,7 @@ extern struct type *ada_find_parallel_type (struct type *,
 extern LONGEST get_int_var_value (char *, int *);
 
 extern struct symbol *ada_find_renaming_symbol (struct symbol *name_sym,
-                                                struct block *block);
+                                                const struct block *block);
 
 extern int ada_prefer_type (struct type *, struct type *);
 

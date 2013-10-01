@@ -6,13 +6,13 @@ D/doc////
 D/include////
 D/main////
 D/samples////
-/COPYING/1.1/Sat Oct 27 22:59:30 2012//
-/COPYING.SID/1.2/Sat Oct 27 22:59:30 2012//
-/ChangeLog/1.25/Sat Oct 27 22:59:30 2012//
-/HACK-RULES/1.1/Sat Oct 27 22:59:30 2012//
-/Makefile.am/1.5/Sat Oct 27 22:59:30 2012//
-/Makefile.in/1.13/Sat Oct 27 22:59:30 2012//
-/aclocal.m4/1.11/Sat Oct 27 22:59:30 2012//
-/configure/1.15/Sat Oct 27 22:59:30 2012//
-/configure.in/1.8/Sat Oct 27 22:59:30 2012//
-/sid.spec/1.5/Sat Oct 27 22:59:30 2012//
+/COPYING/1.1/Sat Aug 18 05:48:01 2012//
+/COPYING.SID/1.2/Sat Aug 18 05:48:01 2012//
+/HACK-RULES/1.1/Sat Aug 18 05:48:01 2012//
+/sid.spec/1.5/Sat Aug 18 05:48:01 2012//
+/ChangeLog/1.26/Mon Sep 30 18:36:13 2013//
+/Makefile.am/1.6/Mon Sep 30 18:36:13 2013//
+/Makefile.in/1.14/Mon Sep 30 18:36:13 2013//
+/aclocal.m4/1.12/Mon Sep 30 18:36:13 2013//
+/configure/1.16/Mon Sep 30 18:36:13 2013//
+/configure.in/1.9/Mon Sep 30 18:36:13 2013//

@@ -1,5 +1,5 @@
 /* longjmp-free interface between gdb and gdbtk.
-   Copyright (C) 1999, 2000, 2002, 2008 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2000, 2002, 2008, 2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -41,7 +41,7 @@ gdb_result GDB_type_print (value_ptr, char *, struct ui_file *, int);
 gdb_result GDB_val_print (struct type *type, char *valaddr,
 			  CORE_ADDR address, struct ui_file *stream,
 			  int format, int deref_ref, int recurse,
-			  enum val_prettyprint pretty);
+			  enum val_prettyformat pretty);
 
 gdb_result GDB_value_equal (value_ptr, value_ptr, int *);
 
@@ -184,7 +184,7 @@ GDB_val_print (struct type *type,
 	       int format,
 	       int deref_ref,
 	       int recurse,
-	       enum val_prettyprint pretty)
+	       enum val_prettyformat pretty)
 {
   struct gdb_wrapper_arguments args;
 
@@ -220,7 +220,7 @@ wrap_val_print (char *a)
   get_formatted_print_options (&opts, format);
   opts.deref_ref = (*args)->args[5].integer;
   recurse = (*args)->args[6].integer;
-  opts.pretty = (enum val_prettyprint) (*args)->args[7].integer;
+  opts.prettyformat = (enum val_prettyformat) (*args)->args[7].integer;
 
   val_print (type, valaddr, 0, address, stream, recurse, NULL, &opts,
              current_language);
@@ -271,10 +271,7 @@ wrap_evaluate_expression (char *a)
 }
 
 gdb_result
-GDB_value_equal (val1, val2, result)
-     value_ptr val1;
-     value_ptr val2;
-     int *result;
+GDB_value_equal (value_ptr val1, value_ptr val2, int *result)
 {
   struct gdb_wrapper_arguments args;
   gdb_result r;
@@ -422,7 +419,7 @@ wrap_block_innermost_frame (char *opaque_arg)
 }
 
 gdb_result
-GDB_reinit_frame_cache ()
+GDB_reinit_frame_cache (void)
 {
   gdb_result r;
 
@@ -500,9 +497,7 @@ wrap_value_slice (char *opaque_arg)
 }
 
 gdb_result
-GDB_value_coerce_array (val, rval)
-     value_ptr val;
-     value_ptr *rval;
+GDB_value_coerce_array (value_ptr val, value_ptr *rval)
 {
   struct gdb_wrapper_arguments args;
   gdb_result r;

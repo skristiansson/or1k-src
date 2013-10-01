@@ -1,7 +1,6 @@
 /* Serial interface for local (hardwired) serial ports on Un*x like systems
 
-   Copyright (C) 1992-1996, 1998-2001, 2003-2005, 2007-2012 Free
-   Software Foundation, Inc.
+   Copyright (C) 1992-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,6 +31,7 @@
 #include "gdb_select.h"
 #include "gdb_string.h"
 #include "gdbcmd.h"
+#include "filestuff.h"
 
 #ifdef HAVE_TERMIOS
 
@@ -108,7 +108,7 @@ void _initialize_ser_hardwire (void);
 static int
 hardwire_open (struct serial *scb, const char *name)
 {
-  scb->fd = open (name, O_RDWR);
+  scb->fd = gdb_open_cloexec (name, O_RDWR, 0);
   if (scb->fd < 0)
     return -1;
 

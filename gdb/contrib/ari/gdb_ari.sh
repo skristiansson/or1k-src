@@ -2,7 +2,7 @@
 
 # GDB script to list of problems using awk.
 #
-# Copyright (C) 2002-2012 Free Software Foundation, Inc.
+# Copyright (C) 2002-2013 Free Software Foundation, Inc.
 #
 # This file is part of GDB.
 #
@@ -256,21 +256,6 @@ BEGIN {
 
 
 # Things in comments
-
-BEGIN { doc["GNU/Linux"] = "\
-Do not use `Linux'\'', instead use `Linux kernel'\'' or `GNU/Linux system'\'';\
- comments should clearly differentiate between the two (this test assumes that\
- word `Linux'\'' appears on the same line as the word `GNU'\'' or `kernel'\''\
- or a kernel version"
-    category["GNU/Linux"] = ari_comment
-}
-/(^|[^_[:alnum:]])Linux([^_[:alnum:]]|$)/ \
-&& !/(^|[^_[:alnum:]])Linux\[sic\]([^_[:alnum:]]|$)/ \
-&& !/(^|[^_[:alnum:]])GNU\/Linux([^_[:alnum:]]|$)/ \
-&& !/(^|[^_[:alnum:]])Linux kernel([^_[:alnum:]]|$)/ \
-&& !/(^|[^_[:alnum:]])Linux [[:digit:]]\.[[:digit:]]+)/ {
-    fail("GNU/Linux")
-}
 
 BEGIN { doc["ARGSUSED"] = "\
 Do not use ARGSUSED, unnecessary"
@@ -558,7 +543,7 @@ Function name starts lower case but has uppercased letters."
     editCase_full_line = ""
 }
 (possible_editCase) {
-    if (ARI_OK == "ediCase function") {
+    if (ARI_OK == "editCase function") {
 	possible_editCase = 0
     }
     # Closing brace found?
@@ -624,7 +609,11 @@ BEGIN { doc["OP eol"] = "\
 Do not use &&, or || at the end of a line"
     category["OP eol"] = ari_code
 }
-/(\|\||\&\&|==|!=)[[:space:]]*$/ {
+# * operator needs a special treatment as it can be a
+# valid end of line for a pointer type definition
+# Only catch case where an assignment or an opening brace is present
+/(\|\||\&\&|==|!=|[[:space:]][+\-\/])[[:space:]]*$/ \
+|| /(\(|=)[[:space:]].*[[:space:]]\*[[:space:]]*$/ {
     fail("OP eol")
 }
 
@@ -767,7 +756,7 @@ Replace ADD_SHARED_SYMBOL_FILES with nothing, not needed?"
 
 BEGIN { doc["SOLIB_ADD"] = "\
 Replace SOLIB_ADD with nothing, not needed?"
-    category["SOLIB_ADD"] = ari_deprecate
+    category["SOLIB_ADD"] = ari_regression
 }
 /(^|[^_[:alnum:]])SOLIB_ADD([^_[:alnum:]]|$)/ {
     fail("SOLIB_ADD")
@@ -775,7 +764,7 @@ Replace SOLIB_ADD with nothing, not needed?"
 
 BEGIN { doc["SOLIB_CREATE_INFERIOR_HOOK"] = "\
 Replace SOLIB_CREATE_INFERIOR_HOOK with nothing, not needed?"
-    category["SOLIB_CREATE_INFERIOR_HOOK"] = ari_deprecate
+    category["SOLIB_CREATE_INFERIOR_HOOK"] = ari_regression
 }
 /(^|[^_[:alnum:]])SOLIB_CREATE_INFERIOR_HOOK([^_[:alnum:]]|$)/ {
     fail("SOLIB_CREATE_INFERIOR_HOOK")
@@ -807,7 +796,7 @@ Replace PROCESS_LINENUMBER_HOOK with nothing, not needed?"
 
 BEGIN { doc["PC_SOLIB"] = "\
 Replace PC_SOLIB with nothing, not needed?"
-    category["PC_SOLIB"] = ari_deprecate
+    category["PC_SOLIB"] = ari_regression
 }
 /(^|[^_[:alnum:]])PC_SOLIB([^_[:alnum:]]|$)/ {
     fail("PC_SOLIB")
@@ -1051,7 +1040,6 @@ a DECR_PC_AFTER_BREAK"
     category["write_pc"] = ari_deprecate
 }
 /(^|[^_[:alnum:]])write_pc[[:space:]]*\(/ || \
-/(^|[^_[:alnum:]])set_gdbarch_write_pc[[:space:]]*\(/ || \
 /(^|[^_[:alnum:]])TARGET_WRITE_PC[[:space:]]*\(/ {
     fail("write_pc")
 }
@@ -1125,26 +1113,6 @@ Do not use vasprintf(), instead use xstrvprintf"
 }
 /(^|[^_[:alnum:]])vasprintf[[:space:]]*\(/ {
     fail("vasprintf")
-}
-
-BEGIN { doc["xasprintf"] = "\
-Do not use xasprintf(), instead use xstrprintf"
-    fix("xasprintf", "common/common-utils.h", 1)
-    fix("xasprintf", "common/common-utils.c", 1)
-    category["xasprintf"] = ari_regression
-}
-/(^|[^_[:alnum:]])xasprintf[[:space:]]*\(/ {
-    fail("xasprintf")
-}
-
-BEGIN { doc["xvasprintf"] = "\
-Do not use xvasprintf(), instead use xstrvprintf"
-    fix("xvasprintf", "common/common-utils.h", 1)
-    fix("xvasprintf", "common/common-utils.c", 1)
-    category["xvasprintf"] = ari_regression
-}
-/(^|[^_[:alnum:]])xvasprintf[[:space:]]*\(/ {
-    fail("xvasprintf")
 }
 
 # More generic memory operations

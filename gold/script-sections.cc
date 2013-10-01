@@ -2294,6 +2294,15 @@ Output_section_definition::set_section_addresses(Symbol_table* symtab,
   uint64_t old_dot_value = *dot_value;
   uint64_t old_load_address = *load_address;
 
+  // If input section sorting is requested via --section-ordering-file or
+  // linker plugins, then do it here.  This is important because we want 
+  // any sorting specified in the linker scripts, which will be done after
+  // this, to take precedence.  The final order of input sections is then 
+  // guaranteed to be according to the linker script specification.
+  if (this->output_section_ != NULL
+      && this->output_section_->input_section_order_specified())
+    this->output_section_->sort_attached_input_sections();
+
   // Decide the start address for the section.  The algorithm is:
   // 1) If an address has been specified in a linker script, use that.
   // 2) Otherwise if a memory region has been specified for the section,
@@ -2865,6 +2874,15 @@ Orphan_output_section::set_section_addresses(Symbol_table*, Layout*,
   uint64_t address = *dot_value;
   address = align_address(address, this->os_->addralign());
 
+  // If input section sorting is requested via --section-ordering-file or
+  // linker plugins, then do it here.  This is important because we want 
+  // any sorting specified in the linker scripts, which will be done after
+  // this, to take precedence.  The final order of input sections is then 
+  // guaranteed to be according to the linker script specification.
+  if (this->os_ != NULL
+      && this->os_->input_section_order_specified())
+    this->os_->sort_attached_input_sections();
+
   // For a relocatable link, all orphan sections are put at
   // address 0.  In general we expect all sections to be at
   // address 0 for a relocatable link, but we permit the linker
@@ -2900,11 +2918,17 @@ Orphan_output_section::set_section_addresses(Symbol_table*, Layout*,
       address += size;
     }
 
-  // An SHF_TLS/SHT_NOBITS section does not take up any address space.
-  if (this->os_ == NULL
-      || (this->os_->flags() & elfcpp::SHF_TLS) == 0
-      || this->os_->type() != elfcpp::SHT_NOBITS)
+  if (parameters->options().relocatable())
     {
+      // For a relocatable link, reset DOT_VALUE to 0.
+      *dot_value = 0;
+      *load_address = 0;
+    }
+  else if (this->os_ == NULL
+	   || (this->os_->flags() & elfcpp::SHF_TLS) == 0
+	   || this->os_->type() != elfcpp::SHT_NOBITS)
+    {
+      // An SHF_TLS/SHT_NOBITS section does not take up any address space.
       if (!have_load_address)
 	*load_address = address;
       else

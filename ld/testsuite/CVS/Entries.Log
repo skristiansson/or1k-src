@@ -1,3 +1,6 @@
-R D/ld-prelink////
-R D/ld-maxq////
-R D/ld-empic////
+A D/ld-empic////
+A D/ld-maxq////
+A D/ld-metag////
+A D/ld-nios2////
+A D/ld-prelink////
+A D/ld-size////

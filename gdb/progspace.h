@@ -1,6 +1,6 @@
 /* Program and address space management, for GDB, the GNU debugger.
 
-   Copyright (C) 2009-2012 Free Software Foundation, Inc.
+   Copyright (C) 2009-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -148,6 +148,10 @@ struct program_space
     bfd *ebfd;
     /* The last-modified time, from when the exec was brought in.  */
     long ebfd_mtime;
+    /* Similar to bfd_get_filename (exec_bfd) but in original form given
+       by user, without symbolic links and pathname resolved.
+       It needs to be freed by xfree.  It is not NULL iff EBFD is not NULL.  */
+    char *pspace_exec_filename;
 
     /* The address space attached to this program space.  More than one
        program space may be bound to the same address space.  In the

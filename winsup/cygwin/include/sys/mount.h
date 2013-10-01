@@ -1,6 +1,7 @@
 /* sys/mount.h
 
-   Copyright 1998, 1999, 2000, 2001 Red Hat, Inc.
+   Copyright 1998, 1999, 2000, 2001, 2002, 2003, 2005, 2008, 2009, 2010, 2012
+   Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -26,8 +27,8 @@ enum
 					   device mount */
   MOUNT_CYGWIN_EXEC =	0x00040,	/* file or directory is or contains a
 					   cygwin executable */
-  MOUNT_MIXED	=	0x00080,	/* reads are text, writes are binary
-					   not yet implemented */
+  MOUNT_SPARSE	=	0x00080,	/* Support automatic sparsifying of
+					   files. */
   MOUNT_NOTEXEC =	0x00100,	/* don't check files for executable magic */
   MOUNT_DEVFS =		0x00200,	/* /device "filesystem" */
   MOUNT_PROC =		0x00400,	/* /proc "filesystem" */

@@ -1,7 +1,6 @@
 /* Caching code for GDB, the GNU debugger.
 
-   Copyright (C) 1992-1993, 1995-1996, 1998-2001, 2003, 2007-2012 Free
-   Software Foundation, Inc.
+   Copyright (C) 1992-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -728,20 +727,20 @@ Use this command to set number of lines in dcache and line-size."),
 Show dcachesettings."),
 		  &dcache_show_list, "show dcache ", /*allow_unknown*/0, &showlist);
 
-  add_setshow_uinteger_cmd ("line-size", class_obscure,
-			    &dcache_line_size, _("\
+  add_setshow_zuinteger_cmd ("line-size", class_obscure,
+			     &dcache_line_size, _("\
 Set dcache line size in bytes (must be power of 2)."), _("\
 Show dcache line size."),
-			    NULL,
-			    set_dcache_line_size,
-			    NULL,
-			    &dcache_set_list, &dcache_show_list);
-  add_setshow_uinteger_cmd ("size", class_obscure,
-			    &dcache_size, _("\
+			     NULL,
+			     set_dcache_line_size,
+			     NULL,
+			     &dcache_set_list, &dcache_show_list);
+  add_setshow_zuinteger_cmd ("size", class_obscure,
+			     &dcache_size, _("\
 Set number of dcache lines."), _("\
 Show number of dcache lines."),
-			    NULL,
-			    set_dcache_size,
-			    NULL,
-			    &dcache_set_list, &dcache_show_list);
+			     NULL,
+			     set_dcache_size,
+			     NULL,
+			     &dcache_set_list, &dcache_show_list);
 }

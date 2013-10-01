@@ -1,7 +1,7 @@
 /* shared_info.h: shared info for cygwin
 
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2008, 2009,
-   2010, 2011, 2012 Red Hat, Inc.
+   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+   2011, 2012, 2013 Red Hat, Inc.
 
 This file is part of Cygwin.
 
@@ -15,7 +15,7 @@ details. */
 #include "limits.h"
 #include "mount.h"
 
-#define CURR_USER_MAGIC 0x6467403bU
+#define CURR_USER_MAGIC 0xab1fcce8U
 
 class user_info
 {
@@ -25,6 +25,7 @@ public:
   DWORD cb;
   bool warned_msdos;
   bool warned_notty;
+  bool warned_nonativesyms;
   mount_info mountinfo;
   friend void dll_crt0_1 (void *);
   static void create (bool);
@@ -74,7 +75,7 @@ enum shared_locations
 
 };
 
-void memory_init (bool) __attribute__ ((regparm(1)));
+void __reg1 memory_init (bool);
 void __stdcall shared_destroy ();
 
 #define shared_align_past(p) \

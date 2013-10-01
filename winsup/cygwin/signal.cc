@@ -1,7 +1,7 @@
 /* signal.cc
 
-   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009, 2010, 2011 Red Hat, Inc.
+   Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009, 2010, 2011, 2012, 2013 Red Hat, Inc.
 
    Written by Steve Chamberlain of Cygnus Support, sac@cygnus.com
    Significant changes by Sergey Okhapkin <sos@prospect.com.ru>
@@ -26,8 +26,7 @@ details. */
 
 #define _SA_NORESTART	0x8000
 
-static int sigaction_worker (int, const struct sigaction *, struct sigaction *, bool)
-  __attribute__ ((regparm (3)));
+static int __reg3 sigaction_worker (int, const struct sigaction *, struct sigaction *, bool);
 
 #define sigtrapped(func) ((func) != SIG_IGN && (func) != SIG_DFL)
 
@@ -188,7 +187,7 @@ sigprocmask (int how, const sigset_t *set, sigset_t *oldset)
   return res;
 }
 
-int __stdcall
+int __reg3
 handle_sigprocmask (int how, const sigset_t *set, sigset_t *oldset, sigset_t& opmask)
 {
   /* check that how is in right range */
@@ -228,7 +227,7 @@ handle_sigprocmask (int how, const sigset_t *set, sigset_t *oldset, sigset_t& op
   return 0;
 }
 
-int __stdcall
+int __reg2
 _pinfo::kill (siginfo_t& si)
 {
   int res;
@@ -274,7 +273,7 @@ _pinfo::kill (siginfo_t& si)
       res = -1;
     }
 
-  syscall_printf ("%d = _pinfo::kill (%d), pid %d, process_state %p", res,
+  syscall_printf ("%d = _pinfo::kill (%d), pid %d, process_state %y", res,
 		  si.si_signo, this_pid, this_process_state);
   return res;
 }
@@ -298,15 +297,6 @@ kill0 (pid_t pid, siginfo_t& si)
     }
 
   return (pid > 0) ? pinfo (pid)->kill (si) : kill_pgrp (-pid, si);
-}
-
-int
-killsys (pid_t pid, int sig)
-{
-  siginfo_t si = {0};
-  si.si_signo = sig;
-  si.si_code = SI_KERNEL;
-  return kill0 (pid, si);
 }
 
 int
@@ -387,7 +377,7 @@ abort (void)
   do_exit (SIGABRT);	/* signal handler didn't exit.  Goodbye. */
 }
 
-static int  __attribute__ ((regparm (3)))
+static int __reg3
 sigaction_worker (int sig, const struct sigaction *newact,
 		  struct sigaction *oldact, bool isinternal)
 {
@@ -526,7 +516,7 @@ extern "C" int
 sigpause (int signal_mask)
 {
   int res = handle_sigsuspend ((sigset_t) signal_mask);
-  syscall_printf ("%R = sigpause(%p)", res, signal_mask);
+  syscall_printf ("%R = sigpause(%y)", res, signal_mask);
   return res;
 }
 
@@ -554,7 +544,7 @@ siginterrupt (int sig, int flag)
       act.sa_flags |= SA_RESTART;
     }
   int res = sigaction_worker (sig, &act, NULL, true);
-  syscall_printf ("%R = siginterrupt(%d, %p)", sig, flag);
+  syscall_printf ("%R = siginterrupt(%d, %y)", sig, flag);
   return res;
 }
 

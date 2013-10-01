@@ -30,6 +30,10 @@
  * SUCH DAMAGE.
  */
 
+#ifdef __CYGWIN__
+#include "winsup.h"
+#endif
+
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)glob.c	8.3 (Berkeley) 10/13/93";
 #endif /* LIBC_SCCS and not lint */
@@ -71,10 +75,6 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/glob.c,v 1.28 2010/05/12 17:44:00 gordon Ex
  * 3. State-dependent encodings are not currently supported.
  */
 
-#ifdef __CYGWIN__
-#include "winsup.h"
-#endif
-
 #include <sys/param.h>
 #include <sys/stat.h>
 
@@ -104,8 +104,6 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/glob.c,v 1.28 2010/05/12 17:44:00 gordon Ex
 #define getpwuid(uid)	getpwuid32 (uid)
 #define getuid()	getuid32 ()
 #define issetugid()	(cygheap->user.issetuid ())
-
-#define stat __stat64
 
 #define CCHAR(c)	(ignore_case_with_glob ? towlower (CHAR (c)) : CHAR (c))
 #define Cchar(c)	(ignore_case_with_glob ? towlower (c) : (c))
@@ -858,8 +856,11 @@ g_opendir(Char *str, glob_t *pglob)
 	return(opendir(buf));
 }
 
+#ifdef __x86_64__
+#define CYGWIN_gl_stat(sfptr) ((*pglob->sfptr) (buf, sb))
+#else
 static void
-stat32_to_stat64 (struct __stat32 *src, struct __stat64 *dst)
+stat32_to_stat64 (struct __stat32 *src, struct stat *dst)
 {
   dst->st_dev = src->st_dev;
   dst->st_ino = src->st_ino;
@@ -882,10 +883,11 @@ stat32_to_stat64 (struct __stat32 *src, struct __stat64 *dst)
      struct __stat32 lsb;						 \
      if (CYGWIN_VERSION_CHECK_FOR_USING_BIG_TYPES)			 \
        ret = (*pglob->sfptr) (buf, sb);					 \
-     else  if (!(ret = (*pglob->sfptr) (buf, (struct __stat64 *) &lsb))) \
+     else  if (!(ret = (*pglob->sfptr) (buf, (struct stat *) &lsb))) \
        stat32_to_stat64 (&lsb, sb);					 \
      ret;								 \
   })
+#endif
 
 static int
 g_lstat(Char *fn, struct stat *sb, glob_t *pglob)

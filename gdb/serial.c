@@ -1,6 +1,6 @@
 /* Generic serial interface routines
 
-   Copyright (C) 1992-2002, 2004-2012 Free Software Foundation, Inc.
+   Copyright (C) 1992-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,6 +22,7 @@
 #include "serial.h"
 #include "gdb_string.h"
 #include "gdbcmd.h"
+#include "cli/cli-utils.h"
 
 extern void _initialize_serial (void);
 
@@ -194,8 +195,7 @@ serial_open (const char *name)
       ops = serial_interface_lookup ("pipe");
       /* Discard ``|'' and any space before the command itself.  */
       ++open_name;
-      while (isspace (*open_name))
-	++open_name;
+      open_name = skip_spaces_const (open_name);
     }
   /* Check for a colon, suggesting an IP address/port pair.
      Do this *after* checking for all the interesting prefixes.  We
@@ -398,14 +398,15 @@ serial_readchar (struct serial *scb, int timeout)
 }
 
 int
-serial_write (struct serial *scb, const char *str, int len)
+serial_write (struct serial *scb, const void *buf, size_t count)
 {
   if (serial_logfp != NULL)
     {
-      int count;
+      const char *str = buf;
+      size_t c;
 
-      for (count = 0; count < len; count++)
-	serial_logchar (serial_logfp, 'w', str[count] & 0xff, 0);
+      for (c = 0; c < count; c++)
+	serial_logchar (serial_logfp, 'w', str[c] & 0xff, 0);
 
       /* Make sure that the log file is as up-to-date as possible,
          in case we are getting ready to dump core or something.  */
@@ -413,9 +414,10 @@ serial_write (struct serial *scb, const char *str, int len)
     }
   if (serial_debug_p (scb))
     {
-      int count;
+      const char *str = buf;
+      size_t c;
 
-      for (count = 0; count < len; count++)
+      for (c = 0; c < count; c++)
 	{
 	  fprintf_unfiltered (gdb_stdlog, "[");
 	  serial_logchar (gdb_stdlog, 'w', str[count] & 0xff, 0);
@@ -424,7 +426,7 @@ serial_write (struct serial *scb, const char *str, int len)
       gdb_flush (gdb_stdlog);
     }
 
-  return (scb->ops->write (scb, str, len));
+  return (scb->ops->write (scb, buf, count));
 }
 
 void
@@ -544,19 +546,6 @@ serial_async (struct serial *scb,
   /* Only change mode if there is a need.  */
   if (changed)
     scb->ops->async (scb, handler != NULL);
-}
-
-int
-deprecated_serial_fd (struct serial *scb)
-{
-  /* FIXME: should this output a warning that deprecated code is being
-     called?  */
-  if (scb->fd < 0)
-    {
-      internal_error (__FILE__, __LINE__,
-		      _("serial: FD not valid"));
-    }
-  return scb->fd; /* sigh */
 }
 
 void

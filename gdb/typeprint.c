@@ -1,7 +1,6 @@
 /* Language independent support for printing types for GDB, the GNU debugger.
 
-   Copyright (C) 1986, 1988-1989, 1991-1995, 1998-2001, 2003, 2006-2012
-   Free Software Foundation, Inc.
+   Copyright (C) 1986-2013 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -39,6 +38,7 @@
 #include <ctype.h>
 #include "cli/cli-utils.h"
 #include "python/python.h"
+#include "completer.h"
 
 extern void _initialize_typeprint (void);
 
@@ -680,11 +680,14 @@ show_print_type_typedefs (struct ui_file *file, int from_tty,
 void
 _initialize_typeprint (void)
 {
-  add_com ("ptype", class_vars, ptype_command, _("\
+  struct cmd_list_element *c;
+
+  c = add_com ("ptype", class_vars, ptype_command, _("\
 Print definition of type TYPE.\n\
-Usage: ptype[/FLAGS] TYPE-NAME | EXPRESSION\n\
-Argument may be a type name defined by typedef, or \"struct STRUCT-TAG\"\n\
-or \"class CLASS-NAME\" or \"union UNION-TAG\" or \"enum ENUM-TAG\".\n\
+Usage: ptype[/FLAGS] TYPE | EXPRESSION\n\
+Argument may be any type (for example a type name defined by typedef,\n\
+or \"struct STRUCT-TAG\" or \"class CLASS-NAME\" or \"union UNION-TAG\"\n\
+or \"enum ENUM-TAG\") or an expression.\n\
 The selected stack frame's lexical context is used to look up the name.\n\
 Contrary to \"whatis\", \"ptype\" always unrolls any typedefs.\n\
 \n\
@@ -694,10 +697,12 @@ Available FLAGS are:\n\
   /M    print methods defined in a class\n\
   /t    do not print typedefs defined in a class\n\
   /T    print typedefs defined in a class"));
+  set_cmd_completer (c, expression_completer);
 
-  add_com ("whatis", class_vars, whatis_command,
-	   _("Print data type of expression EXP.\n\
+  c = add_com ("whatis", class_vars, whatis_command,
+	       _("Print data type of expression EXP.\n\
 Only one level of typedefs is unrolled.  See also \"ptype\"."));
+  set_cmd_completer (c, expression_completer);
 
   add_prefix_cmd ("type", no_class, show_print_type,
 		  _("Generic command for showing type-printing settings."),

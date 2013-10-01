@@ -1,10 +1,11 @@
-/ChangeLog/1.19/Thu Nov 29 07:50:33 2012//
-/Makefile.in/1.8/Thu Nov 29 07:50:33 2012//
-/aclocal.m4/1.1/Sat Oct 27 22:59:31 2012//
-/configure/1.4/Thu Nov 29 07:50:33 2012//
-/configure.ac/1.1/Mon Nov 26 19:50:45 2012//
-/cyglsa-config/1.4/Sat Oct 27 22:59:31 2012//
-/cyglsa.c/1.11/Sat Oct 27 22:59:31 2012//
-/cyglsa.din/1.2/Sat Oct 27 22:59:31 2012//
-/cyglsa64.def/1.1/Sat Oct 27 22:59:31 2012//
+/aclocal.m4/1.1/Sat Aug 18 05:48:02 2012//
+/cyglsa-config/1.4/Sat Aug 18 05:48:02 2012//
+/cyglsa.c/1.11/Sat Aug 18 05:48:02 2012//
+/cyglsa.din/1.2/Sat Aug 18 05:48:02 2012//
+/cyglsa64.def/1.1/Sat Aug 18 05:48:02 2012//
+/ChangeLog/1.21/Mon Sep 30 18:36:13 2013//
+/ChangeLog.64bit/1.2/Mon Sep 30 18:36:13 2013//
+/Makefile.in/1.10/Mon Sep 30 18:36:13 2013//
+/configure/1.5/Mon Sep 30 18:36:13 2013//
+/configure.ac/1.2/Mon Sep 30 18:36:13 2013//
 D

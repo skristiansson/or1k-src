@@ -1,14 +1,12 @@
 /* winf.h
 
-   Copyright 2006, 2007, 2011 Red Hat, Inc.
+   Copyright 2006, 2007, 2009, 2011, 2013 Red Hat, Inc.
 
 This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
 details. */
 
-#ifndef _WINF_H
-#define _WINF_H
-
+#pragma once
 /* Hack for Cygwin processes.  If the Windows command line length gets slightly
    bigger than this value, the stack position is suddenly moved up by 64K for
    no apparent reason, which results in subsequent forks failing.  Since Cygwin
@@ -34,18 +32,16 @@ class av
     memcpy (argv, av_in, (argc + 1) * sizeof (char *));
   }
   void *operator new (size_t, void *p) __attribute__ ((nothrow)) {return p;}
-  void set (int ac_in, const char * const *av_in) {new (this) av (ac_in, av_in);}
   ~av ()
   {
     if (argv)
       {
 	for (int i = 0; i < calloced; i++)
-	  if (argv[i])
-	    cfree (argv[i]);
+	  cfree (argv[i]);
 	cfree (argv);
       }
   }
-  int unshift (const char *what, int conv = 0);
+  int unshift (const char *what, int conv = 0) __reg2;
   operator char **() {return argv;}
   void all_calloced () {calloced = argc;}
   void replace0_maybe (const char *arg0)
@@ -54,36 +50,49 @@ class av
     if (!calloced)
       {
 	argv[0] = cstrdup1 (arg0);
-	calloced = true;
+	calloced = 1;
       }
-  }
-  void dup_maybe (int i)
-  {
-    if (i >= calloced)
-      argv[i] = cstrdup1 (argv[i]);
   }
   void dup_all ()
   {
     for (int i = calloced; i < argc; i++)
       argv[i] = cstrdup1 (argv[i]);
+    calloced = argc;
   }
-  int fixup (const char *, path_conv&, const char *, bool);
+  int setup (const char *, path_conv&, const char *, int, const char *const *,
+	     bool) __reg3;
 };
 
 class linebuf
 {
- public:
   size_t ix;
   char *buf;
   size_t alloced;
+ public:
   linebuf () : ix (0), buf (NULL), alloced (0) {}
   ~linebuf () {if (buf) free (buf);}
-  void add (const char *, int) __attribute__ ((regparm (3)));
+  void __reg3 add (const char *, int);
   void add (const char *what) {add (what, strlen (what));}
   void prepend (const char *, int);
-  void finish (bool) __attribute__ ((regparm (2)));
-  bool fromargv(av&, const char *, bool) __attribute__ ((regparm (3)));;
-  operator char *() {return buf;}
+  void __reg2 finish (bool);
+  bool __reg3 fromargv(av&, const char *, bool);;
+  operator size_t () const { return ix + 1; }
+  operator const char * () const { return buf; }
+  operator wchar_t * ()
+  {
+    size_t n = ix + 1;
+    /* Note that this malloc'ed buffer is not freed by the destructor.
+       It is up to the caller to do (or not do) that. */
+    wchar_t *wbuf = (wchar_t *) malloc (sizeof (wchar_t) * n);
+    return wcs (wbuf, n);
+  }
+  wchar_t *wcs (wchar_t *wbuf) { return wcs (wbuf, ix + 1); }
+  wchar_t *wcs (wchar_t *wbuf, size_t n)
+  {
+    if (n == 1)
+      wbuf[0] = L'\0';
+    else
+      sys_mbstowcs (wbuf, n, buf);
+    return wbuf;
+  }
 };
-
-#endif /*_WINF_H*/

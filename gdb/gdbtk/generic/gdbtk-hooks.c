@@ -1,7 +1,7 @@
 /* Startup code for Insight.
 
    Copyright (C) 1994, 1995, 1996, 1997, 1998, 2000, 200, 2002, 2003, 2004,
-   2008, 2010, 2011, 2012 Free Software Foundation, Inc.
+   2008, 2010, 2011, 2012, 2013 Free Software Foundation, Inc.
 
    Written by Stu Grossman <grossman@cygnus.com> of Cygnus Support.
 
@@ -194,9 +194,7 @@ gdbtk_restore_result_ptr (void *old_result_ptr)
 /* This allows you to Tcl_Eval a tcl command which takes
    a command word, and then a single argument. */
 int
-gdbtk_two_elem_cmd (cmd_name, argv1)
-     char *cmd_name;
-     char *argv1;
+gdbtk_two_elem_cmd (char *cmd_name, char *argv1)
 {
   char *command;
   int result, flags_ptr, arg_len, cmd_len;
@@ -364,7 +362,7 @@ gdbtk_warning (const char *warning, va_list args)
 /* the gdbtk dbug command.  */
 
 void
-report_error ()
+report_error (void)
 {
   TclDebug ('E', Tcl_GetVar (gdbtk_interp, "errorInfo", TCL_GLOBAL_ONLY));
   /*  Tcl_BackgroundError(gdbtk_interp); */
@@ -518,7 +516,7 @@ gdbtk_readline (char *prompt)
 }
 
 static void
-gdbtk_readline_end ()
+gdbtk_readline_end (void)
 {
   if (Tcl_Eval (gdbtk_interp, "gdbtk_tcl_readline_end") != TCL_OK)
     report_error ();
@@ -528,9 +526,6 @@ static void
 gdbtk_call_command (struct cmd_list_element *cmdblk,
 		    char *arg, int from_tty)
 {
-  struct cleanup *old_chain;
-
-  old_chain = make_cleanup (null_cleanup, 0);
   running_now = 0;
   if (cmdblk->class == class_run || cmdblk->class == class_trace)
     {
@@ -545,8 +540,6 @@ gdbtk_call_command (struct cmd_list_element *cmdblk,
     }
   else
     cmd_func (cmdblk, arg, from_tty);
-
-  do_cleanups (old_chain);
 }
 
 /* Called after a `set' command succeeds.  Runs the Tcl hook
@@ -649,7 +642,7 @@ gdbtk_pre_add_symbol (const char *name)
 
 /* This hook is called whenever we finish loading a symbol file. */
 static void
-gdbtk_post_add_symbol ()
+gdbtk_post_add_symbol (void)
 {
   if (Tcl_Eval (gdbtk_interp, "gdbtk_tcl_post_add_symbol") != TCL_OK)
     report_error ();
@@ -788,7 +781,7 @@ gdbtk_exec_file_display (char *filename)
 /* Called from error_begin, this hook is used to warn the gui
    about multi-line error messages */
 static void
-gdbtk_error_begin ()
+gdbtk_error_begin (void)
 {
   if (result_ptr != NULL)
     result_ptr->flags |= GDBTK_ERROR_ONLY;
@@ -821,7 +814,7 @@ gdbtk_annotate_signal (void)
 }
 
 static void
-gdbtk_attach ()
+gdbtk_attach (void)
 {
   if (Tcl_Eval (gdbtk_interp, "after idle \"update idletasks;gdbtk_attached\"") != TCL_OK)
     {
@@ -830,7 +823,7 @@ gdbtk_attach ()
 }
 
 static void
-gdbtk_detach ()
+gdbtk_detach (void)
 {
   if (Tcl_Eval (gdbtk_interp, "gdbtk_detached") != TCL_OK)
     {

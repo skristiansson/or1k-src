@@ -1,5 +1,5 @@
 /* Startup code for Insight
-   Copyright (C) 1994-2012 Free Software Foundation, Inc.
+   Copyright (C) 1994-2013 Free Software Foundation, Inc.
 
    Written by Stu Grossman <grossman@cygnus.com> of Cygnus Support.
 
@@ -31,6 +31,7 @@
 #include "top.h"
 #include "annotate.h"
 #include "exceptions.h"
+#include "main.h"
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
@@ -88,8 +89,6 @@ extern int Tktable_Init (Tcl_Interp * interp);
 
 void gdbtk_init (void);
 
-static void gdbtk_init_1 (char *argv0);
-
 void gdbtk_interactive (void);
 
 static void cleanup_init (void *ignore);
@@ -122,8 +121,6 @@ int running_now;
 static char *gdbtk_source_filename = NULL;
 
 int gdbtk_disable_fputs = 1;
-
-static const char *argv0; 
 
 #ifndef _WIN32
 
@@ -165,7 +162,7 @@ TclpFree (char *ptr)
  */
 
 void
-close_bfds ()
+close_bfds (void)
 {
   struct objfile *o;
   
@@ -250,14 +247,14 @@ cleanup_init (void *ignore)
    via the QUIT macro.  */
 
 void
-gdbtk_interactive ()
+gdbtk_interactive (void)
 {
   /* Tk_DoOneEvent (TK_DONT_WAIT|TK_IDLE_EVENTS); */
 }
 
 /* Start a timer which will keep the GUI alive while in target_wait. */
 void
-gdbtk_start_timer ()
+gdbtk_start_timer (void)
 {
   static int first = 1;
 
@@ -304,7 +301,7 @@ gdbtk_start_timer ()
 
 /* Stop the timer if it is running. */
 void
-gdbtk_stop_timer ()
+gdbtk_stop_timer (void)
 {
   if (gdbtk_timer_going)
     {
@@ -372,7 +369,7 @@ gdbtk_init (void)
   old_chain = make_cleanup (cleanup_init, 0);
 
   /* First init tcl and tk. */
-  Tcl_FindExecutable (argv0);
+  Tcl_FindExecutable (get_gdb_program_name ());
   gdbtk_interp = Tcl_CreateInterp ();
 
 #ifdef TCL_MEM_DEBUG
@@ -664,13 +661,6 @@ gdbtk_find_main";
     }
 }
 
-static void
-gdbtk_init_1 (char *arg0)
-{
-  argv0 = arg0;
-  deprecated_init_ui_hook = NULL;
-}
-
 /* gdbtk_test is used in main.c to validate the -tclcommand option to
    gdb, which sources in a file of tcl code after idle during the
    startup procedure. */
@@ -688,15 +678,13 @@ gdbtk_test (char *filename)
 /* Come here during initialize_all_files () */
 
 void
-_initialize_gdbtk ()
+_initialize_gdbtk (void)
 {
+#ifdef __CYGWIN__
   /* Current_interpreter not set yet, so we must check
      if "interpreter_p" is set to "insight" to know if
      insight is GOING to run. */
-  if (strcmp (interpreter_p, "insight") == 0)
-    deprecated_init_ui_hook = gdbtk_init_1;
-#ifdef __CYGWIN__
-  else
+  if (strcmp (interpreter_p, "insight") != 0)
     {
       DWORD ft = GetFileType (GetStdHandle (STD_INPUT_HANDLE));
 
@@ -739,7 +727,7 @@ tk_command (char *cmd, int from_tty)
 
   result = xstrdup (Tcl_GetStringResult (gdbtk_interp));
 
-  old_chain = make_cleanup (free, result);
+  old_chain = make_cleanup (xfree, result);
 
   if (retval != TCL_OK)
     error ("%s", result);

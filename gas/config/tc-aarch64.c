@@ -1,6 +1,7 @@
 /* tc-aarch64.c -- Assemble for the AArch64 ISA
 
-   Copyright 2009, 2010, 2011, 2012  Free Software Foundation, Inc.
+   Copyright 2009, 2010, 2011, 2012, 2013
+   Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GAS.
@@ -59,6 +60,22 @@ static const aarch64_feature_set aarch64_arch_none = AARCH64_ARCH_NONE;
 #ifdef OBJ_ELF
 /* Pre-defined "_GLOBAL_OFFSET_TABLE_"	*/
 static symbolS *GOT_symbol;
+
+/* Which ABI to use.  */
+enum aarch64_abi_type
+{
+  AARCH64_ABI_LP64 = 0,
+  AARCH64_ABI_ILP32 = 1
+};
+
+/* AArch64 ABI for the output file.  */
+static enum aarch64_abi_type aarch64_abi = AARCH64_ABI_LP64;
+
+/* When non-zero, program to a 32-bit model, in which the C data types
+   int, long and all pointer types are 32-bit objects (ILP32); or to a
+   64-bit model, in which the C int type is 32-bits but the C long type
+   and all pointer types are 64-bit objects (LP64).  */
+#define ilp32_p		(aarch64_abi == AARCH64_ABI_ILP32)
 #endif
 
 enum neon_el_type
@@ -484,25 +501,6 @@ skip_past_char (char **str, char c)
 
 /* Arithmetic expressions (possibly involving symbols).	 */
 
-/* Return TRUE if anything in the expression *SP is a bignum.  */
-
-static bfd_boolean
-exp_has_bignum_p (symbolS * sp)
-{
-  if (symbol_get_value_expression (sp)->X_op == O_big)
-    return TRUE;
-
-  if (symbol_get_value_expression (sp)->X_add_symbol)
-    {
-      return (exp_has_bignum_p (symbol_get_value_expression (sp)->X_add_symbol)
-	      || (symbol_get_value_expression (sp)->X_op_symbol
-		  && exp_has_bignum_p (symbol_get_value_expression (sp)->
-				     X_op_symbol)));
-    }
-
-  return FALSE;
-}
-
 static bfd_boolean in_my_get_expression_p = FALSE;
 
 /* Third argument to my_get_expression.	 */
@@ -570,23 +568,6 @@ my_get_expression (expressionS * ep, char **str, int prefix_mode,
 #else
   (void) seg;
 #endif
-
-  /* Get rid of any bignums now, so that we don't generate an error for which
-     we can't establish a line number later on.  Big numbers are never valid
-     in instructions, which is where this routine is always called.  */
-  if (ep->X_op == O_big
-      || (ep->X_add_symbol
-	  && (exp_has_bignum_p (ep->X_add_symbol)
-	      || (ep->X_op_symbol && exp_has_bignum_p (ep->X_op_symbol)))))
-    {
-      if (prefix_present_p && error_p ())
-	set_fatal_syntax_error (_("invalid constant"));
-      else
-	set_first_syntax_error (_("invalid constant"));
-      *str = input_line_pointer;
-      input_line_pointer = save_in;
-      return FALSE;
-    }
 
   *str = input_line_pointer;
   input_line_pointer = save_in;
@@ -1730,7 +1711,7 @@ s_ltorg (int ignored ATTRIBUTE_UNUSED)
   char sym_name[20];
   int align;
 
-  for (align = 2; align < 4; align++)
+  for (align = 2; align <= 4; align++)
     {
       int size = 1 << align;
 
@@ -2024,49 +2005,140 @@ encode_imm_float_bits (uint32_t imm)
     | ((imm >> (31 - 7)) & 0x80);	/* b[31]    -> b[7]   */
 }
 
-/* Return TRUE if IMM is a valid floating-point immediate; return FALSE
-   otherwise.  */
+/* Return TRUE if the single-precision floating-point value encoded in IMM
+   can be expressed in the AArch64 8-bit signed floating-point format with
+   3-bit exponent and normalized 4 bits of precision; in other words, the
+   floating-point value must be expressable as
+     (+/-) n / 16 * power (2, r)
+   where n and r are integers such that 16 <= n <=31 and -3 <= r <= 4.  */
+
 static bfd_boolean
 aarch64_imm_float_p (uint32_t imm)
 {
-  /* 3 32222222 2221111111111
-     1 09876543 21098765432109876543210
-     n Eeeeeexx xxxx0000000000000000000  */
-  uint32_t e;
+  /* If a single-precision floating-point value has the following bit
+     pattern, it can be expressed in the AArch64 8-bit floating-point
+     format:
 
-  e = (imm >> 30) & 0x1;
-  if (e == 0)
-    e = 0x3e000000;
+     3 32222222 2221111111111
+     1 09876543 21098765432109876543210
+     n Eeeeeexx xxxx0000000000000000000
+
+     where n, e and each x are either 0 or 1 independently, with
+     E == ~ e.  */
+
+  uint32_t pattern;
+
+  /* Prepare the pattern for 'Eeeeee'.  */
+  if (((imm >> 30) & 0x1) == 0)
+    pattern = 0x3e000000;
   else
-    e = 0x40000000;
-  return (imm & 0x7ffff) == 0	/* lower 19 bits are 0 */
-    && ((imm & 0x7e000000) == e);	/* bits 25-29 = ~ bit 30 */
+    pattern = 0x40000000;
+
+  return (imm & 0x7ffff) == 0		/* lower 19 bits are 0.  */
+    && ((imm & 0x7e000000) == pattern);	/* bits 25 - 29 == ~ bit 30.  */
 }
 
-/* Note: this accepts the floating-point 0 constant.  */
+/* Like aarch64_imm_float_p but for a double-precision floating-point value.
+
+   Return TRUE if the value encoded in IMM can be expressed in the AArch64
+   8-bit signed floating-point format with 3-bit exponent and normalized 4
+   bits of precision (i.e. can be used in an FMOV instruction); return the
+   equivalent single-precision encoding in *FPWORD.
+
+   Otherwise return FALSE.  */
+
 static bfd_boolean
-parse_aarch64_imm_float (char **ccp, int *immed)
+aarch64_double_precision_fmovable (uint64_t imm, uint32_t *fpword)
+{
+  /* If a double-precision floating-point value has the following bit
+     pattern, it can be expressed in the AArch64 8-bit floating-point
+     format:
+
+     6 66655555555 554444444...21111111111
+     3 21098765432 109876543...098765432109876543210
+     n Eeeeeeeeexx xxxx00000...000000000000000000000
+
+     where n, e and each x are either 0 or 1 independently, with
+     E == ~ e.  */
+
+  uint32_t pattern;
+  uint32_t high32 = imm >> 32;
+
+  /* Lower 32 bits need to be 0s.  */
+  if ((imm & 0xffffffff) != 0)
+    return FALSE;
+
+  /* Prepare the pattern for 'Eeeeeeeee'.  */
+  if (((high32 >> 30) & 0x1) == 0)
+    pattern = 0x3fc00000;
+  else
+    pattern = 0x40000000;
+
+  if ((high32 & 0xffff) == 0			/* bits 32 - 47 are 0.  */
+      && (high32 & 0x7fc00000) == pattern)	/* bits 54 - 61 == ~ bit 62.  */
+    {
+      /* Convert to the single-precision encoding.
+         i.e. convert
+	   n Eeeeeeeeexx xxxx00000...000000000000000000000
+	 to
+	   n Eeeeeexx xxxx0000000000000000000.  */
+      *fpword = ((high32 & 0xfe000000)			/* nEeeeee.  */
+		 | (((high32 >> 16) & 0x3f) << 19));	/* xxxxxx.  */
+      return TRUE;
+    }
+  else
+    return FALSE;
+}
+
+/* Parse a floating-point immediate.  Return TRUE on success and return the
+   value in *IMMED in the format of IEEE754 single-precision encoding.
+   *CCP points to the start of the string; DP_P is TRUE when the immediate
+   is expected to be in double-precision (N.B. this only matters when
+   hexadecimal representation is involved).
+
+   N.B. 0.0 is accepted by this function.  */
+
+static bfd_boolean
+parse_aarch64_imm_float (char **ccp, int *immed, bfd_boolean dp_p)
 {
   char *str = *ccp;
   char *fpnum;
   LITTLENUM_TYPE words[MAX_LITTLENUMS];
   int found_fpchar = 0;
+  int64_t val = 0;
+  unsigned fpword = 0;
+  bfd_boolean hex_p = FALSE;
 
   skip_past_char (&str, '#');
 
-  /* We must not accidentally parse an integer as a floating-point number.  Make
-     sure that the value we parse is not an integer by checking for special
-     characters '.' or 'e'.
-     FIXME: This is a hack that is not very efficient, but doing better is
-     tricky because type information isn't in a very usable state at parse
-     time.  */
   fpnum = str;
   skip_whitespace (fpnum);
 
   if (strncmp (fpnum, "0x", 2) == 0)
-    return FALSE;
+    {
+      /* Support the hexadecimal representation of the IEEE754 encoding.
+	 Double-precision is expected when DP_P is TRUE, otherwise the
+	 representation should be in single-precision.  */
+      if (! parse_constant_immediate (&str, &val))
+	goto invalid_fp;
+
+      if (dp_p)
+	{
+	  if (! aarch64_double_precision_fmovable (val, &fpword))
+	    goto invalid_fp;
+	}
+      else if ((uint64_t) val > 0xffffffff)
+	goto invalid_fp;
+      else
+	fpword = val;
+
+      hex_p = TRUE;
+    }
   else
     {
+      /* We must not accidentally parse an integer as a floating-point number.
+	 Make sure that the value we parse is not an integer by checking for
+	 special characters '.' or 'e'.  */
       for (; *fpnum != '\0' && *fpnum != ' ' && *fpnum != '\n'; fpnum++)
 	if (*fpnum == '.' || *fpnum == 'e' || *fpnum == 'E')
 	  {
@@ -2078,10 +2150,12 @@ parse_aarch64_imm_float (char **ccp, int *immed)
 	return FALSE;
     }
 
-  if ((str = atof_ieee (str, 's', words)) != NULL)
+  if (! hex_p)
     {
-      unsigned fpword = 0;
       int i;
+
+      if ((str = atof_ieee (str, 's', words)) == NULL)
+	goto invalid_fp;
 
       /* Our FP word must be 32 bits (single-precision FP).  */
       for (i = 0; i < 32 / LITTLENUM_NUMBER_OF_BITS; i++)
@@ -2089,14 +2163,12 @@ parse_aarch64_imm_float (char **ccp, int *immed)
 	  fpword <<= LITTLENUM_NUMBER_OF_BITS;
 	  fpword |= words[i];
 	}
+    }
 
-      if (aarch64_imm_float_p (fpword) || (fpword & 0x7fffffff) == 0)
-	*immed = fpword;
-      else
-	goto invalid_fp;
-
+  if (aarch64_imm_float_p (fpword) || (fpword & 0x7fffffff) == 0)
+    {
+      *immed = fpword;
       *ccp = str;
-
       return TRUE;
     }
 
@@ -2298,24 +2370,20 @@ static struct reloc_table_entry reloc_table[] = {
    BFD_RELOC_AARCH64_MOVW_G3,
    0,
    0},
-  /* Get to the GOT entry for a symbol.  */
-  {"got_prel19", 0,
-   0,
-   0,
-   0,
-   BFD_RELOC_AARCH64_GOT_LD_PREL19},
+
   /* Get to the page containing GOT entry for a symbol.  */
   {"got", 1,
    BFD_RELOC_AARCH64_ADR_GOT_PAGE,
    0,
    0,
-   0},
+   BFD_RELOC_AARCH64_GOT_LD_PREL19},
+
   /* 12 bit offset into the page containing GOT entry for that symbol.  */
   {"got_lo12", 0,
    0,
    0,
    0,
-   BFD_RELOC_AARCH64_LD64_GOT_LO12_NC},
+   BFD_RELOC_AARCH64_LD_GOT_LO12_NC},
 
   /* Get to the page containing GOT TLS entry for a symbol */
   {"tlsgd", 0,
@@ -2333,7 +2401,7 @@ static struct reloc_table_entry reloc_table[] = {
 
   /* Get to the page containing GOT TLS entry for a symbol */
   {"tlsdesc", 0,
-   BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE,
+   BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21,
    0,
    0,
    0},
@@ -2343,7 +2411,7 @@ static struct reloc_table_entry reloc_table[] = {
    0,
    0,
    BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC,
-   BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC},
+   BFD_RELOC_AARCH64_TLSDESC_LD_LO12_NC},
 
   /* Get to the page containing GOT TLS entry for a symbol */
   {"gottprel", 0,
@@ -2357,7 +2425,7 @@ static struct reloc_table_entry reloc_table[] = {
    0,
    0,
    0,
-   BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC},
+   BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_LO12_NC},
 
   /* Get tp offset for a symbol.  */
   {"tprel", 0,
@@ -3232,10 +3300,14 @@ parse_sys_reg (char **str, struct hash_control *sys_regs, int imple_defined_p)
 	  unsigned int op0, op1, cn, cm, op2;
 	  if (sscanf (buf, "s%u_%u_c%u_c%u_%u", &op0, &op1, &cn, &cm, &op2) != 5)
 	    return PARSE_FAIL;
-	  /* Register access is encoded as follows:
+	  /* The architecture specifies the encoding space for implementation
+	     defined registers as:
 	     op0  op1  CRn   CRm   op2
-	     11   xxx  1x11  xxxx  xxx.  */
-	  if (op0 != 3 || op1 > 7 || (cn | 0x4) != 0xf || cm > 15 || op2 > 7)
+	     11   xxx  1x11  xxxx  xxx
+	     For convenience GAS accepts a wider encoding space, as follows:
+	     op0  op1  CRn   CRm   op2
+	     11   xxx  xxxx  xxxx  xxx  */
+	  if (op0 != 3 || op1 > 7 || cn > 15 || cm > 15 || op2 > 7)
 	    return PARSE_FAIL;
 	  value = (op0 << 14) | (op1 << 11) | (cn << 7) | (cm << 3) | op2;
 	}
@@ -3961,9 +4033,14 @@ output_operand_error_record (const operand_error_record *record, char *str)
       break;
 
     case AARCH64_OPDE_OUT_OF_RANGE:
-      as_bad (_("%s out of range %d to %d at operand %d -- `%s'"),
-	      detail->error ? detail->error : _("immediate value"),
-	      detail->data[0], detail->data[1], detail->index + 1, str);
+      if (detail->data[0] != detail->data[1])
+	as_bad (_("%s out of range %d to %d at operand %d -- `%s'"),
+		detail->error ? detail->error : _("immediate value"),
+		detail->data[0], detail->data[1], detail->index + 1, str);
+      else
+	as_bad (_("%s expected to be %d at operand %d -- `%s'"),
+		detail->error ? detail->error : _("immediate value"),
+		detail->data[0], detail->index + 1, str);
       break;
 
     case AARCH64_OPDE_REG_LIST:
@@ -4717,7 +4794,7 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	    bfd_boolean res1 = FALSE, res2 = FALSE;
 	    /* N.B. -0.0 will be rejected; although -0.0 shouldn't be rejected,
 	       it is probably not worth the effort to support it.  */
-	    if (!(res1 = parse_aarch64_imm_float (&str, &qfloat))
+	    if (!(res1 = parse_aarch64_imm_float (&str, &qfloat, FALSE))
 		&& !(res2 = parse_constant_immediate (&str, &val)))
 	      goto failure;
 	    if ((res1 && qfloat == 0) || (res2 && val == 0))
@@ -4778,7 +4855,10 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	case AARCH64_OPND_SIMD_FPIMM:
 	  {
 	    int qfloat;
-	    if (! parse_aarch64_imm_float (&str, &qfloat))
+	    bfd_boolean dp_p
+	      = (aarch64_get_qualifier_esize (inst.base.operands[0].qualifier)
+		 == 8);
+	    if (! parse_aarch64_imm_float (&str, &qfloat, dp_p))
 	      goto failure;
 	    if (qfloat == 0)
 	      {
@@ -5086,7 +5166,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  break;
 
 	case AARCH64_OPND_SYSREG:
-	  if ((val = parse_sys_reg (&str, aarch64_sys_regs_hsh, 1)) == FALSE)
+	  if ((val = parse_sys_reg (&str, aarch64_sys_regs_hsh, 1))
+	      == PARSE_FAIL)
 	    {
 	      set_syntax_error (_("unknown or missing system register name"));
 	      goto failure;
@@ -5095,7 +5176,8 @@ parse_operands (char *str, const aarch64_opcode *opcode)
 	  break;
 
 	case AARCH64_OPND_PSTATEFIELD:
-	  if ((val = parse_sys_reg (&str, aarch64_pstatefield_hsh, 0)) == FALSE)
+	  if ((val = parse_sys_reg (&str, aarch64_pstatefield_hsh, 0))
+	      == PARSE_FAIL)
 	    {
 	      set_syntax_error (_("unknown or missing PSTATE field name"));
 	      goto failure;
@@ -5275,6 +5357,7 @@ programmer_friendly_fixup (aarch64_instruction *instr)
 	  if (op == OP_LDRSW_LIT)
 	    size = 4;
 	  if (instr->reloc.exp.X_op != O_constant
+	      && instr->reloc.exp.X_op != O_big
 	      && instr->reloc.exp.X_op != O_symbol)
 	    {
 	      record_operand_error (opcode, 1,
@@ -5289,25 +5372,6 @@ programmer_friendly_fixup (aarch64_instruction *instr)
 				    _("literal pool insertion failed"));
 	      return FALSE;
 	    }
-	}
-      break;
-    case asimdimm:
-      /* Allow MOVI V0.16B, 97, LSL 0, although the preferred architectural
-	 syntax requires that the LSL shifter can only be used when the
-	 destination register has the shape of 4H, 8H, 2S or 4S.  */
-      if (op == OP_V_MOVI_B && operands[1].shifter.kind == AARCH64_MOD_LSL
-	  && (operands[0].qualifier == AARCH64_OPND_QLF_V_8B
-	      || operands[0].qualifier == AARCH64_OPND_QLF_V_16B))
-	{
-	  if (operands[1].shifter.amount != 0)
-	    {
-	      record_operand_error (opcode, 1,
-				    AARCH64_OPDE_OTHER_ERROR,
-				    _("shift amount non-zero"));
-	      return FALSE;
-	    }
-	  operands[1].shifter.kind = AARCH64_MOD_NONE;
-	  operands[1].qualifier = AARCH64_OPND_QLF_NIL;
 	}
       break;
     case log_shift:
@@ -5840,6 +5904,18 @@ tc_aarch64_regname_to_dw2regnum (char *regname)
   return -1;
 }
 
+/* Implement DWARF2_ADDR_SIZE.  */
+
+int
+aarch64_dwarf2_addr_size (void)
+{
+#if defined (OBJ_MAYBE_ELF) || defined (OBJ_ELF)
+  if (ilp32_p)
+    return 4;
+#endif
+  return bfd_arch_bits_per_address (stdoutput) / 8;
+}
+
 /* MD interface: Symbol and relocation handling.  */
 
 /* Return the address within the segment that a PC-relative fixup is
@@ -6289,14 +6365,14 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
       break;
 
     case BFD_RELOC_AARCH64_LD_LO19_PCREL:
-      if (value & 3)
-	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("pc-relative load offset not word aligned"));
-      if (signed_overflow (value, 21))
-	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("pc-relative load offset out of range"));
       if (fixP->fx_done || !seg->use_rela_p)
 	{
+	  if (value & 3)
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("pc-relative load offset not word aligned"));
+	  if (signed_overflow (value, 21))
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("pc-relative load offset out of range"));
 	  insn = get_aarch64_insn (buf);
 	  insn |= encode_ld_lit_ofs_19 (value >> 2);
 	  put_aarch64_insn (buf, insn);
@@ -6304,11 +6380,11 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
       break;
 
     case BFD_RELOC_AARCH64_ADR_LO21_PCREL:
-      if (signed_overflow (value, 21))
-	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("pc-relative address offset out of range"));
       if (fixP->fx_done || !seg->use_rela_p)
 	{
+	  if (signed_overflow (value, 21))
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("pc-relative address offset out of range"));
 	  insn = get_aarch64_insn (buf);
 	  insn |= encode_adr_imm (value);
 	  put_aarch64_insn (buf, insn);
@@ -6316,14 +6392,14 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
       break;
 
     case BFD_RELOC_AARCH64_BRANCH19:
-      if (value & 3)
-	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("conditional branch target not word aligned"));
-      if (signed_overflow (value, 21))
-	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("conditional branch out of range"));
       if (fixP->fx_done || !seg->use_rela_p)
 	{
+	  if (value & 3)
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("conditional branch target not word aligned"));
+	  if (signed_overflow (value, 21))
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("conditional branch out of range"));
 	  insn = get_aarch64_insn (buf);
 	  insn |= encode_cond_branch_ofs_19 (value >> 2);
 	  put_aarch64_insn (buf, insn);
@@ -6331,14 +6407,14 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
       break;
 
     case BFD_RELOC_AARCH64_TSTBR14:
-      if (value & 3)
-	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("conditional branch target not word aligned"));
-      if (signed_overflow (value, 16))
-	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("conditional branch out of range"));
       if (fixP->fx_done || !seg->use_rela_p)
 	{
+	  if (value & 3)
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("conditional branch target not word aligned"));
+	  if (signed_overflow (value, 16))
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("conditional branch out of range"));
 	  insn = get_aarch64_insn (buf);
 	  insn |= encode_tst_branch_ofs_14 (value >> 2);
 	  put_aarch64_insn (buf, insn);
@@ -6347,13 +6423,14 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
 
     case BFD_RELOC_AARCH64_JUMP26:
     case BFD_RELOC_AARCH64_CALL26:
-      if (value & 3)
-	as_bad_where (fixP->fx_file, fixP->fx_line,
-		      _("branch target not word aligned"));
-      if (signed_overflow (value, 28))
-	as_bad_where (fixP->fx_file, fixP->fx_line, _("branch out of range"));
       if (fixP->fx_done || !seg->use_rela_p)
 	{
+	  if (value & 3)
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("branch target not word aligned"));
+	  if (signed_overflow (value, 28))
+	    as_bad_where (fixP->fx_file, fixP->fx_line,
+			  _("branch out of range"));
 	  insn = get_aarch64_insn (buf);
 	  insn |= encode_branch_ofs_26 (value >> 2);
 	  put_aarch64_insn (buf, insn);
@@ -6435,24 +6512,58 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
 	}
       break;
 
-    case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
-    case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-    case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
-    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
-    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
-    case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE:
-    case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_LO12_NC:
+      fixP->fx_r_type = (ilp32_p
+			 ? BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC
+			 : BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC);
       S_SET_THREAD_LOCAL (fixP->fx_addsy);
       /* Should always be exported to object file, see
 	 aarch64_force_relocation().  */
+      gas_assert (!fixP->fx_done);
+      gas_assert (seg->use_rela_p);
+      break;
+
+    case BFD_RELOC_AARCH64_TLSDESC_LD_LO12_NC:
+      fixP->fx_r_type = (ilp32_p
+			 ? BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC
+			 : BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC);
+      S_SET_THREAD_LOCAL (fixP->fx_addsy);
+      /* Should always be exported to object file, see
+	 aarch64_force_relocation().  */
+      gas_assert (!fixP->fx_done);
+      gas_assert (seg->use_rela_p);
+      break;
+
+    case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
+    case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
+    case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    case BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
+    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
+      S_SET_THREAD_LOCAL (fixP->fx_addsy);
+      /* Should always be exported to object file, see
+	 aarch64_force_relocation().  */
+      gas_assert (!fixP->fx_done);
+      gas_assert (seg->use_rela_p);
+      break;
+
+    case BFD_RELOC_AARCH64_LD_GOT_LO12_NC:
+      /* Should always be exported to object file, see
+	 aarch64_force_relocation().  */
+      fixP->fx_r_type = (ilp32_p
+			 ? BFD_RELOC_AARCH64_LD32_GOT_LO12_NC
+			 : BFD_RELOC_AARCH64_LD64_GOT_LO12_NC);
       gas_assert (!fixP->fx_done);
       gas_assert (seg->use_rela_p);
       break;
@@ -6468,6 +6579,7 @@ md_apply_fix (fixS * fixP, valueT * valP, segT seg)
     case BFD_RELOC_AARCH64_GOT_LD_PREL19:
     case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
     case BFD_RELOC_AARCH64_LD64_GOT_LO12_NC:
+    case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
       /* Should always be exported to object file, see
 	 aarch64_force_relocation().  */
       gas_assert (!fixP->fx_done);
@@ -6598,32 +6710,42 @@ aarch64_force_relocation (struct fix *fixp)
          even if the symbol is extern or weak.  */
       return 0;
 
-    case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
-    case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-    case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
-    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
-    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0:
-    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
-    case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE:
-    case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
-    case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
-    case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
-    case BFD_RELOC_AARCH64_LD64_GOT_LO12_NC:
-    case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
-    case BFD_RELOC_AARCH64_ADR_HI21_NC_PCREL:
+    case BFD_RELOC_AARCH64_TLSIE_LD_GOTTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_LD_LO12_NC:
+    case BFD_RELOC_AARCH64_LD_GOT_LO12_NC:
+      /* Pseudo relocs that need to be fixed up according to
+	 ilp32_p.  */
+      return 0;
+
     case BFD_RELOC_AARCH64_ADD_LO12:
-    case BFD_RELOC_AARCH64_LDST8_LO12:
+    case BFD_RELOC_AARCH64_ADR_GOT_PAGE:
+    case BFD_RELOC_AARCH64_ADR_HI21_NC_PCREL:
+    case BFD_RELOC_AARCH64_ADR_HI21_PCREL:
+    case BFD_RELOC_AARCH64_GOT_LD_PREL19:
+    case BFD_RELOC_AARCH64_LD32_GOT_LO12_NC:
+    case BFD_RELOC_AARCH64_LD64_GOT_LO12_NC:
+    case BFD_RELOC_AARCH64_LDST128_LO12:
     case BFD_RELOC_AARCH64_LDST16_LO12:
     case BFD_RELOC_AARCH64_LDST32_LO12:
     case BFD_RELOC_AARCH64_LDST64_LO12:
-    case BFD_RELOC_AARCH64_LDST128_LO12:
-    case BFD_RELOC_AARCH64_GOT_LD_PREL19:
+    case BFD_RELOC_AARCH64_LDST8_LO12:
+    case BFD_RELOC_AARCH64_TLSDESC_ADD_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_ADR_PAGE21:
+    case BFD_RELOC_AARCH64_TLSDESC_LD32_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSDESC_LD64_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSGD_ADD_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSGD_ADR_PAGE21:
+    case BFD_RELOC_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    case BFD_RELOC_AARCH64_TLSIE_LD32_GOTTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_HI12:
+    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12:
+    case BFD_RELOC_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
+    case BFD_RELOC_AARCH64_TLSLE_MOVW_TPREL_G2:
       /* Always leave these relocations for the linker.  */
       return 1;
 
@@ -6640,9 +6762,9 @@ const char *
 elf64_aarch64_target_format (void)
 {
   if (target_big_endian)
-    return "elf64-bigaarch64";
+    return ilp32_p ? "elf32-bigaarch64" : "elf64-bigaarch64";
   else
-    return "elf64-littleaarch64";
+    return ilp32_p ? "elf32-littleaarch64" : "elf64-littleaarch64";
 }
 
 void
@@ -6913,9 +7035,8 @@ md_begin (void)
   for (i = 0; i < ARRAY_SIZE (aarch64_prfops); i++)
     {
       const char* name = aarch64_prfops[i].name;
-      /* Skip 0011x, 01xxx, 1011x and 11xxx - the unallocated hint encodings
-	 as a 5-bit immediate #uimm5.  */
-      if ((i & 0xf) >= 6)
+      /* Skip the unallocated hint encodings.  */
+      if (name == NULL)
 	continue;
       checked_hash_insert (aarch64_pldop_hsh, name,
 			   (void *) (aarch64_prfops + i));
@@ -6934,7 +7055,7 @@ md_begin (void)
   cpu_variant = *mcpu_cpu_opt;
 
   /* Record the CPU type.  */
-  mach = bfd_mach_aarch64;
+  mach = ilp32_p ? bfd_mach_aarch64_ilp32 : bfd_mach_aarch64;
 
   bfd_set_arch_mach (stdoutput, TARGET_ARCH, mach);
 }
@@ -7000,6 +7121,8 @@ struct aarch64_cpu_option_table
    recognized by GCC.  */
 static const struct aarch64_cpu_option_table aarch64_cpus[] = {
   {"all", AARCH64_ANY, NULL},
+  {"cortex-a53",	AARCH64_ARCH_V8, "Cortex-A53"},
+  {"cortex-a57",	AARCH64_ARCH_V8, "Cortex-A57"},
   {"generic", AARCH64_ARCH_V8, NULL},
 
   /* These two are example CPUs supported in GCC, once we have real
@@ -7032,6 +7155,7 @@ struct aarch64_option_cpu_value_table
 };
 
 static const struct aarch64_option_cpu_value_table aarch64_features[] = {
+  {"crc",		AARCH64_FEATURE (AARCH64_FEATURE_CRC, 0)},
   {"crypto",		AARCH64_FEATURE (AARCH64_FEATURE_CRYPTO, 0)},
   {"fp",		AARCH64_FEATURE (AARCH64_FEATURE_FP, 0)},
   {"simd",		AARCH64_FEATURE (AARCH64_FEATURE_SIMD, 0)},
@@ -7194,7 +7318,47 @@ aarch64_parse_arch (char *str)
   return 0;
 }
 
+/* ABIs.  */
+struct aarch64_option_abi_value_table
+{
+  char *name;
+  enum aarch64_abi_type value;
+};
+
+static const struct aarch64_option_abi_value_table aarch64_abis[] = {
+  {"ilp32",		AARCH64_ABI_ILP32},
+  {"lp64",		AARCH64_ABI_LP64},
+  {NULL,		0}
+};
+
+static int
+aarch64_parse_abi (char *str)
+{
+  const struct aarch64_option_abi_value_table *opt;
+  size_t optlen = strlen (str);
+
+  if (optlen == 0)
+    {
+      as_bad (_("missing abi name `%s'"), str);
+      return 0;
+    }
+
+  for (opt = aarch64_abis; opt->name != NULL; opt++)
+    if (strlen (opt->name) == optlen && strncmp (str, opt->name, optlen) == 0)
+      {
+	aarch64_abi = opt->value;
+	return 1;
+      }
+
+  as_bad (_("unknown abi `%s'\n"), str);
+  return 0;
+}
+
 static struct aarch64_long_option_table aarch64_long_opts[] = {
+#ifdef OBJ_ELF
+  {"mabi=", N_("<abi name>\t  specify for ABI <abi name>"),
+   aarch64_parse_abi, NULL},
+#endif /* OBJ_ELF */
   {"mcpu=", N_("<cpu name>\t  assemble for CPU <cpu name>"),
    aarch64_parse_cpu, NULL},
   {"march=", N_("<arch name>\t  assemble for architecture <arch name>"),
