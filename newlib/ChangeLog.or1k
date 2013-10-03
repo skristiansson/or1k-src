@@ -1,3 +1,9 @@
+2013-10-02  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* libc/machine/or1k/or1k-support-asm.S (interrupt_handler_add): Remove
+	incorrect subtraction of handler table address.
+	(interrupt_handler): Use seperate reg to hold function pointer.
+
 2012-06-22  Peter Gavin  <pgavin@gmail.com>
 
 	* libc/include/machine/or1k/include/or1k-asm.h: add some comments

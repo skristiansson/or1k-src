@@ -408,14 +408,14 @@ or1k_interrupt_handler:
 	l.addi	r5,r4,-1
 	l.slli	r6,r5,2
 	/* Add this to table bases */
-	l.add	r6,r6,r7
+	l.add	r14,r6,r7
 	l.add	r13,r6,r12
 
 	/* Fetch handler function address */
-	l.lwz	r6,0(r6)
+	l.lwz	r14,0(r14)
 
 	/* Double check it's valid, compare against INTERRUPT_HANDLER_NOT_SET */
-	l.sfne	r6,r8
+	l.sfne	r14,r8
 	/* Skip if no handler: TODO: Indicate interrupt fired but no handler*/
 	OR1K_DELAYED_NOP(OR1K_INST(l.bnf .L1))
 	
@@ -425,7 +425,7 @@ or1k_interrupt_handler:
 	/* Call handler, save r5 in delay slot */
         OR1K_DELAYED(
 	OR1K_INST(l.sw	8(r1),r5),
-	OR1K_INST(l.jalr	r5)
+	OR1K_INST(l.jalr	r14)
         )
 
 	/* Reload r3,r5 */
@@ -465,7 +465,6 @@ or1k_interrupt_handler_add:
 	l.sw	0(r1),r6
 	/* Convert interrupt number into word address */
 	l.slli	r3,r3,2
-	l.addi	r3,r3,-4
 	/* Get address of interrupt handler table */
 	l.movhi r6,hi(or1k_interrupt_handler_table)
 	l.ori	r6,r6,lo(or1k_interrupt_handler_table)
