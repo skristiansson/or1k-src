@@ -725,6 +725,8 @@ case "${host}" in
 	newlib_cflags="${newlib_cflags} -DHAVE_RENAME -DHAVE_SYSTEM -DMISSING_SYSCALL_NAMES"
 	;;
   nds32*)
+	syscall_dir=syscalls
+	;;
   or1k-*-* | or1knd-*-*)
 	syscall_dir=syscalls
         ;;
