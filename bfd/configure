@@ -15079,7 +15079,7 @@ SHARED_LDFLAGS=
 if test "$enable_shared" = "yes"; then
   x=`sed -n -e 's/^[ 	]*PICFLAG[ 	]*=[ 	]*//p' < ../libiberty/Makefile | sed -n '$p'`
   if test -n "$x"; then
-    SHARED_LIBADD="-L`pwd`/../libiberty/pic -L`pwd`/../intl -liberty -lintl"
+    SHARED_LIBADD="-L`pwd`/../libiberty/pic -liberty"
   fi
 
 # More hacks to build DLLs on Windows.
@@ -15087,6 +15087,11 @@ if test "$enable_shared" = "yes"; then
   *-*-cygwin*)
     SHARED_LDFLAGS="-no-undefined"
     SHARED_LIBADD="-L`pwd`/../libiberty -liberty -L`pwd`/../intl -lintl -lcygwin -lkernel32"
+  ;;
+
+  # Hack to build or1k-src on OSX
+  *-*-darwin*)
+    SHARED_LIBADD="-L`pwd`/../libiberty/pic -L`pwd`/../intl -liberty -lintl"
   ;;
   esac
 
