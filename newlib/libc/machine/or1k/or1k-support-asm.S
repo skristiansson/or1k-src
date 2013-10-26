@@ -445,8 +445,8 @@ or1k_interrupt_handler:
 	l.lwz	r9,0(r1)
 	l.mtspr	r0,r3,SPR_PICSR
         OR1K_DELAYED(
-	OR1K_INST(l.jr	r9),
-	OR1K_INST(l.addi	r1,r1,12)
+	OR1K_INST(l.addi	r1,r1,12),
+	OR1K_INST(l.jr	r9)
         )
 
 

@@ -1,3 +1,8 @@
+2013-10-27  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
+
+	* libc/machine/or1k/or1k-support-asm.S (or1k_interrupt_handler):
+	Change order of instructions in OR1K_DELAYED macro.
+
 2013-10-02  Stefan Kristiansson  <stefan.kristiansson@saunalahti.fi>
 
 	* libc/machine/or1k/or1k-support-asm.S (interrupt_handler_add): Remove
