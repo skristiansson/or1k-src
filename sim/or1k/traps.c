@@ -28,7 +28,9 @@ void or1k32bf_exception (sim_cpu *current_cpu, USI pc, USI exnum)
   SET_H_SYS_ESR0 (GET_H_SYS_SR ());
   
   SET_H_SYS_SR_DSX (current_cpu->delay_slot);
-  
+
+  SET_H_ATOMIC_RESERVE (0);
+
   switch (exnum) {
   case EXCEPT_RESET:
     break;

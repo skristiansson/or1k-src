@@ -629,6 +629,39 @@ SEM_FN_NAME (or1k32bf,l_lws) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
 #undef FLD
 }
 
+/* l-lwa: l.lwa $rD,${simm16}($rA) */
+
+static SEM_PC
+SEM_FN_NAME (or1k32bf,l_lwa) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_l_lwz.f
+  ARGBUF *abuf = SEM_ARGBUF (sem_arg);
+  int UNUSED written = 0;
+  IADDR UNUSED pc = abuf->addr;
+  SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
+
+{
+  {
+    USI opval = ZEXTSISI (GETMEMUSI (current_cpu, pc, or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16)), 4)));
+    SET_H_GPR (FLD (f_r1), opval);
+    TRACE_RESULT (current_cpu, abuf, "gpr", 'x', opval);
+  }
+  {
+    BI opval = 1;
+    CPU (h_atomic_reserve) = opval;
+    TRACE_RESULT (current_cpu, abuf, "atomic-reserve", 'x', opval);
+  }
+  {
+    SI opval = or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16)), 4);
+    CPU (h_atomic_address) = opval;
+    TRACE_RESULT (current_cpu, abuf, "atomic-address", 'x', opval);
+  }
+}
+
+  return vpc;
+#undef FLD
+}
+
 /* l-lbz: l.lbz $rD,${simm16}($rA) */
 
 static SEM_PC
@@ -724,12 +757,25 @@ SEM_FN_NAME (or1k32bf,l_sw) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   IADDR UNUSED pc = abuf->addr;
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
+{
+  SI tmp_addr;
+  tmp_addr = or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16_split)), 4);
   {
     USI opval = TRUNCSISI (GET_H_GPR (FLD (f_r3)));
-    SETMEMUSI (current_cpu, pc, or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16_split)), 4), opval);
+    SETMEMUSI (current_cpu, pc, tmp_addr, opval);
     TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
+if (EQSI (ANDSI (tmp_addr, 268435452), CPU (h_atomic_address))) {
+  {
+    BI opval = 0;
+    CPU (h_atomic_reserve) = opval;
+    written |= (1 << 4);
+    TRACE_RESULT (current_cpu, abuf, "atomic-reserve", 'x', opval);
+  }
+}
+}
 
+  abuf->written = written;
   return vpc;
 #undef FLD
 }
@@ -745,12 +791,25 @@ SEM_FN_NAME (or1k32bf,l_sb) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   IADDR UNUSED pc = abuf->addr;
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
+{
+  SI tmp_addr;
+  tmp_addr = or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16_split)), 1);
   {
     UQI opval = TRUNCSIQI (GET_H_GPR (FLD (f_r3)));
-    SETMEMUQI (current_cpu, pc, or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16_split)), 1), opval);
+    SETMEMUQI (current_cpu, pc, tmp_addr, opval);
     TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
+if (EQSI (ANDSI (tmp_addr, 268435452), CPU (h_atomic_address))) {
+  {
+    BI opval = 0;
+    CPU (h_atomic_reserve) = opval;
+    written |= (1 << 4);
+    TRACE_RESULT (current_cpu, abuf, "atomic-reserve", 'x', opval);
+  }
+}
+}
 
+  abuf->written = written;
   return vpc;
 #undef FLD
 }
@@ -766,12 +825,65 @@ SEM_FN_NAME (or1k32bf,l_sh) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
   IADDR UNUSED pc = abuf->addr;
   SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
 
+{
+  SI tmp_addr;
+  tmp_addr = or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16_split)), 2);
   {
     UHI opval = TRUNCSIHI (GET_H_GPR (FLD (f_r3)));
-    SETMEMUHI (current_cpu, pc, or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16_split)), 2), opval);
+    SETMEMUHI (current_cpu, pc, tmp_addr, opval);
     TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
   }
+if (EQSI (ANDSI (tmp_addr, 268435452), CPU (h_atomic_address))) {
+  {
+    BI opval = 0;
+    CPU (h_atomic_reserve) = opval;
+    written |= (1 << 4);
+    TRACE_RESULT (current_cpu, abuf, "atomic-reserve", 'x', opval);
+  }
+}
+}
 
+  abuf->written = written;
+  return vpc;
+#undef FLD
+}
+
+/* l-swa: l.swa ${simm16-split}($rA),$rB */
+
+static SEM_PC
+SEM_FN_NAME (or1k32bf,l_swa) (SIM_CPU *current_cpu, SEM_ARG sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_l_sw.f
+  ARGBUF *abuf = SEM_ARGBUF (sem_arg);
+  int UNUSED written = 0;
+  IADDR UNUSED pc = abuf->addr;
+  SEM_PC vpc = SEM_NEXT_VPC (sem_arg, pc, 4);
+
+{
+  SI tmp_addr;
+  BI tmp_flag;
+  tmp_addr = or1k32bf_make_load_store_addr (current_cpu, GET_H_GPR (FLD (f_r2)), EXTSISI (FLD (f_simm16_split)), 4);
+  {
+    USI opval = ANDBI (CPU (h_atomic_reserve), EQSI (tmp_addr, CPU (h_atomic_address)));
+    SET_H_SYS_SR_F (opval);
+    TRACE_RESULT (current_cpu, abuf, "sys-sr-f", 'x', opval);
+  }
+if (GET_H_SYS_SR_F ()) {
+  {
+    USI opval = TRUNCSISI (GET_H_GPR (FLD (f_r3)));
+    SETMEMUSI (current_cpu, pc, tmp_addr, opval);
+    written |= (1 << 7);
+    TRACE_RESULT (current_cpu, abuf, "memory", 'x', opval);
+  }
+}
+  {
+    BI opval = 0;
+    CPU (h_atomic_reserve) = opval;
+    TRACE_RESULT (current_cpu, abuf, "atomic-reserve", 'x', opval);
+  }
+}
+
+  abuf->written = written;
   return vpc;
 #undef FLD
 }
@@ -2666,6 +2778,7 @@ static const struct sem_fn_desc sem_fns[] = {
   { OR1K32BF_INSN_L_MTSPR, SEM_FN_NAME (or1k32bf,l_mtspr) },
   { OR1K32BF_INSN_L_LWZ, SEM_FN_NAME (or1k32bf,l_lwz) },
   { OR1K32BF_INSN_L_LWS, SEM_FN_NAME (or1k32bf,l_lws) },
+  { OR1K32BF_INSN_L_LWA, SEM_FN_NAME (or1k32bf,l_lwa) },
   { OR1K32BF_INSN_L_LBZ, SEM_FN_NAME (or1k32bf,l_lbz) },
   { OR1K32BF_INSN_L_LBS, SEM_FN_NAME (or1k32bf,l_lbs) },
   { OR1K32BF_INSN_L_LHZ, SEM_FN_NAME (or1k32bf,l_lhz) },
@@ -2673,6 +2786,7 @@ static const struct sem_fn_desc sem_fns[] = {
   { OR1K32BF_INSN_L_SW, SEM_FN_NAME (or1k32bf,l_sw) },
   { OR1K32BF_INSN_L_SB, SEM_FN_NAME (or1k32bf,l_sb) },
   { OR1K32BF_INSN_L_SH, SEM_FN_NAME (or1k32bf,l_sh) },
+  { OR1K32BF_INSN_L_SWA, SEM_FN_NAME (or1k32bf,l_swa) },
   { OR1K32BF_INSN_L_SLL, SEM_FN_NAME (or1k32bf,l_sll) },
   { OR1K32BF_INSN_L_SLLI, SEM_FN_NAME (or1k32bf,l_slli) },
   { OR1K32BF_INSN_L_SRL, SEM_FN_NAME (or1k32bf,l_srl) },

@@ -291,6 +291,22 @@ model_or1200_l_lws (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
+model_or1200_l_lwa (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_l_lwz.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += or1k32bf_model_or1200_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
 model_or1200_l_lbz (SIM_CPU *current_cpu, void *sem_arg)
 {
 #define FLD(f) abuf->fields.sfmt_l_lwz.f
@@ -388,6 +404,22 @@ model_or1200_l_sb (SIM_CPU *current_cpu, void *sem_arg)
 
 static int
 model_or1200_l_sh (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_l_sw.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += or1k32bf_model_or1200_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_or1200_l_swa (SIM_CPU *current_cpu, void *sem_arg)
 {
 #define FLD(f) abuf->fields.sfmt_l_sw.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
@@ -1923,6 +1955,22 @@ model_or1200nd_l_lws (SIM_CPU *current_cpu, void *sem_arg)
 }
 
 static int
+model_or1200nd_l_lwa (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_l_lwz.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += or1k32bf_model_or1200nd_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
 model_or1200nd_l_lbz (SIM_CPU *current_cpu, void *sem_arg)
 {
 #define FLD(f) abuf->fields.sfmt_l_lwz.f
@@ -2020,6 +2068,22 @@ model_or1200nd_l_sb (SIM_CPU *current_cpu, void *sem_arg)
 
 static int
 model_or1200nd_l_sh (SIM_CPU *current_cpu, void *sem_arg)
+{
+#define FLD(f) abuf->fields.sfmt_l_sw.f
+  const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
+  const IDESC * UNUSED idesc = abuf->idesc;
+  int cycles = 0;
+  {
+    int referenced = 0;
+    int UNUSED insn_referenced = abuf->written;
+    cycles += or1k32bf_model_or1200nd_u_exec (current_cpu, idesc, 0, referenced);
+  }
+  return cycles;
+#undef FLD
+}
+
+static int
+model_or1200nd_l_swa (SIM_CPU *current_cpu, void *sem_arg)
 {
 #define FLD(f) abuf->fields.sfmt_l_sw.f
   const ARGBUF * UNUSED abuf = SEM_ARGBUF ((SEM_ARG) sem_arg);
@@ -3326,6 +3390,7 @@ static const INSN_TIMING or1200_timing[] = {
   { OR1K32BF_INSN_L_MTSPR, model_or1200_l_mtspr, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LWZ, model_or1200_l_lwz, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LWS, model_or1200_l_lws, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
+  { OR1K32BF_INSN_L_LWA, model_or1200_l_lwa, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LBZ, model_or1200_l_lbz, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LBS, model_or1200_l_lbs, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LHZ, model_or1200_l_lhz, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
@@ -3333,6 +3398,7 @@ static const INSN_TIMING or1200_timing[] = {
   { OR1K32BF_INSN_L_SW, model_or1200_l_sw, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SB, model_or1200_l_sb, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SH, model_or1200_l_sh, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
+  { OR1K32BF_INSN_L_SWA, model_or1200_l_swa, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SLL, model_or1200_l_sll, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SLLI, model_or1200_l_slli, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SRL, model_or1200_l_srl, { { (int) UNIT_OR1200_U_EXEC, 1, 1 } } },
@@ -3439,6 +3505,7 @@ static const INSN_TIMING or1200nd_timing[] = {
   { OR1K32BF_INSN_L_MTSPR, model_or1200nd_l_mtspr, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LWZ, model_or1200nd_l_lwz, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LWS, model_or1200nd_l_lws, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
+  { OR1K32BF_INSN_L_LWA, model_or1200nd_l_lwa, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LBZ, model_or1200nd_l_lbz, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LBS, model_or1200nd_l_lbs, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_LHZ, model_or1200nd_l_lhz, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
@@ -3446,6 +3513,7 @@ static const INSN_TIMING or1200nd_timing[] = {
   { OR1K32BF_INSN_L_SW, model_or1200nd_l_sw, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SB, model_or1200nd_l_sb, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SH, model_or1200nd_l_sh, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
+  { OR1K32BF_INSN_L_SWA, model_or1200nd_l_swa, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SLL, model_or1200nd_l_sll, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SLLI, model_or1200nd_l_slli, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
   { OR1K32BF_INSN_L_SRL, model_or1200nd_l_srl, { { (int) UNIT_OR1200ND_U_EXEC, 1, 1 } } },
